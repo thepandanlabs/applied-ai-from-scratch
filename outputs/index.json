@@ -1,0 +1,277 @@
+{
+  "version": "1.0.0",
+  "generated": "2026-05-25",
+  "total": 30,
+  "artifacts": [
+    {
+      "phase": 2,
+      "lesson": 1,
+      "lesson_name": "Embeddings Intuition",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/01-embeddings-intuition/outputs/skill-embeddings-intuition.md",
+      "name": "skill-embeddings-intuition",
+      "description": "Helps an AI assistant explain embedding concepts, debug embedding-related retrieval failures, and reason about vector similarity."
+    },
+    {
+      "phase": 2,
+      "lesson": 2,
+      "lesson_name": "Embedding Models",
+      "type": "prompt",
+      "file": "phases/02-retrieval-and-rag/02-embedding-models/outputs/prompt-embedding-model-selector.md",
+      "name": "prompt-embedding-model-selector",
+      "description": "Expert advisor prompt for choosing an embedding model given constraints: latency, cost, domain, language, and scale."
+    },
+    {
+      "phase": 2,
+      "lesson": 3,
+      "lesson_name": "Vector Stores",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/03-vector-stores/outputs/skill-vector-store-setup.md",
+      "name": "skill-vector-store-setup",
+      "description": "Guides setting up a vector store for a production use case, covering the full decision path from in-memory local development through hosted Qdrant and pgvector."
+    },
+    {
+      "phase": 2,
+      "lesson": 4,
+      "lesson_name": "Chunking Strategies",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/04-chunking-strategies/outputs/skill-chunking-strategy-picker.md",
+      "name": "skill-chunking-strategy-picker",
+      "description": "Expert advisor for choosing a chunking strategy given document type and retrieval use case, including a decision table and failure mode checklist."
+    },
+    {
+      "phase": 2,
+      "lesson": 5,
+      "lesson_name": "Naive RAG",
+      "type": "prompt",
+      "file": "phases/02-retrieval-and-rag/05-naive-rag/outputs/prompt-rag-debugger.md",
+      "name": "prompt-rag-debugger",
+      "description": "Systematic prompt for diagnosing a broken RAG pipeline. Given a symptom, maps it to the broken step and provides a diagnostic checklist."
+    },
+    {
+      "phase": 2,
+      "lesson": 6,
+      "lesson_name": "Retrieval Metrics",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/06-retrieval-metrics/outputs/skill-retrieval-evaluator.md",
+      "name": "skill-retrieval-evaluator",
+      "description": "Guides the process of computing and interpreting retrieval metrics for any RAG system, from building a golden dataset through diagnosing what to fix."
+    },
+    {
+      "phase": 2,
+      "lesson": 7,
+      "lesson_name": "Hybrid Search",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/07-hybrid-search/outputs/skill-hybrid-search-builder.md",
+      "name": "skill-hybrid-search-builder",
+      "description": "Guides choosing and implementing the right hybrid search configuration for a specific RAG use case, with decision guidance and a tuning workflow."
+    },
+    {
+      "phase": 2,
+      "lesson": 8,
+      "lesson_name": "Query Transformation",
+      "type": "prompt",
+      "file": "phases/02-retrieval-and-rag/08-query-transformation/outputs/prompt-query-transformer.md",
+      "name": "prompt-query-transformer",
+      "description": "Advises which query transformation technique to apply to a given query and retrieval system, with recommendations and exact prompts to use."
+    },
+    {
+      "phase": 2,
+      "lesson": 9,
+      "lesson_name": "Citation Grounding",
+      "type": "prompt",
+      "file": "phases/02-retrieval-and-rag/09-citation-grounding/outputs/prompt-citation-formatter.md",
+      "name": "prompt-citation-formatter",
+      "description": "Reusable system prompt template for formatting LLM responses with inline citations grounded in retrieved source documents."
+    },
+    {
+      "phase": 2,
+      "lesson": 10,
+      "lesson_name": "RAG Evaluation",
+      "type": "eval-harness",
+      "file": "phases/02-retrieval-and-rag/10-rag-evaluation/outputs/skill-rag-eval-harness.md",
+      "name": "skill-rag-eval-harness",
+      "description": "Skill for setting up a RAG evaluation harness that measures faithfulness, answer relevance, and context relevance across the RAG Triad."
+    },
+    {
+      "phase": 2,
+      "lesson": 11,
+      "lesson_name": "Advanced RAG",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/11-advanced-rag/outputs/skill-advanced-rag-selector.md",
+      "name": "skill-advanced-rag-selector",
+      "description": "Selects the appropriate advanced RAG pattern (reranking, HyDE, parent-child chunking, etc.) given a specific retrieval failure mode."
+    },
+    {
+      "phase": 2,
+      "lesson": 12,
+      "lesson_name": "Agentic RAG",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/12-agentic-rag/outputs/skill-agentic-rag-loop.md",
+      "name": "skill-agentic-rag-loop",
+      "description": "Implements the agentic RAG loop pattern where the model iteratively retrieves, reasons, and decides whether to retrieve again before answering."
+    },
+    {
+      "phase": 2,
+      "lesson": 13,
+      "lesson_name": "Structured Retrieval",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/13-structured-retrieval/outputs/skill-text-to-sql.md",
+      "name": "skill-text-to-sql",
+      "description": "Guides building a Text-to-SQL pipeline with safety controls, schema injection patterns, and evaluation for structured data retrieval."
+    },
+    {
+      "phase": 2,
+      "lesson": 14,
+      "lesson_name": "RAG Over Codebase",
+      "type": "skill",
+      "file": "phases/02-retrieval-and-rag/14-rag-over-codebase/outputs/skill-codebase-rag.md",
+      "name": "skill-codebase-rag",
+      "description": "Builds a codebase Q&A system using AST-aware chunking, symbol search, and incremental indexing for accurate code retrieval."
+    },
+    {
+      "phase": 2,
+      "lesson": 15,
+      "lesson_name": "RAG Frameworks",
+      "type": "prompt",
+      "file": "phases/02-retrieval-and-rag/15-rag-frameworks/outputs/prompt-rag-framework-chooser.md",
+      "name": "prompt-rag-framework-chooser",
+      "description": "Decision prompt for choosing between LlamaIndex, LangChain, or a raw implementation given project requirements, team constraints, and complexity."
+    },
+    {
+      "phase": 2,
+      "lesson": 16,
+      "lesson_name": "Capstone: RAG Service",
+      "type": "service-template",
+      "file": "phases/02-retrieval-and-rag/16-capstone-rag-service/outputs/service-template",
+      "name": "service-template",
+      "description": "Production-ready FastAPI RAG service with document ingestion, hybrid retrieval, LLM generation, evaluation, and health monitoring."
+    },
+    {
+      "phase": 5,
+      "lesson": 1,
+      "lesson_name": "Why Evals Are the Job",
+      "type": "prompt",
+      "file": "phases/05-evaluation-and-eval-driven-development/01-why-evals-are-the-job/outputs/prompt-eval-scorecard.md",
+      "name": "prompt-eval-scorecard",
+      "description": "LLM-as-judge system prompt that evaluates an AI response and returns a structured JSON score with reasoning and failure mode classification."
+    },
+    {
+      "phase": 5,
+      "lesson": 2,
+      "lesson_name": "Error Analysis First",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/02-error-analysis-first/outputs/skill-error-analysis.md",
+      "name": "skill-error-analysis",
+      "description": "Guide for running structured error analysis on any LLM system: annotation schema, open coding process, failure taxonomy, and saturation signal."
+    },
+    {
+      "phase": 5,
+      "lesson": 3,
+      "lesson_name": "Trace Review & Failure Taxonomy",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/03-trace-review-and-taxonomy/outputs/skill-trace-review.md",
+      "name": "skill-trace-review",
+      "description": "Guide for systematic trace review: trace schema, 7-category failure taxonomy, step-by-step triage process, and blank taxonomy template."
+    },
+    {
+      "phase": 5,
+      "lesson": 4,
+      "lesson_name": "Building a Golden Set",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/04-building-a-golden-set/outputs/skill-golden-set-builder.md",
+      "name": "skill-golden-set-builder",
+      "description": "Guide for building and maintaining a golden dataset: GoldenCase schema, sourcing strategy, labeling process, size targets, and maintenance checklist."
+    },
+    {
+      "phase": 5,
+      "lesson": 5,
+      "lesson_name": "Metrics That Matter",
+      "type": "prompt",
+      "file": "phases/05-evaluation-and-eval-driven-development/05-metrics-that-matter/outputs/prompt-metric-selector.md",
+      "name": "prompt-metric-selector",
+      "description": "Prompt for choosing the right eval metrics given system type and failure modes, with threshold guidance and actionability criteria."
+    },
+    {
+      "phase": 5,
+      "lesson": 6,
+      "lesson_name": "LLM-as-Judge",
+      "type": "prompt",
+      "file": "phases/05-evaluation-and-eval-driven-development/06-llm-as-judge/outputs/prompt-llm-judge.md",
+      "name": "prompt-llm-judge",
+      "description": "Production-ready LLM-as-judge prompt template with 5-point rubric, structured JSON output, bias-checking instructions, and calibration checklist."
+    },
+    {
+      "phase": 5,
+      "lesson": 7,
+      "lesson_name": "Pairwise & Reference-Based Evals",
+      "type": "prompt",
+      "file": "phases/05-evaluation-and-eval-driven-development/07-pairwise-and-reference-evals/outputs/prompt-pairwise-judge.md",
+      "name": "prompt-pairwise-judge",
+      "description": "Pairwise judge prompt with position-bias mitigation, sample size table, and segmented analysis template for comparing two system outputs."
+    },
+    {
+      "phase": 5,
+      "lesson": 8,
+      "lesson_name": "Eval Harnesses",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/08-eval-harnesses/outputs/skill-eval-harness.md",
+      "name": "skill-eval-harness",
+      "description": "EvalHarness class template, scorer interface spec, results storage format, comparison report format, and Braintrust/LangSmith/Phoenix decision matrix."
+    },
+    {
+      "phase": 5,
+      "lesson": 9,
+      "lesson_name": "CI for Prompts",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/09-ci-for-prompts/outputs/skill-prompt-ci.md",
+      "name": "skill-prompt-ci",
+      "description": "GitHub Actions workflow template for prompt CI, eval_runner.py template, threshold-setting guide, and intentional regression approval process."
+    },
+    {
+      "phase": 5,
+      "lesson": 10,
+      "lesson_name": "Evaluating RAG, Agents, Multi-Step Systems",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/10-evaluating-rag-and-agents/outputs/skill-multistep-eval.md",
+      "name": "skill-multistep-eval",
+      "description": "RAG Triad definitions, agent trajectory eval pattern, component vs end-to-end eval strategy, and failure taxonomy for multi-step AI systems."
+    },
+    {
+      "phase": 5,
+      "lesson": 11,
+      "lesson_name": "Online Evals & Production Feedback Loops",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/11-online-evals-and-feedback-loops/outputs/skill-online-eval-pipeline.md",
+      "name": "skill-online-eval-pipeline",
+      "description": "Async online eval architecture, sampling strategy guide, feedback signal schema, eval log format, and runbook for production score drops."
+    },
+    {
+      "phase": 5,
+      "lesson": 12,
+      "lesson_name": "Drift & Regression Detection",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/12-drift-and-regression-detection/outputs/skill-drift-detection.md",
+      "name": "skill-drift-detection",
+      "description": "ScoreHistory rolling-mean pattern, drift taxonomy (input/output/concept), absolute vs trend threshold guide, and model provider update checklist."
+    },
+    {
+      "phase": 5,
+      "lesson": 13,
+      "lesson_name": "A/B Testing LLM Features",
+      "type": "skill",
+      "file": "phases/05-evaluation-and-eval-driven-development/13-ab-testing-llm-features/outputs/skill-ab-testing-llm.md",
+      "name": "skill-ab-testing-llm",
+      "description": "ABRouter and ABAnalyzer templates, sample size calculator, pitfall checklist (novelty/carryover/seasonal), and decision template for calling a test."
+    },
+    {
+      "phase": 5,
+      "lesson": 14,
+      "lesson_name": "Capstone: Eval-First Development",
+      "type": "runbook",
+      "file": "phases/05-evaluation-and-eval-driven-development/14-capstone-eval-first/outputs/runbook-eval-first-development.md",
+      "name": "runbook-eval-first-development",
+      "description": "7-step runbook for eval-first development of any AI feature: success criteria, golden set, scorers, CI thresholds, and online eval sampling strategy."
+    }
+  ]
+}

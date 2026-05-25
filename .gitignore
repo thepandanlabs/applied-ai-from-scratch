@@ -1,0 +1,45 @@
+# ── Reference material ──────────────────────────────────────────────────────
+# 13MB source dump — reference only, not for public consumption
+ai-engineering-from-scratch.txt
+
+# ── Internal planning & AI config ───────────────────────────────────────────
+plan.md
+CLAUDE.md
+
+# ── Generated files ─────────────────────────────────────────────────────────
+site/data.js
+
+# ── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+*.egg
+dist/
+build/
+*.so
+
+# ── Node ─────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── OS ───────────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+
+# ── IDE ──────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Jupyter ──────────────────────────────────────────────────────────────────
+.ipynb_checkpoints/
