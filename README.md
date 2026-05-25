@@ -1,3 +1,5 @@
+# Applied AI From Scratch
+
 ![Lessons](https://img.shields.io/badge/lessons-165-blue) ![Phases](https://img.shields.io/badge/phases-13-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Stack](https://img.shields.io/badge/stack-Python%20%2B%20TypeScript-yellow)
 
 ---
