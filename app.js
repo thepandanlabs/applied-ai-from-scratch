@@ -59,7 +59,7 @@ function escapeHtml(str) {
 }
 
 function statusLabel(status) {
-  const map = { complete: 'Complete', progress: 'In Progress', planned: 'Planned' };
+  const map = { complete: 'Available', progress: 'Currently Building', planned: 'Planned' };
   return map[status] || status;
 }
 
@@ -172,8 +172,8 @@ function renderHome() {
       <div class="section-header">
         <span class="section-title">All Phases</span>
         <div class="legend">
-          <div class="legend-item"><div class="legend-dot complete"></div> Complete</div>
-          <div class="legend-item"><div class="legend-dot progress"></div> In Progress</div>
+          <div class="legend-item"><div class="legend-dot complete"></div> Available</div>
+          <div class="legend-item"><div class="legend-dot progress"></div> Currently Building</div>
           <div class="legend-item"><div class="legend-dot planned"></div> Planned</div>
         </div>
       </div>
