@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applied AI From Scratch</title>
+  <meta name="description" content="The applied AI engineering curriculum. 13 phases, ~165 lessons. Build production AI systems from scratch — RAG, agents, evals, observability, security, and the FDE skillset." />
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Syntax highlighting — two themes, toggled by JS -->
+  <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css" />
+  <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" disabled />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+  <!-- Markdown rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked@9/marked.min.js"></script>
+
+  <!-- Mermaid diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <!-- Apply saved theme before first paint to prevent flash -->
+  <script>
+    (function() {
+      const saved = localStorage.getItem('theme');
+      const prefer = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      const theme = saved || prefer;
+      document.documentElement.setAttribute('data-theme', theme);
+      if (theme === 'light') {
+        document.addEventListener('DOMContentLoaded', function() {
+          const d = document.getElementById('hljs-dark');
+          const l = document.getElementById('hljs-light');
+          if (d) d.disabled = true;
+          if (l) l.disabled = false;
+        });
+      }
+    })();
+  </script>
+</head>
+<body>
+
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      applied<span class="logo-accent">ai</span>fromscratch
+    </a>
+    <div class="nav-links">
+      <a href="#phases" class="nav-link">Phases</a>
+      <a href="ROADMAP.md" class="nav-link">Roadmap</a>
+      <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
+        <span class="theme-icon">☀</span>
+      </button>
+      <a href="https://github.com/appliedaifromscratch/appliedaifromscratch.com"
+         target="_blank" rel="noopener" class="nav-github">
+        GitHub ↗
+      </a>
+    </div>
+  </div>
+</nav>
+
+<main id="app">
+  <div class="loading">Loading curriculum…</div>
+</main>
+
+<!-- Data + App -->
+<script src="site/data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
