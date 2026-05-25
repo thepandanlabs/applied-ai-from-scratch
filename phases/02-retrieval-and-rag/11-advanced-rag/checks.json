@@ -1,0 +1,74 @@
+[
+  {
+    "id": "11-q01",
+    "question": "Users report that RAG answers are incomplete — they reference 'as mentioned in the previous point' without including that content. Which pattern addresses this?",
+    "options": [
+      "Multi-vector indexing — generate summaries that capture the full argument",
+      "Parent-document retrieval — retrieve small chunks but return larger parent context",
+      "Contextual retrieval — prepend context to chunks to include prior content",
+      "Hybrid search — BM25 will find the keyword reference"
+    ],
+    "answer": 1,
+    "explanation": "This is the size mismatch problem: the retrieved child chunk is too small to include the 'previous point'. Parent-document retrieval indexes small children for precision but returns the full parent section to the LLM, which includes the surrounding context. Contextual retrieval helps with orphaned references but doesn't change the size of what's returned."
+  },
+  {
+    "id": "11-q02",
+    "question": "A chunk reads: 'Using the methodology described above, we found a 40% improvement.' Standalone, this chunk is nearly useless for retrieval. What is the best fix?",
+    "options": [
+      "Increase chunk size until it includes the methodology section",
+      "Use parent-document retrieval to return the full document",
+      "Apply contextual retrieval to prepend a description of where this chunk appears",
+      "Use multi-vector indexing to generate keywords from the chunk"
+    ],
+    "answer": 2,
+    "explanation": "This is the missing context / orphaned reference problem. The phrase 'the methodology described above' is meaningful only in context. Contextual retrieval generates a sentence like 'This chunk is from Section 4 of the results section, which reports outcomes of the NLP evaluation methodology introduced in Section 2.' Prepended before the chunk, it makes the chunk retrievable and interpretable."
+  },
+  {
+    "id": "11-q03",
+    "question": "What is the indexing-time cost of contextual retrieval relative to naive RAG?",
+    "options": [
+      "Zero — contextual retrieval doesn't change the indexing process",
+      "One LLM call per chunk to generate the context sentence",
+      "One LLM call per query at retrieval time",
+      "Doubles the embedding cost because two vectors are stored per chunk"
+    ],
+    "answer": 1,
+    "explanation": "Contextual retrieval requires one LLM call per chunk at index time to generate the context sentence. This is a one-time offline cost amortized over all future queries. There is zero added latency at retrieval time. The embedding cost is the same (one vector per chunk — just on the enriched text instead of the raw text)."
+  },
+  {
+    "id": "11-q04",
+    "question": "In multi-vector indexing, you index both a document's full text and its LLM-generated summary. A query matches the summary representation. What is returned to the LLM?",
+    "options": [
+      "The summary text only",
+      "The full document text, because the summary was just used for retrieval",
+      "Both the summary and the full text, concatenated",
+      "The top-matching sentence from the full document"
+    ],
+    "answer": 1,
+    "explanation": "In multi-vector indexing, the representations (summary, keywords, full text) are used for retrieval only. They all point back to the original document via a doc_id. When any representation matches, the system retrieves and returns the full original document text to the LLM. You retrieve by summary; you generate from full text."
+  },
+  {
+    "id": "11-q05",
+    "question": "Which combination of patterns addresses all three naive RAG failure modes simultaneously?",
+    "options": [
+      "Multi-vector indexing + hybrid search",
+      "Contextual retrieval + parent-document retrieval",
+      "Parent-document retrieval + reranking",
+      "Contextual retrieval + query transformation"
+    ],
+    "answer": 1,
+    "explanation": "Contextual retrieval fixes missing context / orphaned references. Parent-document retrieval fixes size mismatch and context fragmentation. Together they address all three structural failure modes: orphaned chunks become self-contained (contextual retrieval), and when retrieved, they return their full parent section (parent-doc) for generation. This combination is Anthropic's recommended approach for complex document corpora."
+  },
+  {
+    "id": "11-q06",
+    "question": "What RAG Triad metric should you watch most closely after applying parent-document retrieval?",
+    "options": [
+      "Answer relevance — the parent chunks may cause the LLM to answer adjacent questions",
+      "Faithfulness — the larger parent context should reduce hallucination",
+      "Context relevance — the larger parents may include irrelevant content, diluting the signal",
+      "Abstention rate — parents return more text, making abstention less likely"
+    ],
+    "answer": 1,
+    "explanation": "Parent-document retrieval returns larger chunks to the LLM. The primary benefit is that more complete context reduces faithfulness failures (the generator has enough context to avoid hallucinating missing details). The primary risk is that larger parents include more text, some of which may be irrelevant — potentially diluting context relevance. Monitor faithfulness improvement and context relevance stability to confirm the pattern is helping."
+  }
+]

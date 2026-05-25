@@ -1,0 +1,74 @@
+[
+  {
+    "id": "12-q01",
+    "question": "A question asks: 'What recommendations did the 2022 audit make, and which ones were addressed in the 2023 policy updates?' Why does single-pass RAG fail here?",
+    "options": [
+      "Single-pass RAG cannot retrieve more than 3 chunks",
+      "The second part of the answer requires knowing the 2022 audit findings first, which is only learned from the first retrieval",
+      "Single-pass RAG doesn't support multi-document retrieval",
+      "The query contains too many keywords for the embedding model to handle"
+    ],
+    "answer": 1,
+    "explanation": "This is the multi-hop problem. The query for the second part ('which 2023 policies addressed the audit findings') requires knowing the specific findings from the first retrieval ('what did the 2022 audit recommend'). Single-pass RAG issues one query against the full corpus. That query doesn't know which specific findings to search for in the policy documents because it hasn't retrieved the audit yet."
+  },
+  {
+    "id": "12-q02",
+    "question": "What is the primary purpose of setting max_iterations in an agentic RAG loop?",
+    "options": [
+      "To improve the quality of retrieved documents",
+      "To prevent infinite retrieval loops and runaway costs when the corpus doesn't contain the answer",
+      "To ensure the LLM always makes at least one retrieval call",
+      "To limit the total number of documents that can be indexed"
+    ],
+    "answer": 1,
+    "explanation": "Without max_iterations, an agent searching for information not in the corpus will keep retrieving, finding partial results, refining its query, retrieving again — potentially until the context window overflows or you run out of money. max_iterations is a hard safety governor that ensures the loop terminates regardless of what the LLM wants to do."
+  },
+  {
+    "id": "12-q03",
+    "question": "An agentic RAG system has 40% of queries hitting max_iterations. What does this signal?",
+    "options": [
+      "The system is working well — multi-hop questions naturally require many iterations",
+      "Retrieval is broken: the corpus doesn't contain answers, the corpus is poorly chunked, or the agent is getting stuck in loops",
+      "max_iterations is set too low and should be increased",
+      "The LLM is choosing not to use the search tool for most queries"
+    ],
+    "answer": 1,
+    "explanation": "40% max_iterations termination is a strong signal that something is structurally wrong. Either: (1) the corpus genuinely doesn't contain answers to many of the queries, (2) the embedding/retrieval is so poor that the agent can't find what it needs, (3) the agent is stuck in a query loop and retrieves until it hits the limit. Increasing max_iterations would just increase cost without fixing the root cause."
+  },
+  {
+    "id": "12-q04",
+    "question": "What is query deduplication in agentic RAG and why does it matter?",
+    "options": [
+      "Removing duplicate words from the user's query before searching",
+      "Detecting when the agent issues a query very similar to a previous one and skipping the redundant retrieval",
+      "Storing query embeddings to avoid re-embedding the same query twice",
+      "Merging two different queries into one to reduce retrieval calls"
+    ],
+    "answer": 1,
+    "explanation": "When an agent fails to find information, it often rephrases and tries again — sometimes with nearly identical queries. Query deduplication detects this: if query N is semantically similar to any previous query (by string overlap or embedding similarity), skip the retrieval and return a message that no new information is available. This prevents the agent from wasting iterations on variations of a query that's already been tried."
+  },
+  {
+    "id": "12-q05",
+    "question": "You have a real-time customer support chatbot (< 500ms latency requirement). Should you use agentic RAG?",
+    "options": [
+      "Yes, agentic RAG always produces better answers",
+      "No — each agent iteration adds 1-3 seconds; even 2 iterations violates a 500ms SLA",
+      "Yes, but limit max_iterations to 1 to stay under 500ms",
+      "Only if the questions are multi-hop; use the same system for all queries"
+    ],
+    "answer": 1,
+    "explanation": "Each iteration of the agent loop involves an LLM API call (500ms-2s) plus retrieval. Even at 500ms per iteration, 2 iterations = 1 second minimum. For a 500ms SLA, agentic RAG is the wrong tool. Use static RAG with good chunking and retrieval quality instead. If you genuinely need multi-hop for some queries in a latency-sensitive system, consider pre-computing answers for known multi-hop query patterns."
+  },
+  {
+    "id": "12-q06",
+    "question": "An agentic RAG trace shows the agent made 4 retrieval calls before answering a question that should have required 2. What metric should you flag for manual review?",
+    "options": [
+      "Total tokens used",
+      "Faithfulness score",
+      "Queries requiring more than 3 calls — signal that retrieval or chunking may be broken",
+      "Context relevance score from the first retrieval"
+    ],
+    "answer": 2,
+    "explanation": "Questions requiring >3 retrieval calls are your most important debugging targets. In a well-functioning system, most questions need 1-2 calls, with multi-hop questions needing 2-3. More than 3 suggests: the retrieval isn't returning relevant chunks (requiring the agent to keep searching), the corpus is poorly structured, or the question is genuinely out of scope. Flag these for manual review to understand the root cause."
+  }
+]

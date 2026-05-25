@@ -1,0 +1,80 @@
+[
+  {
+    "id": "05-q1",
+    "question": "What are the four steps of the naive RAG pipeline in the correct order?",
+    "type": "multiple_choice",
+    "options": [
+      "Generate → Retrieve → Augment → Ingest",
+      "Ingest → Retrieve → Augment → Generate",
+      "Retrieve → Ingest → Generate → Augment",
+      "Augment → Ingest → Retrieve → Generate"
+    ],
+    "answer": "Ingest → Retrieve → Augment → Generate",
+    "explanation": "Ingest (load, chunk, embed, store) runs once at setup time. Retrieve, Augment, and Generate run per query in that order. Ingest cannot run per-query — it would re-embed the entire corpus on every question."
+  },
+  {
+    "id": "05-q2",
+    "question": "A RAG system returns a wrong answer. You log the top-5 retrieved chunks and find the relevant passage is at position 3. What is the most likely root cause?",
+    "type": "multiple_choice",
+    "options": [
+      "Retrieval failure — the embedding model returned an irrelevant chunk",
+      "Generation failure — the LLM ignored the context even though the right chunk was retrieved",
+      "Chunking failure — the passage was split across two chunks",
+      "Augmentation failure — the prompt format confused the model"
+    ],
+    "answer": "Generation failure — the LLM ignored the context even though the right chunk was retrieved",
+    "explanation": "If the relevant passage appears in the top-K retrieved chunks, retrieval is working. The problem is in the generate step: the LLM is not using the provided context. Fixing the system prompt, lowering temperature, or upgrading the model are the right next steps — not changing chunking or retrieval parameters."
+  },
+  {
+    "id": "05-q3",
+    "question": "Why should you batch all chunk embeddings in a single API call during ingest rather than calling the embed API once per chunk?",
+    "type": "multiple_choice",
+    "options": [
+      "Batching produces higher quality embeddings by averaging across the batch",
+      "The API requires it — individual calls are not supported",
+      "Batching reduces latency dramatically (1 call vs N calls) with identical output quality",
+      "Batching uses a different model with better semantic understanding"
+    ],
+    "answer": "Batching reduces latency dramatically (1 call vs N calls) with identical output quality",
+    "explanation": "Each API call has network round-trip overhead. 50 individual calls at 50ms each = 2.5 seconds. One batched call ≈ 100ms. The embedding quality is identical. Always batch during ingest."
+  },
+  {
+    "id": "05-q4",
+    "question": "You set temperature=0.0 in your LLM calls. What is the primary reason for this in a RAG system?",
+    "type": "multiple_choice",
+    "options": [
+      "It makes the model smarter and more accurate",
+      "It reduces token usage and lowers API costs",
+      "It makes outputs deterministic, so eval results are repeatable",
+      "It prevents the model from refusing to answer questions"
+    ],
+    "answer": "It makes outputs deterministic, so eval results are repeatable",
+    "explanation": "With temperature > 0, the same query can produce different answers on different runs. This makes it impossible to tell whether a code change improved the system. temperature=0.0 ensures the same query always returns the same answer, which is a prerequisite for meaningful A/B testing and eval comparison."
+  },
+  {
+    "id": "05-q5",
+    "question": "What is chunk overlap and why is it important?",
+    "type": "multiple_choice",
+    "options": [
+      "Overlap is when two chunks share the same embedding — it indicates duplicate content",
+      "Overlap is repeating some words at the start of each new chunk to prevent answers that span a chunk boundary from being lost",
+      "Overlap is when the cosine similarity between two chunks exceeds 0.9, indicating they should be merged",
+      "Overlap is the number of tokens shared between the query and the top retrieved chunk"
+    ],
+    "answer": "Overlap is repeating some words at the start of each new chunk to prevent answers that span a chunk boundary from being lost",
+    "explanation": "If a key fact falls exactly at the boundary between two chunks, with no overlap neither chunk contains the complete fact. By repeating 50 words (or N characters) at the start of the next chunk, you ensure boundary-spanning content is fully present in at least one chunk."
+  },
+  {
+    "id": "05-q6",
+    "question": "A framework like LlamaIndex or LangChain does the same four steps as the naive pipeline. What is the PRIMARY reason to build the naive version before using a framework?",
+    "type": "multiple_choice",
+    "options": [
+      "Frameworks are slower and more expensive than raw code",
+      "Frameworks require you to understand the primitives anyway, so you save no time",
+      "Building naive first gives you enough visibility to debug production failures that frameworks hide behind defaults",
+      "Frameworks cannot handle custom document types like PDFs or code files"
+    ],
+    "answer": "Building naive first gives you enough visibility to debug production failures that frameworks hide behind defaults",
+    "explanation": "Frameworks abstract away chunking strategy, embedding batching, retrieval parameters, and prompt format. When your production system answers wrongly at 2am, you need to know which step broke. If you started with a framework, each of those decisions was made by a default you may never have read. The naive version forces you to own every decision before you abstract it away."
+  }
+]

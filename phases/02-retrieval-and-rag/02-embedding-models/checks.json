@@ -1,0 +1,73 @@
+{
+  "phase": 2,
+  "lesson": 2,
+  "title": "Embedding Models",
+  "questions": [
+    {
+      "q": "A team is building a RAG system for a corpus of biomedical research papers. They test text-embedding-3-small and get MRR@5 of 0.61 on their labeled query set. What is the most productive next step?",
+      "options": [
+        "Switch to text-embedding-3-large — more dimensions will fix the domain gap",
+        "Add more documents to the index to improve model accuracy",
+        "Benchmark a domain-specific model like PubMedBERT or voyage-4 on the same labeled query set",
+        "Increase chunk size so that embeddings capture more context per document"
+      ],
+      "answer": 2,
+      "explanation": "MRR@5 of 0.61 on domain-specific content (biomedical papers) is a domain mismatch signal, not a size signal. text-embedding-3-large uses the same training data as small — more dimensions won't help if the model hasn't seen biomedical terminology. Domain-specific models trained on PubMed/clinical data will perform significantly better."
+    },
+    {
+      "q": "What does Matryoshka Representation Learning (MRL) enable that standard embedding models do not support?",
+      "options": [
+        "Embedding documents longer than 8,192 tokens without truncation",
+        "Truncating a vector to fewer dimensions without catastrophic quality loss",
+        "Cross-lingual semantic search across 100+ languages",
+        "Asymmetric embedding where queries and documents use different model heads"
+      ],
+      "answer": 1,
+      "explanation": "MRL trains the model so the first N dimensions carry the most information. You can truncate text-embedding-3-small from 1536d to 256d and retain ~88% of retrieval quality. Standard models (all-MiniLM, older OpenAI ada-002) don't support this — arbitrary truncation destroys quality."
+    },
+    {
+      "q": "You need to embed customer support tickets (English), but your privacy policy prohibits sending customer data to third-party APIs. Which model should you use?",
+      "options": [
+        "text-embedding-3-large via the OpenAI API",
+        "voyage-4 via the Voyage AI API",
+        "all-mpnet-base-v2 hosted on your own infrastructure via sentence-transformers",
+        "Gemini Embedding 2 via the Google Cloud API"
+      ],
+      "answer": 2,
+      "explanation": "When data cannot leave your network, all API-hosted models are off the table regardless of quality. all-mpnet-base-v2 is the best general-purpose English baseline that runs locally. For higher quality with full privacy, BGE-M3 or Qwen3-Embedding self-hosted are also strong options."
+    },
+    {
+      "q": "Your embedding corpus has 50 million documents. You're currently using text-embedding-3-small at 1536 dimensions. Storage costs are a concern. What is the most effective optimization that maintains near-original quality?",
+      "options": [
+        "Switch to a 384-dimension model like all-MiniLM-L6-v2",
+        "Use text-embedding-3-small with dimensions=256 (Matryoshka truncation)",
+        "Store embeddings as 8-bit integers instead of 32-bit floats",
+        "Index every other document and rely on the LLM to fill gaps"
+      ],
+      "answer": 1,
+      "explanation": "Matryoshka truncation to 256 dimensions reduces storage by ~83% while retaining ~88% of retrieval quality — the best quality-to-storage tradeoff available. Switching to all-MiniLM-L6-v2 would reduce quality significantly while only saving modestly on storage (384d vs 256d). 8-bit quantization is an orthogonal optimization that can be applied additionally."
+    },
+    {
+      "q": "The MTEB leaderboard shows Model A outperforms Model B on retrieval tasks. You benchmark both on your product domain and find Model B beats Model A by 8 MRR points. How do you proceed?",
+      "options": [
+        "Trust MTEB — it evaluates on more data and is more statistically reliable",
+        "Use Model B — your domain benchmark is the ground truth for your system",
+        "Average both scores; the combined signal is more reliable",
+        "Report the discrepancy to the MTEB maintainers as a potential benchmark bug"
+      ],
+      "answer": 1,
+      "explanation": "MTEB is an excellent initial screening tool but evaluates on public datasets. Your domain may have different vocabulary, document structure, or query patterns than MTEB's test sets. Your domain benchmark is the only reliable signal for YOUR system. Always evaluate on representative samples of your actual data."
+    },
+    {
+      "q": "A Voyage AI model's embedding API accepts input_type='query' or input_type='document'. Why does this distinction matter for retrieval quality?",
+      "options": [
+        "It affects the token limit: queries can be up to 512 tokens, documents up to 32K tokens",
+        "The model uses asymmetric embedding: separate learned functions for queries and documents, optimized for retrieval relevance matching",
+        "It determines which language model is used to process the input text",
+        "It changes the normalization strategy applied to output vectors"
+      ],
+      "answer": 1,
+      "explanation": "Asymmetric embedding trains separate encoder functions for queries (typically short, keyword-like) and documents (longer, full text). The model is trained so query embeddings are geometrically close to the document embeddings they should retrieve — even though query and document text look different in structure and length. Symmetric models (same function for both) sacrifice this optimization."
+    }
+  ]
+}

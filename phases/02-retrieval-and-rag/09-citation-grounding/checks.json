@@ -1,0 +1,74 @@
+[
+  {
+    "id": "09-q01",
+    "question": "A RAG system retrieves three chunks and the LLM response contains [4]. What is this called?",
+    "options": [
+      "A faithfulness failure",
+      "A citation hallucination",
+      "A context relevance failure",
+      "An abstention"
+    ],
+    "answer": 1,
+    "explanation": "The LLM cited source [4] but only [1], [2], and [3] exist in the retrieved set. This is citation hallucination — the model invented a citation marker that doesn't correspond to any retrieved chunk. A faithfulness failure would be where a valid cited chunk doesn't actually support the claim."
+  },
+  {
+    "id": "09-q02",
+    "question": "Your system cites source [2] for the claim 'transformers use attention'. Source [2] is a chunk about diffusion models. Which failure mode is this?",
+    "options": [
+      "Citation hallucination — [2] is not in the retrieved set",
+      "Faithfulness failure — [2] exists but doesn't support the claim",
+      "Abstention — the system should have refused to answer",
+      "Context relevance failure — the retriever returned the wrong document"
+    ],
+    "answer": 1,
+    "explanation": "Source [2] exists in the retrieved set (no hallucination), but the chunk text doesn't support the claim about transformers. This is a faithfulness failure: the cited source doesn't entail the claim it's cited for."
+  },
+  {
+    "id": "09-q03",
+    "question": "Why should you set temperature=0 when using a citation-grounded prompt?",
+    "options": [
+      "Lower temperature makes the LLM retrieve more documents",
+      "Higher temperature increases the probability of hallucinated citation numbers",
+      "Temperature controls whether the LLM uses the system prompt",
+      "Temperature=0 enables structured JSON output"
+    ],
+    "answer": 1,
+    "explanation": "Higher temperature makes generation more random and creative — which increases the probability that the model will invent plausible-looking citation numbers outside the valid range. Citation accuracy is deterministic work: you want the model to follow the format consistently, not creatively."
+  },
+  {
+    "id": "09-q04",
+    "question": "What is 'abstention rate on unanswerable queries' measuring?",
+    "options": [
+      "How often the system retrieves zero chunks",
+      "The fraction of unanswerable queries where the system correctly declines to answer",
+      "The fraction of responses that contain no citation markers",
+      "How often the LLM hallucination rate exceeds a threshold"
+    ],
+    "answer": 1,
+    "explanation": "Abstention rate on unanswerable queries measures how often the system says 'I can't answer this from the sources' when the question genuinely cannot be answered from the retrieved context. A well-grounded system should abstain rather than hallucinate an answer from parametric memory."
+  },
+  {
+    "id": "09-q05",
+    "question": "You have a corpus of 10,000 documents. At what stage must you attach metadata (source filename, page number, chunk_id) to ensure you can cite later?",
+    "options": [
+      "At query time, by reconstructing metadata from the embedding",
+      "At chunking and indexing time, before embeddings are created",
+      "At generation time, by inferring the source from the chunk text",
+      "At evaluation time, by running a separate attribution model"
+    ],
+    "answer": 1,
+    "explanation": "This is the attribution architecture principle: metadata must be attached at chunking and indexing time and preserved through every subsequent pipeline stage. If you strip metadata during ingest, there is no way to recover it at retrieval time. You cannot reconstruct a source filename from a vector embedding."
+  },
+  {
+    "id": "09-q06",
+    "question": "A deployed RAG system has a citation hallucination rate of 12%. What is the most likely root cause?",
+    "options": [
+      "The embedding model is too small",
+      "The LLM is using parametric knowledge and the prompt doesn't constrain it to the provided source IDs",
+      "The chunk size is too large",
+      "BM25 retrieval is returning irrelevant documents"
+    ],
+    "answer": 1,
+    "explanation": "A 12% hallucination rate means the LLM is regularly citing IDs outside the valid range. This happens when the prompt doesn't make the constraint explicit enough — the model generates text from training data and decorates it with citation markers that look plausible but don't exist in the retrieved set. The fix is prompt tightening (explicit numbered sources, explicit prohibition on outside knowledge) and setting temperature=0."
+  }
+]

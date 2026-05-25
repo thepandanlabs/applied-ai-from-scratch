@@ -1,0 +1,80 @@
+[
+  {
+    "id": "08-q1",
+    "question": "A user asks a medical RAG system: 'is this drug bad for the liver?'. The relevant document contains: 'This compound is hepatotoxic and contraindicated in patients with elevated serum transaminase levels.' Dense retrieval returns no relevant chunks. What is the primary failure mode?",
+    "type": "multiple_choice",
+    "options": [
+      "The embedding model is too small and should be replaced with a larger one",
+      "Vocabulary mismatch: the informal query ('bad for the liver') and the formal document ('hepatotoxic', 'transaminase') occupy different regions of embedding space",
+      "The chunk size is too small and the relevant passage was split across chunks",
+      "The cosine similarity threshold is set too high, filtering out the relevant result"
+    ],
+    "answer": "Vocabulary mismatch: the informal query ('bad for the liver') and the formal document ('hepatotoxic', 'transaminase') occupy different regions of embedding space",
+    "explanation": "This is a classic vocabulary mismatch problem. The user's casual language ('bad for the liver') and the document's formal medical language ('hepatotoxic', 'contraindicated', 'transaminase') have low cosine similarity despite being semantically equivalent. This is where HyDE or query rewriting helps: transforming the query to use the vocabulary of the document domain before embedding."
+  },
+  {
+    "id": "08-q2",
+    "question": "What is the core insight behind HyDE (Hypothetical Document Embeddings)?",
+    "type": "multiple_choice",
+    "options": [
+      "Generating multiple queries increases the surface area of retrieval",
+      "Questions and answers occupy different regions of embedding space; embedding a hypothetical answer positions the vector near real answers",
+      "Dense retrieval works better on longer texts, so HyDE expands short queries into longer ones",
+      "Hypothetical documents are used to fine-tune the embedding model on domain-specific vocabulary"
+    ],
+    "answer": "Questions and answers occupy different regions of embedding space; embedding a hypothetical answer positions the vector near real answers",
+    "explanation": "The key insight of HyDE: 'What is the capital of France?' has a different embedding than 'Paris is the capital of France.' Questions and answers use different linguistic patterns, so they embed differently. By generating a hypothetical answer that sounds like a document passage, we create a vector that lives in the same neighborhood as real document passages — dramatically improving retrieval for vocabulary-mismatch scenarios."
+  },
+  {
+    "id": "08-q3",
+    "question": "A user queries: 'what is the max dose of ibuprofen for a 45kg pediatric patient with fever?'. Step-back prompting is applied and generates: 'what are ibuprofen dosing guidelines and weight-based calculations for pediatric patients?'. Why might the combined retrieval (original + step-back) produce better results than either query alone?",
+    "type": "multiple_choice",
+    "options": [
+      "The step-back query retrieves background dosing principles and weight tables, while the original query retrieves the specific calculation context; together they give the LLM both the rule and the specific case",
+      "The step-back query generates more tokens for the embedding model to work with",
+      "Using two queries doubles the number of retrieved chunks, so the relevant content is more likely to appear by chance",
+      "The step-back query simplifies the retrieval by removing the constraint on the specific weight"
+    ],
+    "answer": "The step-back query retrieves background dosing principles and weight tables, while the original query retrieves the specific calculation context; together they give the LLM both the rule and the specific case",
+    "explanation": "Step-back prompting is designed for this pattern: the specific question (45kg patient) requires background knowledge (pediatric dosing formula, weight-based calculation rules). The step-back query retrieves the foundational principle; the original query retrieves the specific context. The LLM gets both levels of information and can produce a complete, grounded answer."
+  },
+  {
+    "id": "08-q4",
+    "question": "Multi-query retrieval generates 3 phrasings, retrieves top-5 chunks for each (15 total), then deduplicates. After deduplication, 9 unique chunks remain. What is the correct way to think about this compared to just retrieving top-9 with the original query?",
+    "type": "multiple_choice",
+    "options": [
+      "They are equivalent — retrieving 9 with the original query gives the same result",
+      "Multi-query covers different vocabulary regions per phrasing, so the 9 chunks come from a broader part of the semantic space than the top-9 from a single query",
+      "Multi-query is always worse because the generated queries are less accurate than the original",
+      "Multi-query is only better if the cosine similarity scores are averaged across phrasings"
+    ],
+    "answer": "Multi-query covers different vocabulary regions per phrasing, so the 9 chunks come from a broader part of the semantic space than the top-9 from a single query",
+    "explanation": "Each phrasing of the same question embeds to a slightly different point in vector space. Retrieving from multiple starting points covers a larger region of the embedding space. Top-9 from a single query retrieves the 9 closest chunks to one specific vector. Multi-query's 9 deduplicated chunks represent a broader spread — each phrasing may have found different relevant chunks that a single query would have ranked below position 5."
+  },
+  {
+    "id": "08-q5",
+    "question": "You implement query rewriting for a RAG system. You measure that recall@5 improved from 0.62 to 0.66 (+4 percentage points) but latency increased from 150ms to 550ms (+400ms). Should you ship this transformation?",
+    "type": "multiple_choice",
+    "options": [
+      "Yes — any recall improvement is worth shipping",
+      "It depends: a +4pp recall gain at +400ms latency cost is marginal; whether it is worth it depends on your latency budget and how much recall matters for your use case",
+      "No — the latency increase is always too high for production systems",
+      "Yes, but only if the recall improvement is consistent across all query types"
+    ],
+    "answer": "It depends: a +4pp recall gain at +400ms latency cost is marginal; whether it is worth it depends on your latency budget and how much recall matters for your use case",
+    "explanation": "Query transformation is always a cost-benefit tradeoff. A +4pp recall gain at +400ms is arguably marginal — it would not typically justify the latency for a real-time chat interface where users expect sub-second responses. It might be worth it for a batch document research system where 550ms is acceptable. The rule of thumb: transformations are typically worth it when recall improvement exceeds 10pp, or when latency budget allows it."
+  },
+  {
+    "id": "08-q6",
+    "question": "When should you NOT apply query transformation?",
+    "type": "multiple_choice",
+    "options": [
+      "When using a hybrid retrieval system — transformation is only needed for dense retrieval",
+      "When the query already contains technical vocabulary matching the document domain, or when the query contains exact identifiers (product codes, version numbers) where adding words could introduce hallucinated terms that hurt retrieval",
+      "Query transformation should always be applied — there is no downside",
+      "When the corpus has more than 10,000 chunks — transformation does not scale"
+    ],
+    "answer": "When the query already contains technical vocabulary matching the document domain, or when the query contains exact identifiers (product codes, version numbers) where adding words could introduce hallucinated terms that hurt retrieval",
+    "explanation": "Transformation is not always helpful. If a user queries 'CVE-2024-41110 vulnerability in libssl', rewriting this query might add surrounding words that dilute the exact identifier match — causing worse retrieval. Similarly, if the query already uses the right vocabulary, transformation adds latency with no benefit. The principle: apply transformation to fix a specific identified problem (vocabulary mismatch, vagueness, over-specificity), not as a blanket improvement."
+  }
+]

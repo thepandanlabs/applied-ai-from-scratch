@@ -1,0 +1,73 @@
+{
+  "phase": 2,
+  "lesson": 3,
+  "title": "Vector Stores",
+  "questions": [
+    {
+      "q": "A vector store contains 50,000 documents indexed with all-MiniLM-L6-v2 (384 dims). You switch to text-embedding-3-small (1536 dims) and add 1,000 new documents to the same collection without re-indexing the old ones. What happens?",
+      "options": [
+        "Queries using the new model return correct results for old documents because cosine similarity is model-agnostic",
+        "The old and new vectors live in incompatible coordinate spaces; similarity scores between old and new embeddings are meaningless",
+        "The store automatically re-embeds old documents when a new model is detected",
+        "The store raises a dimension mismatch error and rejects the new documents"
+      ],
+      "answer": 1,
+      "explanation": "Each embedding model defines its own coordinate space — there is no universal geometry. A vector from all-MiniLM maps 'dog' to a specific point; text-embedding-3-small maps 'dog' to a completely different point. Cosine similarity between vectors from different models produces random-looking scores. Always version collections and re-index everything when changing models."
+    },
+    {
+      "q": "Your production RAG system uses Qdrant with a metadata filter on `tenant_id`. After a deploy, users from tenant 'acme' report getting zero results. What is the most likely cause?",
+      "options": [
+        "The HNSW index needs to be rebuilt after adding new documents",
+        "A field name typo or type mismatch in the filter (e.g., filtering for integer 42 when stored as string '42')",
+        "The collection exceeded its maximum document count",
+        "Cosine similarity scores dropped below Qdrant's default minimum threshold"
+      ],
+      "answer": 1,
+      "explanation": "Zero results from a filter almost always means the filter condition matches nothing. The two most common causes: (1) a typo in the field name so no documents have that field, or (2) a type mismatch where the filter value type differs from the stored value type. Verify the exact field name and value type in stored payloads."
+    },
+    {
+      "q": "When would you choose pgvector over a dedicated vector database like Qdrant or Pinecone?",
+      "options": [
+        "When you need approximate nearest neighbor search with HNSW",
+        "When your corpus exceeds 50 million vectors and query latency is critical",
+        "When you already run Postgres, your corpus is under 5M vectors, and adding a new service has operational cost",
+        "When you need real-time vector updates with sub-millisecond write latency"
+      ],
+      "answer": 2,
+      "explanation": "pgvector lets you add vector search to a Postgres table you already manage. For corpora under ~5M vectors it delivers 30-50ms query latency with an HNSW index — more than adequate for most RAG systems. The operational savings of not running a separate service are significant. Reach for a dedicated vector DB when you need scale beyond pgvector's sweet spot, or features like named vectors and rich payload indexing."
+    },
+    {
+      "q": "What is the key operational difference between a flat index and an HNSW index in a vector store?",
+      "options": [
+        "Flat indexes support metadata filtering; HNSW indexes do not",
+        "Flat indexes compute exact cosine similarity against every document; HNSW uses an approximate graph traversal that is O(log N) but may miss the true nearest neighbor",
+        "HNSW indexes only work with normalized vectors; flat indexes work with any vector",
+        "Flat indexes require GPU acceleration; HNSW runs on CPU"
+      ],
+      "answer": 1,
+      "explanation": "A flat index scans every vector — exact results, O(N) cost per query. HNSW builds a layered graph and navigates it — approximate results (95-99% recall is typical), O(log N) cost per query. For < 100K vectors, flat is fine. Above that, HNSW's approximation tradeoff is worth it for latency."
+    },
+    {
+      "q": "You run `store.count()` after bulk indexing and get 48,200 results when you expected 50,000. What is the most useful immediate next step?",
+      "options": [
+        "Increase the HNSW ef_construction parameter and rebuild the index",
+        "Switch to a larger embedding model to improve document coverage",
+        "Identify which document IDs are missing and investigate whether their upserts failed or were skipped",
+        "Re-run the entire indexing job with a smaller batch size"
+      ],
+      "answer": 2,
+      "explanation": "Count mismatch means some documents didn't make it into the index. The right approach is to identify the specific missing IDs (set difference between your source and indexed IDs), then investigate why — common causes: silent upsert failures, documents that exceeded token limits and were skipped, duplicate IDs causing overwrites, or errors swallowed by a broad except clause."
+    },
+    {
+      "q": "In Qdrant's local mode, what is the difference between QdrantClient(':memory:') and QdrantClient(path='./qdrant_data')?",
+      "options": [
+        "':memory:' uses HNSW indexing; path-based storage uses a flat index",
+        "':memory:' is faster for search; path-based is faster for writes",
+        "':memory:' is in-process with no persistence (lost on restart); path-based writes to disk and survives restarts",
+        "Path-based storage requires a Qdrant server process; ':memory:' does not"
+      ],
+      "answer": 2,
+      "explanation": "Both run entirely in-process — no server, no Docker. The only difference is durability: ':memory:' is purely in-RAM and gone when your process exits, while path-based storage serializes to disk so your index survives application restarts. The search API, performance characteristics, and code are identical for both."
+    }
+  ]
+}

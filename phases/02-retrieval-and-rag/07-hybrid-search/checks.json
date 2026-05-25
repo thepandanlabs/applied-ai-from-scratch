@@ -1,0 +1,80 @@
+[
+  {
+    "id": "07-q1",
+    "question": "A user queries 'CVE-2024-41110 vulnerability details'. Dense retrieval returns completely unrelated results. BM25 retrieves the correct document at rank 1. What is the root cause of the dense retrieval failure?",
+    "type": "multiple_choice",
+    "options": [
+      "The embedding model was not fine-tuned on security data",
+      "CVE identifiers are outside the training distribution of most embedding models, so the vector for 'CVE-2024-41110' is essentially random",
+      "Dense retrieval cannot handle queries shorter than 10 words",
+      "The cosine similarity threshold was set too high, filtering out the relevant document"
+    ],
+    "answer": "CVE identifiers are outside the training distribution of most embedding models, so the vector for 'CVE-2024-41110' is essentially random",
+    "explanation": "Embedding models learn representations from training data. A term like 'CVE-2024-41110' — a specific identifier that may not appear in pre-training data — gets embedded poorly (near-random vector). BM25 succeeds because it uses exact term matching: if 'CVE-2024-41110' appears in the document, BM25 will find it regardless of whether the model 'understands' it."
+  },
+  {
+    "id": "07-q2",
+    "question": "What is the primary reason Reciprocal Rank Fusion (RRF) is preferred over score normalization when merging BM25 and dense retrieval results?",
+    "type": "multiple_choice",
+    "options": [
+      "RRF produces higher quality results than any normalization approach",
+      "RRF only uses rank positions, not scores — making it scale-agnostic and robust to different score distributions",
+      "Score normalization requires access to the full corpus, which is computationally expensive",
+      "RRF is required by the Qdrant and pgvector APIs"
+    ],
+    "answer": "RRF only uses rank positions, not scores — making it scale-agnostic and robust to different score distributions",
+    "explanation": "BM25 scores are unbounded integers that vary with query and corpus. Cosine similarities are [0,1]. Merging these directly requires per-query normalization which is unstable with outliers. RRF ignores the raw scores entirely and only uses the rank position of each document in each list. This makes it completely scale-agnostic and empirically competitive with careful score normalization."
+  },
+  {
+    "id": "07-q3",
+    "question": "In the BM25 formula, what does the b parameter control and what is its default value?",
+    "type": "multiple_choice",
+    "options": [
+      "b controls term frequency saturation; default is 1.5",
+      "b controls length normalization — how much longer documents are penalized; default is 0.75",
+      "b controls the number of candidate documents scored per query; default is 100",
+      "b controls the IDF smoothing factor to prevent zero scores; default is 0.5"
+    ],
+    "answer": "b controls length normalization — how much longer documents are penalized; default is 0.75",
+    "explanation": "The b parameter in BM25 normalizes term frequency by document length relative to average document length. b=0 disables normalization (all docs treated equally regardless of length). b=1 fully normalizes. b=0.75 is the standard default. For RAG with fixed-length chunks, b can be lowered since chunks are already roughly equal length."
+  },
+  {
+    "id": "07-q4",
+    "question": "Why is a cross-encoder more accurate than a bi-encoder for ranking, and why can't you use it for first-stage retrieval?",
+    "type": "multiple_choice",
+    "options": [
+      "Cross-encoders use larger models; they can't fit in memory for full-corpus search",
+      "Cross-encoders see query and document together in one forward pass, modeling their interaction, but require per-query inference on every document making full-corpus search O(n) expensive",
+      "Cross-encoders use a different training objective that produces uncacheable embeddings",
+      "Cross-encoders require GPU and cannot run on CPU at all"
+    ],
+    "answer": "Cross-encoders see query and document together in one forward pass, modeling their interaction, but require per-query inference on every document making full-corpus search O(n) expensive",
+    "explanation": "A bi-encoder embeds query and document separately, then computes cosine similarity. The document embeddings can be pre-computed once. A cross-encoder takes [query; document] as input together — you cannot pre-compute these because every new query changes the input. For 100,000 documents and a new query, that is 100,000 cross-encoder inference calls. The standard solution: use a bi-encoder to retrieve top-50 candidates cheaply, then use the cross-encoder to rerank only those 50."
+  },
+  {
+    "id": "07-q5",
+    "question": "You compute RRF scores for a document that appears at rank 2 in BM25 and rank 3 in dense retrieval. Using k=60, what is the RRF score?",
+    "type": "multiple_choice",
+    "options": [
+      "1/(60+2) + 1/(60+3) = 0.01587 + 0.01538 = 0.03125",
+      "1/2 + 1/3 = 0.5 + 0.333 = 0.833",
+      "(2+3) / (60×2) = 0.0417",
+      "log(60/2) + log(60/3) = 3.40 + 2.99 = 6.39"
+    ],
+    "answer": "1/(60+2) + 1/(60+3) = 0.01587 + 0.01538 = 0.03125",
+    "explanation": "RRF formula: score = Σ 1/(k + rank_i). For k=60, rank 2 in BM25: 1/(60+2) = 1/62 ≈ 0.01587. Rank 3 in dense: 1/(60+3) = 1/63 ≈ 0.01538. Sum ≈ 0.03125. The k=60 constant prevents the score from being too sensitive to small rank differences near the top — a document at rank 1 vs rank 2 has only a small score difference."
+  },
+  {
+    "id": "07-q6",
+    "question": "A user's RAG corpus consists entirely of customer support emails written in casual natural language. Users query it with casual questions like 'how do I get a refund' and 'why is my order late'. Should you implement hybrid search?",
+    "type": "multiple_choice",
+    "options": [
+      "Yes — hybrid search always improves over dense-only, so there is no reason not to add it",
+      "No — when both queries and documents use natural conversational language with similar vocabulary, dense retrieval captures meaning well and adding BM25 adds latency without meaningful recall improvement",
+      "Yes — BM25 is always needed to handle typos in user queries",
+      "No — emails cannot be indexed with BM25 due to informal grammar"
+    ],
+    "answer": "No — when both queries and documents use natural conversational language with similar vocabulary, dense retrieval captures meaning well and adding BM25 adds latency without meaningful recall improvement",
+    "explanation": "Hybrid search is most valuable when there is a vocabulary mismatch between queries and documents, or when queries contain exact identifiers that fall outside embedding model training. A corpus of casual emails queried with casual questions does not have this mismatch — dense retrieval handles paraphrase and semantic similarity well. Adding BM25 in this case adds 100-200ms of latency and potentially hurts precision by surfacing documents with keyword overlap but wrong meaning."
+  }
+]

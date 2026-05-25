@@ -1,0 +1,98 @@
+[
+  {
+    "id": "10-q01",
+    "question": "Your RAG system has faithfulness=0.4, answer_relevance=0.9, context_relevance=0.85. What is the primary issue?",
+    "options": [
+      "The retriever is returning irrelevant chunks",
+      "The generator is hallucinating beyond the retrieved context",
+      "The generator is answering adjacent questions instead of the actual one",
+      "The eval set is too small to be reliable"
+    ],
+    "answer": 1,
+    "explanation": "High context relevance (0.85) means the retriever is doing its job — good chunks are coming in. High answer relevance (0.9) means the generator is addressing the right question. But low faithfulness (0.4) means the generator is adding claims not supported by the context — classic LLM hallucination on top of good retrieval. Fix: tighten grounding prompts and reduce temperature."
+  },
+  {
+    "id": "10-q02",
+    "question": "Your RAG system has faithfulness=0.85, answer_relevance=0.5, context_relevance=0.8. What is the primary issue?",
+    "options": [
+      "The retriever is returning irrelevant chunks",
+      "The generator is hallucinating beyond the retrieved context",
+      "The generator is answering a related but different question than the one asked",
+      "The judge prompts are not calibrated"
+    ],
+    "answer": 2,
+    "explanation": "Good faithfulness means the generator is grounded in the context it receives. Good context relevance means the retriever is finding relevant chunks. But low answer relevance means the generator is using those chunks to answer an adjacent question, not the actual one. This can be caused by imprecise retrieval (chunks about a related topic) or query misunderstanding. Fix: improve query transformation or add reranking to surface more precisely relevant chunks."
+  },
+  {
+    "id": "10-q03",
+    "question": "Why should you NOT generate your evaluation set using the same LLM that generates your RAG answers?",
+    "options": [
+      "It is too expensive to run the LLM twice for each example",
+      "The synthetic eval set will mirror the generator's strengths, masking its failure modes",
+      "Generated questions are always lower quality than human questions",
+      "LLMs cannot generate questions, only answers"
+    ],
+    "answer": 1,
+    "explanation": "This is distribution collapse. If you use the same LLM to generate eval queries, those queries will be phrased in ways the LLM understands well. The eval set will have a blind spot for the exact failure modes — unusual phrasing, domain-specific vocabulary, multi-hop questions — that will surface in production from real users."
+  },
+  {
+    "id": "10-q04",
+    "question": "Your LLM-as-judge shows 72% agreement with human labels on faithfulness scores. What should you do?",
+    "options": [
+      "Accept the judge — 72% is better than random chance",
+      "Increase the evaluation set size to 1000 examples",
+      "Debug and improve the judge prompt before using it at scale; target ≥ 85% agreement",
+      "Switch to a rule-based faithfulness checker instead of LLM-as-judge"
+    ],
+    "answer": 2,
+    "explanation": "72% agreement means your judge is wrong on nearly 1 in 4 examples — too unreliable for automated decisions about your RAG system. The fix is to calibrate: add few-shot examples to the judge prompt, try a stronger judge model, or decompose the metric more finely. Target 85%+ agreement before trusting the judge at scale. Increasing eval set size doesn't fix a biased judge."
+  },
+  {
+    "id": "10-q05",
+    "question": "What does 'error analysis first' mean in the context of RAG evaluation?",
+    "options": [
+      "Run automated metrics before reading any traces",
+      "Manually read 20-50 query traces to identify failure types before building automated metrics",
+      "Check for Python exceptions in your RAG pipeline logs before evaluation",
+      "Compare your system against a baseline before measuring absolute scores"
+    ],
+    "answer": 1,
+    "explanation": "Error analysis first (from Hamel Husain's methodology) means manually reading raw traces — retrieved chunks, generated answers — before building any automated metric. The goal is to identify your system's specific failure taxonomy: wrong retrieval, hallucination, partial answers, etc. Your automated metrics should then measure your actual failure modes, not a generic checklist."
+  },
+  {
+    "id": "10-q06",
+    "question": "Which RAGAS metric measures whether retrieved chunks contain information useful for answering the query?",
+    "options": [
+      "Faithfulness",
+      "Answer relevance",
+      "Context relevance (context precision)",
+      "Context recall"
+    ],
+    "answer": 2,
+    "explanation": "Context relevance (also called context precision in RAGAS) measures whether the retrieved chunks are relevant to the question — i.e., does the retriever's output contain the information needed to answer? Faithfulness measures whether the answer is supported by the context. Answer relevance measures whether the answer addresses the question."
+  },
+  {
+    "id": "10-q07",
+    "question": "You run the RAG Triad and get: faithfulness=0.3, answer_relevance=0.4, context_relevance=0.25. What should you fix first?",
+    "options": [
+      "The generator — faithfulness is lowest",
+      "The generator prompt — answer relevance is also low",
+      "The retriever — when context relevance is low, everything downstream fails",
+      "The eval harness — all three scores being low suggests the judge is broken"
+    ],
+    "answer": 2,
+    "explanation": "The RAG Triad diagnostic principle: when context relevance is low, fix the retriever before touching anything else. The generator cannot produce faithful, relevant answers from irrelevant chunks. Improving the generator prompt won't help if the context is bad. Fix retrieval first: better chunking, embedding model, or reranking. Then re-run the full triad."
+  },
+  {
+    "id": "10-q08",
+    "question": "What is the correct way to integrate the RAG Triad into a CI pipeline?",
+    "options": [
+      "Run the eval harness weekly in a separate pipeline, not on every PR",
+      "Only check faithfulness — it is the most important metric and checking all three is too expensive",
+      "Run the eval harness on every PR that changes prompts, retrieval, or chunking; fail the build if any metric drops below its threshold",
+      "Run the eval harness only on main branch after merging, to avoid slowing down development"
+    ],
+    "answer": 2,
+    "explanation": "The RAG Triad should gate every change that could affect system quality — any PR touching prompts, retrieval parameters, or chunking strategy. Running it after merge is too late: you've already shipped a regression. Running weekly or on main misses the causal link between a specific change and a metric drop. All three metrics matter: a change that fixes faithfulness but breaks context relevance is still a regression."
+  }
+]
