@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "03-trace-review-and-taxonomy",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You're debugging a RAG-based HR assistant. A user asked 'What is the parental leave policy for contractors?' and got the wrong answer. You pull up the trace. The retrieve step returned 4 chunks, all about employee (not contractor) parental leave. The rerank step kept 3. The generate step produced: 'Contractors receive 6 weeks paid parental leave.' (contractors actually receive unpaid leave).",
+      "question": "Which failure type is this, and where should you focus the fix?",
+      "options": [
+        "A. hallucination in the generate step; fix by adding 'answer only from context' to the prompt",
+        "B. retrieval_failure; the knowledge base doesn't have contractor parental leave content, or the retrieval failed to find it",
+        "C. reasoning_failure in the generate step; the model drew the wrong conclusion from the contractor policy chunks",
+        "D. rerank_failure; the correct contractor policy chunk was retrieved but dropped"
+      ],
+      "answer": "B",
+      "explanation": "The retrieval step returned 4 chunks all about employee (not contractor) policy. The model generated an answer based on that incorrect context. This is retrieval_failure: the system failed to retrieve content about the specific sub-group the user asked about. The fix is in the knowledge base (add contractor policy) or in retrieval (improve handling of 'contractor' as a distinct query type)."
+    },
+    {
+      "id": "c2",
+      "scenario": "A support bot trace shows: retrieve returned 3 chunks including 'Refunds are processed in 5-7 business days.' Rerank kept all 3. Generate produced: 'Refunds are processed in 3-5 business days.' The retrieved chunk clearly states 7 days as the upper bound.",
+      "question": "Which failure type is this?",
+      "options": [
+        "A. retrieval_failure; the wrong chunks were retrieved",
+        "B. rerank_failure; the correct chunk was dropped",
+        "C. hallucination; the model modified a specific number from the context it was given",
+        "D. formatting_failure; the model restructured the information incorrectly"
+      ],
+      "answer": "C",
+      "explanation": "The correct chunk was present in the generate step's context. The model changed '5-7 business days' to '3-5 business days.' This is hallucination: the model modified a factual detail from the retrieved context rather than using it verbatim. The fix is to strengthen the grounding instruction in the system prompt."
+    },
+    {
+      "id": "c3",
+      "scenario": "You're reviewing 30 traces from a code review assistant. You find 6 failures. After triage: 2 are retrieval_failure, 3 are reasoning_failure, 1 is formatting_failure. Your team wants to know what to fix first.",
+      "question": "How do you prioritize fixes given this taxonomy?",
+      "options": [
+        "A. Fix retrieval_failure first because retrieval is always the root cause in RAG systems",
+        "B. Fix all three categories simultaneously by trying a more capable model",
+        "C. Prioritize reasoning_failure (3 cases) since it has the highest count, then retrieval (2 cases), then formatting (1 case)",
+        "D. Fix formatting_failure first because it is the easiest to fix and will show quick wins"
+      ],
+      "answer": "C",
+      "explanation": "Prioritize by count: reasoning_failure affects the most cases (3), so fixing it has the highest impact. Then address retrieval (2 cases) and formatting (1 case). 'Fix everything at once with a bigger model' rarely works and makes it impossible to attribute which change caused improvement."
+    },
+    {
+      "id": "c4",
+      "scenario": "A teammate logs only the final prompt (assembled with retrieved context) and the model's response. They argue: 'We can see the full prompt, so we know what the model had access to. We don't need traces of individual steps.'",
+      "question": "What failure mode would this approach miss?",
+      "options": [
+        "A. Nothing; logging the full prompt and response captures all the information needed for debugging",
+        "B. It would miss retrieval failures that are visible in the retrieve step output but become invisible once the wrong chunks are assembled into the prompt",
+        "C. It would miss formatting failures because those are visible in the final response",
+        "D. It would miss latency information but not correctness failures"
+      ],
+      "answer": "B",
+      "explanation": "Once wrong chunks are assembled into the prompt, you can see they're wrong, but you can't tell whether they were wrong because retrieve returned them, or because rerank failed to filter them. You also lose step-level latency (can't tell if slowness is in retrieval or generation) and any errors that were handled silently within a step."
+    },
+    {
+      "id": "c5",
+      "scenario": "You build a trace logging decorator for your pipeline. After reviewing 40 production traces, you notice that 9 traces have the retrieve step returning chunks, the rerank step returning an empty list, and the generate step saying 'I don't have enough information to answer.' The rerank model's score threshold is set to 0.85.",
+      "question": "What is the failure type and most likely fix?",
+      "options": [
+        "A. retrieval_failure; the retrieval model is not finding relevant content",
+        "B. rerank_failure; the threshold of 0.85 is too high and is filtering out relevant chunks",
+        "C. hallucination; the model is ignoring context and generating a refusal",
+        "D. refusal; the system prompt is overly cautious"
+      ],
+      "answer": "B",
+      "explanation": "Retrieve returns chunks, but rerank returns an empty list. This is a textbook rerank_failure. The threshold of 0.85 is filtering out chunks that scored below that threshold, including relevant ones. Lower the threshold (try 0.6-0.7) and re-run the eval to see if it recovers the failed traces without introducing false positives."
+    },
+    {
+      "id": "c6",
+      "scenario": "You're using OpenTelemetry's gen_ai semantic conventions to instrument a pipeline. A colleague asks why you're using gen_ai.usage.input_tokens and gen_ai.usage.output_tokens attributes rather than just logging a 'cost' field.",
+      "question": "What is the benefit of using standard gen_ai.* attributes?",
+      "options": [
+        "A. Standard attributes are required by the OpenAI API and won't work without them",
+        "B. Standard attributes allow any OTel-compatible backend (Langfuse, Arize Phoenix, Datadog) to understand and visualize token usage without custom parsing",
+        "C. Standard attributes automatically calculate cost in USD using current provider pricing",
+        "D. Standard attributes improve model performance by providing better context to the LLM"
+      ],
+      "answer": "B",
+      "explanation": "The value of semantic conventions is interoperability. If you use gen_ai.usage.input_tokens, any tool that understands the GenAI OTel spec can parse it correctly. Custom fields like 'cost' require every tool to be customized to parse your schema. Standard conventions let you switch observability backends without rewriting your instrumentation."
+    },
+    {
+      "id": "c7",
+      "scenario": "You review 50 traces from a medical information assistant. You assign failure types to all 12 failures. Your taxonomy shows: 5 hallucination, 4 reasoning_failure, 2 retrieval_failure, 1 refusal. A product manager asks you to turn these findings into a test suite.",
+      "question": "What is the right translation of 'hallucination x5' into a test case?",
+      "options": [
+        "A. Add 5 more examples to the system prompt showing correct answers",
+        "B. For each of the 5 hallucination cases, write a test that asserts the model's answer for that input is grounded in (i.e., can be traced to) the retrieved context chunks",
+        "C. Lower the temperature to 0.0 to eliminate all hallucinations",
+        "D. Replace the model with one that has a lower hallucination rate on benchmarks"
+      ],
+      "answer": "B",
+      "explanation": "The 5 hallucination traces give you 5 concrete test cases: the input query, the retrieved context (which was correct), and the wrong output. Each test asserts that the model's answer for that input does not contain claims absent from the retrieved context. This is a grounding check. A model change or temperature change is a hypothesis, not a verified fix."
+    },
+    {
+      "id": "c8",
+      "scenario": "You're building a trace viewer CLI. You want to implement a 'saturation check' for trace failure taxonomy review. After reviewing 30 traces, you have 5 failure categories. Traces 21-30 introduced no new categories. You have 20 more traces you could review.",
+      "question": "What should you do, and why?",
+      "options": [
+        "A. Review all 20 remaining traces to maximize coverage",
+        "B. Stop at 30; saturation has been reached and additional traces will add examples but not new categories",
+        "C. Review 10 more traces; saturation requires a window of 20, not 10",
+        "D. Review all traces before declaring saturation; 30 is not a large enough sample for production systems"
+      ],
+      "answer": "B",
+      "explanation": "Saturation is defined as: the last N traces introduced zero new failure categories. With a window of 10 and 0 new categories, the taxonomy is stable. Reviewing more traces will add examples to existing categories (useful for writing test cases) but is unlikely to reveal new failure modes. Stop sampling and start writing targeted tests based on the 5 identified categories."
+    }
+  ]
+}

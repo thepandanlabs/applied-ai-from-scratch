@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "14-capstone-eval-first",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You write a golden set for a FAQ assistant. When you run your evals on the stub (a function that returns an empty response), all 10 cases pass with format_compliance=1.0. You move on to building the feature.",
+      "question": "What went wrong and what should you do?",
+      "options": [
+        "A. Nothing went wrong -- the stub passing format checks is expected.",
+        "B. The format_compliance scorer has a bug: it returns 1.0 for empty strings. Fix the scorer until it returns 0.0 for the stub, then proceed.",
+        "C. The stub should be written to return a valid response format with placeholder content.",
+        "D. This confirms the evals are working. The stub always passes structural checks."
+      ],
+      "answer": "B",
+      "explanation": "The stub verification step exists to prove evals actually test something. If format_compliance passes on an empty response, the scorer is not checking what it claims to check. Fix the scorer first: an empty answer string should return 0.0. An eval that passes on a stub is useless as a quality gate."
+    },
+    {
+      "id": "c2",
+      "scenario": "You run your eval suite after building the FAQ assistant. Results: faithfulness=0.72, answer_relevance=0.89, format_compliance=1.0. Success criteria: faithfulness >= 0.90. You trace the failures and find the retriever is returning the wrong FAQ section for 30% of questions.",
+      "question": "What is the correct next step?",
+      "options": [
+        "A. Improve the LLM generation prompt to be more faithful to whatever sections it does retrieve.",
+        "B. Fix the retrieval: improve section-name matching or add keyword synonyms so the right sections are returned before generation.",
+        "C. Lower the faithfulness threshold to 0.75 to reflect what the system can currently achieve.",
+        "D. Add more examples to the golden set so the distribution is more representative."
+      ],
+      "answer": "B",
+      "explanation": "The eval failures point to retrieval as the root cause. A generation model can only be faithful to what it's given: if the wrong sections are retrieved, faithfulness fails regardless of how good the generation prompt is. Fix the retrieval layer first. Generation prompt changes should come after the retrieval is returning correct content."
+    },
+    {
+      "id": "c3",
+      "scenario": "After fixing retrieval, your eval results are: faithfulness=0.91, answer_relevance=0.87, format_compliance=0.85. The chunker fix introduced a new format compliance failure. Your PM wants to ship because 'two out of three metrics pass and it's much better than before.'",
+      "question": "What is your response?",
+      "options": [
+        "A. Agree to ship: the overall improvement justifies the format compliance regression.",
+        "B. Block the ship. Format compliance at 0.85 means 15% of responses are malformed, which will crash downstream parsers. Fix it before shipping.",
+        "C. Ship with a try/except around the JSON parser to handle malformed outputs gracefully.",
+        "D. Ship to 5% of users to see if the format failure rate is acceptable in practice."
+      ],
+      "answer": "B",
+      "explanation": "Format compliance is a structural requirement: downstream code that parses the JSON response will throw an exception on 15% of responses. This is not a quality regression that can be tolerated -- it's a reliability regression. Ship-with-exception-handling (option C) is a workaround, not a fix. Identify what the chunker change broke in the prompt format instruction and fix it."
+    },
+    {
+      "id": "c4",
+      "scenario": "A new engineer joins your team. They want to build a new AI feature for the product. They come to you and say: 'I've built the feature already -- it took 2 hours. Now what evals do I write?'",
+      "question": "What has this engineer missed by writing the feature before the evals?",
+      "options": [
+        "A. Nothing -- writing evals after the feature is the normal order. The feature needs to exist before you can measure it.",
+        "B. They missed the definition-of-done: without pre-defined success criteria, they don't know if the feature is done. They also can't verify the evals test anything useful without a stub to fail against.",
+        "C. They need to add a Dockerfile before the evals can run in CI.",
+        "D. They missed writing the golden set, which must come before the feature code."
+      ],
+      "answer": "B",
+      "explanation": "The most important thing eval-first development establishes is the definition of done before any code is written. Without pre-defined success criteria, 'done' means 'it works on the examples I tried.' The engineer also can't run the stub verification step: the feature already exists, so they can't prove the evals would catch a broken implementation."
+    },
+    {
+      "id": "c5",
+      "scenario": "You add your eval runner to CI. A PR changes the FAQ chunking logic and the CI eval run fails: faithfulness drops from 0.91 to 0.83. The author says 'the eval is too strict, the feature still works fine.'",
+      "question": "How do you respond?",
+      "options": [
+        "A. Investigate whether the threshold should be adjusted based on the new chunking approach.",
+        "B. The CI failure is correct: faithfulness of 0.83 is below the agreed threshold of 0.90. The author needs to fix the regression or revert the chunking change. The threshold should only be changed through a deliberate process, not to unblock a failing PR.",
+        "C. Approve the PR and lower the CI threshold to 0.80 for this experiment.",
+        "D. Override CI and merge: the eval harness was calibrated on a different chunking approach."
+      ],
+      "answer": "B",
+      "explanation": "A CI threshold that can be lowered to unblock a failing PR provides no protection. The threshold represents the quality contract. If the new chunking approach produces lower faithfulness, that's a real regression. The fix is to improve the chunking logic until faithfulness recovers, not to lower the bar. Threshold changes should go through review, not happen under pressure."
+    },
+    {
+      "id": "c6",
+      "scenario": "You deploy the FAQ assistant with online eval at 20% sample rate. After 24 hours you check the online_eval.jsonl. It has 3 entries. Your service is handling about 500 requests per day.",
+      "question": "What is wrong and how do you fix it?",
+      "options": [
+        "A. 3 entries from 500 requests at 20% sample rate is correct: 500 * 0.20 = 100 -- the log file must have more entries.",
+        "B. The background task is not firing. Debug the BackgroundTasks integration -- check that the task is being added to background_tasks and that the service is not running in a mode that suppresses background tasks.",
+        "C. The online eval score log is being written to the wrong path. Check the file path in the environment.",
+        "D. 20% of 500 = 100 samples per day. The eval worker is too slow to process them all. Increase worker count."
+      ],
+      "answer": "B",
+      "explanation": "3 entries from 500 requests at 20% is far below the expected ~100 per day. The most common cause is that BackgroundTasks are not executing -- this can happen if the server is under load and tasks are being dropped, if the ASGI lifespan is ending before tasks complete, or if there's an exception in the task that silently swallows the write. Debug by adding logging at the start of the background task function."
+    },
+    {
+      "id": "c7",
+      "scenario": "Six months after shipping the FAQ assistant with eval-first development, your team has run 12 iterations of the feature. Each iteration used the eval suite to guide changes. Your golden set has grown from 10 to 47 cases. The faithfulness score has improved from 0.91 at launch to 0.96.",
+      "question": "What best explains the quality improvement from 0.91 to 0.96 over 12 iterations?",
+      "options": [
+        "A. Better models from the provider improved baseline quality.",
+        "B. The golden set grew because each iteration added production failures as new cases, closing the feedback loop between production failures and CI coverage.",
+        "C. The team wrote better prompts over time through experience.",
+        "D. 0.96 is close to the ceiling -- further improvement is unlikely."
+      ],
+      "answer": "B",
+      "explanation": "The compound return of eval-first development is the growing golden set. Each production failure that gets traced, categorized, and added to the golden set means that failure mode is now part of CI. Future changes can't reintroduce it without failing CI. After 12 iterations of this loop, the golden set covers real failure patterns, not just hypothetical ones. This is the mechanism behind quality improving over time."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are presenting your eval-first development process at an engineering all-hands. The CTO asks: 'How do we know our evals are measuring what users actually care about? What if we're optimizing for the wrong metric?'",
+      "question": "What is the most honest and practical answer?",
+      "options": [
+        "A. Our evals are validated by LLM judges, which are calibrated to human preferences.",
+        "B. This is a real risk. We validate evals in three ways: (1) consistency check between judge and human raters on sampled cases, (2) correlation between eval scores and user satisfaction feedback, (3) error analysis on cases where high eval score and low user satisfaction diverge.",
+        "C. Our metrics are industry-standard (faithfulness, relevance) and have been validated across many AI systems.",
+        "D. We will know our evals are wrong when user satisfaction drops despite high eval scores, at which point we revise the metrics."
+      ],
+      "answer": "B",
+      "explanation": "The CTO is asking about eval validity -- a genuinely hard problem. The honest answer is that eval metrics are proxies for user value, and proxies can be wrong. The three-part validation (judge-human consistency, eval-satisfaction correlation, divergence analysis) is how you detect when the proxy is misleading. Option D is reactive: by the time satisfaction drops, damage is done. Ongoing validation is the proactive approach."
+    }
+  ]
+}

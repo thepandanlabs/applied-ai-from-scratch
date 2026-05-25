@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "02-error-analysis-first",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You have a customer support bot with a 71% pass rate on your eval harness. A senior engineer suggests spending 2 hours running metrics with different scorers to understand the failures better. Hamel Husain's methodology suggests a different first step.",
+      "question": "What should you do before running more metrics?",
+      "options": [
+        "A. Try a more capable model and see if the score improves",
+        "B. Sample 30-50 outputs and read them carefully, writing notes on what you observe",
+        "C. Run the eval with a lower pass threshold to understand the score distribution",
+        "D. Ask users what they think is wrong via a feedback survey"
+      ],
+      "answer": "B",
+      "explanation": "Reading outputs before running metrics is the core of Hamel Husain's methodology. You can't write a good scorer for a failure mode you haven't named. Two hours of output reading typically surfaces 5-6 distinct failure categories, each requiring a different fix."
+    },
+    {
+      "id": "c2",
+      "scenario": "You're running open coding on 40 outputs from a legal document summarizer. After annotating 30 outputs, you have 6 categories. You annotate outputs 31-40 and none of them introduce a new category. You have 10 more outputs in your sample.",
+      "question": "What does this tell you, and what should you do?",
+      "options": [
+        "A. Continue annotating all remaining outputs to maximize coverage",
+        "B. You've likely reached saturation; your taxonomy is stable and you can stop",
+        "C. The last 10 outputs were probably too similar; sample a different time period",
+        "D. You need at least 50 outputs for the saturation check to be valid"
+      ],
+      "answer": "B",
+      "explanation": "Saturation occurs when new outputs stop introducing new categories. If the last 10 outputs added 0 new categories, the taxonomy has stabilized. More sampling adds examples to existing categories but rarely reveals new failure modes."
+    },
+    {
+      "id": "c3",
+      "scenario": "Two annotators independently label the same 25 outputs from a medical triage assistant. Annotator A assigns: 15 correct, 4 incomplete, 4 wrong_fact, 2 unnecessary_caveat. Annotator B assigns: 14 correct, 6 incomplete, 3 wrong_fact, 2 unnecessary_caveat. They agree on 18 of 25 cases.",
+      "question": "What is the agreement rate and what does it tell you about your taxonomy?",
+      "options": [
+        "A. 72% agreement; this is acceptable and suggests the taxonomy categories are reasonably well-defined",
+        "B. 72% agreement; this is too low and the entire taxonomy needs to be redesigned",
+        "C. 60% agreement; the annotators need more training on the categories",
+        "D. 85% agreement; calculated by averaging their individual accuracy rates"
+      ],
+      "answer": "A",
+      "explanation": "18/25 = 72% agreement, which falls in the acceptable 70-80% range for subjective annotation tasks. Below 60% would signal that category definitions are too vague. The disagreement cluster (7 cases) is worth reviewing together to sharpen the boundary between 'incomplete' and 'wrong_fact'."
+    },
+    {
+      "id": "c4",
+      "scenario": "After annotating 45 outputs from a product recommendation system, you find: 28 correct, 7 hallucination, 4 incomplete, 3 off_topic, 2 format_mismatch, 1 other. You're about to write a prompt change to reduce hallucinations.",
+      "question": "What should you do BEFORE changing the prompt?",
+      "options": [
+        "A. Add more examples to the system prompt to reduce hallucination",
+        "B. Write a test case and baseline score specifically targeting the hallucination category, so you can measure whether the prompt change actually fixes it",
+        "C. Try a different model that is known to hallucinate less",
+        "D. Reduce the temperature parameter to make outputs more deterministic"
+      ],
+      "answer": "B",
+      "explanation": "Without a baseline measurement, you can't know if your prompt change actually reduced hallucinations or just shifted the failure to a different category. Write the test cases, run the baseline, then make the change. This is the eval-driven development loop applied to a specific failure category."
+    },
+    {
+      "id": "c5",
+      "scenario": "You're annotating outputs and keep assigning 'other' to cases. After 40 annotations, you have 9 'other' cases. The notes you wrote for them are: 'weird phrasing', 'too verbose', 'right answer, wrong tone', 'includes outdated info', 'right answer, unnecessary examples', 'answer is technically correct but unhelpful', 'too terse', 'tone seems defensive', 'verbose with examples'.",
+      "question": "What should you do with the 'other' category?",
+      "options": [
+        "A. Keep 'other' as-is; some outputs just don't fit cleanly into categories",
+        "B. Look at the notes for patterns: 'verbose' appears multiple times and could be its own category 'over-explained'; review all 9 cases to find 1-2 sub-categories worth splitting out",
+        "C. Move all 9 cases to 'format_mismatch' since they're all about presentation",
+        "D. Delete the 'other' category and force each case into an existing category"
+      ],
+      "answer": "B",
+      "explanation": "When 'other' accumulates more than 2-3 cases, it usually means there are one or two under-named categories hiding inside it. Reading the notes reveals clusters: 'verbose' appears in 3+ cases, suggesting a 'over-explained' category. Split 'other' when you find a repeating pattern."
+    },
+    {
+      "id": "c6",
+      "scenario": "You're presenting error analysis findings to your team. You found that 18 of 50 outputs (36%) have the 'unnecessary_caveat' failure mode. Your manager says: 'That doesn't seem like a real problem. Users are getting correct answers. Why are we prioritizing this?'",
+      "question": "How do you make the case that unnecessary_caveat is worth fixing?",
+      "options": [
+        "A. Unnecessary caveats are a legal liability, so they must be removed regardless of user impact",
+        "B. Show specific examples where caveats dilute the answer's usefulness, then propose a targeted test: if a user asks 'Can I roll over PTO?' and the answer takes 4 sentences to get to 'yes', that is a user experience failure even if technically correct",
+        "C. Agree with the manager; correct answers are the only thing that matters in a QA system",
+        "D. Propose removing the safety guidelines from the system prompt to reduce caveats"
+      ],
+      "answer": "B",
+      "explanation": "Concrete examples are more persuasive than category labels. Show the actual output, identify the specific cost to the user (they have to wade through 4 sentences to get a simple yes/no), and propose a measurable fix. Framing it as a user experience failure with a testable criterion makes it actionable."
+    },
+    {
+      "id": "c7",
+      "scenario": "You run error analysis on two different time periods: outputs from last month (50 samples) and outputs from this month (50 samples). Last month: 5 hallucination cases. This month: 11 hallucination cases. The model and prompt haven't changed.",
+      "question": "What is the most likely explanation and what should you investigate?",
+      "options": [
+        "A. The model provider silently updated the model; contact them to roll back",
+        "B. The input distribution shifted: users are asking different types of questions this month, possibly edge cases the system handles poorly",
+        "C. The eval is inconsistent; re-run the analysis to get a stable number",
+        "D. Hallucination always increases over time as the model 'forgets' its training"
+      ],
+      "answer": "B",
+      "explanation": "When failure rates change without a code or model change, the first hypothesis is input distribution shift. Look at the specific hallucination cases from both periods and compare the input types. Are this month's cases concentrated in a new topic area? That points to a knowledge base gap, not a model problem."
+    },
+    {
+      "id": "c8",
+      "scenario": "A colleague says: 'Error analysis is qualitative and subjective. We should use automated metrics so our findings are reproducible and objective.' You're about to push back.",
+      "question": "What is the strongest response?",
+      "options": [
+        "A. Agree that automated metrics are superior; offer to help design them",
+        "B. Automated metrics are only as good as the criteria they encode. Error analysis is how you discover what criteria matter. You need both: qualitative analysis first to name the failure modes, then automated metrics to measure them at scale",
+        "C. Qualitative analysis is always more reliable than metrics for AI systems",
+        "D. Metrics are too slow to compute; manual review is faster for small datasets"
+      ],
+      "answer": "B",
+      "explanation": "This is the core argument: metrics require criteria, and criteria require knowing what failure modes exist. Error analysis is how you get the criteria. The two approaches are complementary, not competing. Start qualitative to discover failure modes, then build automated metrics to track them."
+    }
+  ]
+}

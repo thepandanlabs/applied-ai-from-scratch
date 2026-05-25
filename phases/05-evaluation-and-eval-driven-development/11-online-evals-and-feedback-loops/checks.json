@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "11-online-evals-and-feedback-loops",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team just deployed a new model version. The offline CI eval passed (golden set = 200 cases). Twenty-four hours after deploy, your online eval shows average score dropped from 0.88 to 0.74 on production traffic.",
+      "question": "What does this pattern most likely indicate?",
+      "options": [
+        "A. The CI golden set is wrong and needs to be rebuilt.",
+        "B. The new model version has a failure mode on production traffic types not covered by the golden set.",
+        "C. The online eval judge is broken and scoring too harshly.",
+        "D. The drop is within normal variance and no action is needed."
+      ],
+      "answer": "B",
+      "explanation": "When CI passes but online eval drops, the golden set is missing coverage of real production inputs. The new model behaves differently on those inputs. The fix is to pull the failing production traces, identify the new failure category, and add representative cases to the golden set."
+    },
+    {
+      "id": "c2",
+      "scenario": "You have 5,000 production requests per day. Your LLM judge costs $0.02 per eval. Your PM says quality monitoring is critical and asks you to eval 100% of traffic.",
+      "question": "What is the most practical approach to provide reliable quality monitoring at a lower cost?",
+      "options": [
+        "A. Eval 100% as requested -- quality monitoring is worth the cost.",
+        "B. Use a 10% random sample plus 100% eval on thumbs-down feedback, targeting 500+ evals/day.",
+        "C. Skip the LLM judge entirely and rely only on thumbs up/down feedback.",
+        "D. Eval 1% of traffic to minimize cost."
+      ],
+      "answer": "B",
+      "explanation": "A 10% random sample of 5,000 requests gives 500 evals/day, well above the 100-eval minimum for reliable drift detection. Routing 100% of thumbs-down to the judge catches the highest-signal cases. Total cost is 10x cheaper than 100% eval with comparable quality signal."
+    },
+    {
+      "id": "c3",
+      "scenario": "You build an async eval pipeline using FastAPI BackgroundTasks. A colleague runs a load test and measures user-facing latency at 2.1 seconds. They claim your background eval is adding latency.",
+      "question": "How do you verify whether the background eval is or isn't adding to user-facing latency?",
+      "options": [
+        "A. Check the eval worker logs for processing time and subtract it from the total.",
+        "B. Measure response time from the /ask endpoint with background tasks enabled vs disabled, and compare.",
+        "C. Increase the number of eval workers to reduce the eval processing time.",
+        "D. The latency must be from the judge LLM call since it runs synchronously."
+      ],
+      "answer": "B",
+      "explanation": "BackgroundTasks in FastAPI are fire-and-forget: the response is sent before background tasks run. To verify, compare /ask latency with background tasks on vs off. If latency is identical, the background eval is not blocking. If different, your eval is somehow in the critical path (e.g., the queue is synchronous)."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your online eval average score is 0.87. Your thumbs-up rate is 0.61. That's a large gap -- a 0.87 LLM judge score usually correlates with a much higher satisfaction rate.",
+      "question": "What is the most likely explanation for the gap between LLM judge score and thumbs-up rate?",
+      "options": [
+        "A. Users are clicking thumbs-down by mistake.",
+        "B. The LLM judge is measuring a different dimension than what users care about (e.g., accuracy vs tone or brevity).",
+        "C. The sample of judged interactions is biased toward better responses.",
+        "D. The thumbs-up endpoint has a bug that records thumbs-up as thumbs-down."
+      ],
+      "answer": "B",
+      "explanation": "LLM judges typically measure factual accuracy and completeness. Users rate on a broader experience that includes tone, length, formality, and whether the answer was actionable. A technically correct but verbose or overly formal answer can score high on an LLM judge but receive a thumbs-down. Investigate the gap by reading thumbs-down traces."
+    },
+    {
+      "id": "c5",
+      "scenario": "You want to add implicit feedback signals to your eval pipeline without building an LLM judge. Your application is a code assistant.",
+      "question": "Which implicit signal is most reliably correlated with answer quality for a code assistant?",
+      "options": [
+        "A. Session duration -- longer sessions mean the user found the assistant helpful.",
+        "B. Time between question and next question -- short time means fast iteration.",
+        "C. Copy-paste action on the code block -- if they copied it, it was useful.",
+        "D. Page scroll depth -- scrolling further indicates more engagement."
+      ],
+      "answer": "C",
+      "explanation": "For a code assistant, copy-paste of the code block is the highest-signal implicit feedback. It indicates the user found the answer actionable enough to use. Session duration and scroll depth are too ambiguous (a long session could mean struggling, not satisfaction). Time between questions has too many confounds."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are setting up a Langfuse integration for production eval. Your team asks: why not just use a JSONL file like the homegrown pipeline?",
+      "question": "Which specific capability of Langfuse most justifies the added dependency for a team of 5 engineers?",
+      "options": [
+        "A. Langfuse stores scores in a database instead of a file.",
+        "B. Langfuse provides shared visibility with drill-down into individual traces, enabling the whole team to investigate production failures without grep.",
+        "C. Langfuse automatically fixes prompt issues it detects in production.",
+        "D. Langfuse reduces LLM judge costs by caching scores."
+      ],
+      "answer": "B",
+      "explanation": "For a team, the key value of Langfuse over a JSONL file is shared visibility with a UI. When a score drops, any engineer can open the dashboard, drill into the failing traces, see the exact input/output/score, and identify the failure pattern without SSH access or log parsing. For solo developers, a JSONL file is often sufficient."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your judge consistency check shows: when you run the same 20 cases through your online judge and your offline CI judge, the average score delta is 0.19. The target is 0.10.",
+      "question": "What is the most likely root cause and fix?",
+      "options": [
+        "A. The online judge uses a different model version than the offline judge. Switch both to the same pinned model.",
+        "B. The judge prompt has no explicit rubric with score anchors, so both judges interpret the scale differently. Add a rubric.",
+        "C. 20 cases is not enough to measure consistency reliably. Run 200 cases.",
+        "D. LLM judge consistency cannot exceed 0.15 delta and the target should be relaxed."
+      ],
+      "answer": "B",
+      "explanation": "A 0.19 delta is a sign of rubric ambiguity. When the judge prompt says '0.0-1.0' without defining what 0.5, 0.7, or 0.9 mean concretely, each judge call interprets the scale differently. Add score anchors: 'score 0.9: answer is accurate and complete; score 0.5: answer is partially correct but missing a key detail.' Pinned model versions also help but rubric quality is usually the dominant factor."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are doing a post-mortem after a quality incident. Logs show your online eval score dropped from 0.85 to 0.68 over 3 days, but no alert fired. Your alert threshold was set to score < 0.70.",
+      "question": "What change to your alerting setup would have caught this incident earlier?",
+      "options": [
+        "A. Lower the absolute threshold from 0.70 to 0.65.",
+        "B. Add a trend threshold: alert if the 7-day rolling mean drops more than 5% from the previous week.",
+        "C. Increase the sample rate so more evals run per day.",
+        "D. Switch from a JSONL log to a database for faster alerting."
+      ],
+      "answer": "B",
+      "explanation": "An absolute threshold of 0.70 didn't fire because the score spent 3 days declining from 0.85 to 0.71 without hitting the floor. A trend threshold (rolling mean drops >5%) would have fired after day 1 or 2 of decline, when the drop became measurable. Trend thresholds and absolute thresholds are complementary: use both."
+    }
+  ]
+}

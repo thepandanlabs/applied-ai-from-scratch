@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "09-ci-for-prompts",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team runs evals manually before every release. In the past month, two regressions reached production: one caught at release time and one caught by a user complaint. A third regression was caught manually by an engineer who happened to run evals before a PR merged.",
+      "question": "What does this pattern indicate about your eval process, and what is the correct fix?",
+      "options": [
+        "A. Evals are working correctly; two of three regressions were caught before production.",
+        "B. Evals are ad hoc and rely on individuals remembering to run them; adding CI makes evals mandatory on every PR.",
+        "C. You need more scorers to catch the types of regressions that slipped through.",
+        "D. The eval harness is too slow and engineers skip it under deadline pressure; you need faster hardware."
+      ],
+      "answer": "B",
+      "explanation": "Manual evals that depend on engineers remembering to run them will always have coverage gaps. CI makes the eval mandatory: the PR cannot merge if the eval fails. This eliminates the human memory dependency entirely. More scorers or faster hardware would not fix the process problem."
+    },
+    {
+      "id": "c2",
+      "scenario": "You set a threshold of 0.03 (3%) for all metrics. After one week, CI is failing on 40% of PRs that engineers believe are correct changes. Engineers are adding the override flag routinely.",
+      "question": "What is most likely causing this and what should you do?",
+      "options": [
+        "A. Engineers are making too many risky changes; require more reviews before merging.",
+        "B. Your thresholds are too tight relative to natural LLM variance; calibrate thresholds by running baseline 3 times and setting threshold at 2x the observed variance.",
+        "C. Your smoke set is too large; reduce it to 5-10 cases to reduce variance.",
+        "D. The override flag process is too easy; make engineers get two approvals instead of one."
+      ],
+      "answer": "B",
+      "explanation": "If 40% of correct PRs fail CI, your thresholds are tighter than the natural variance of your system. The correct fix is empirical calibration: run the baseline multiple times with identical code, measure the variance per metric, and set thresholds at 2x that variance. A threshold tighter than the noise floor produces constant false positives."
+    },
+    {
+      "id": "c3",
+      "scenario": "An engineer submits a PR that changes the output format from JSON to a structured plain-text format. The format_compliance scorer drops from 1.0 to 0.0. CI fails. The change was intentional and approved by the product team.",
+      "question": "What is the correct process for handling this situation?",
+      "options": [
+        "A. Disable the format_compliance scorer permanently since format requirements change.",
+        "B. Revert the format change and keep JSON output to avoid breaking CI.",
+        "C. Add [eval-override: switching from JSON to structured plain text, approved by PM] to the PR, get team lead approval, and submit a follow-up PR updating the golden set and scorer.",
+        "D. Merge the PR and accept the regression; update the scorer in the same PR."
+      ],
+      "answer": "C",
+      "explanation": "Intentional behavioral changes are handled with an approval-gated override. The override is not a permanent bypass: it requires a justification, team lead approval, and a follow-up PR that updates the golden set and scorer to reflect the new expected behavior. The CI system then re-calibrates its baseline against the updated expectations."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your full golden set has 400 cases and takes 55 minutes to run. You want fast feedback on PRs but do not want to miss regressions.",
+      "question": "What is the recommended two-tier CI strategy?",
+      "options": [
+        "A. Run 400 cases on every PR but use async parallel requests to finish in 10 minutes.",
+        "B. Run a 20-30 case smoke set on every PR (under 5 minutes) and the full 400-case set only on merge to main.",
+        "C. Run the full set once per day at midnight and block merges until the nightly run completes.",
+        "D. Randomly sample 50 cases from the full set on every PR to balance speed and coverage."
+      ],
+      "answer": "B",
+      "explanation": "The two-tier pattern is: a small, curated smoke set for fast PR feedback, and the full set as a merge gate. The smoke set should contain the cases most likely to catch regressions (historically problematic cases, one per capability). Random sampling (option D) risks missing important cases. Running the full set at midnight introduces a multi-hour delay before engineers get feedback."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your eval runner script exits with code 0 (pass) even when a regression exists. You check the code and find the threshold check is correct. The CI workflow reports a green check.",
+      "question": "What is the most important property of the eval runner that is broken?",
+      "options": [
+        "A. The scorer functions are returning incorrect values.",
+        "B. The runner must exit with code 1 on regression; if it exits 0, GitHub Actions cannot detect the failure.",
+        "C. The results are not being stored to disk correctly.",
+        "D. The runner is using the wrong baseline experiment name."
+      ],
+      "answer": "B",
+      "explanation": "GitHub Actions determines pass/fail by the exit code of the shell command: exit 0 = pass, any non-zero exit = fail. If the runner always exits 0, CI can never fail regardless of scores. The eval runner must call sys.exit(1) when regressions are detected. This is the single most important property of a CI eval runner."
+    },
+    {
+      "id": "c6",
+      "scenario": "You set format_compliance threshold to 0.0 (hard threshold: any drop fails). Your system has natural variance of 2% on exact_match. You set the exact_match threshold to 0.03 (3%).",
+      "question": "Why do these two thresholds have different values?",
+      "options": [
+        "A. Format compliance is harder to measure so it needs a tighter threshold.",
+        "B. Format compliance is binary: either outputs are valid JSON or they are not. Any regression is a breaking change. Exact match has natural LLM variance so a small drop may be noise, not a regression.",
+        "C. Exact match is more important than format compliance for this system.",
+        "D. The 0.03 threshold on exact_match is incorrect; it should also be 0.0."
+      ],
+      "answer": "B",
+      "explanation": "Threshold values should reflect two factors: the severity of the regression and the natural variance of the metric. Format compliance is binary (JSON is valid or it is not) and any drop is a breaking change for consumers of the API. Exact match has natural LLM variance, so a 2-3% drop may be noise rather than a real regression. The threshold is set above the noise floor."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your CTO says: 'We already have unit tests that test the function that calls the LLM. If the function passes its tests, the prompt is working. Why do we need separate prompt CI?'",
+      "question": "What is the correct technical response?",
+      "options": [
+        "A. Agree: if unit tests cover the API call, prompt quality is implicitly tested.",
+        "B. Unit tests verify code logic (did the function call the API with the right parameters?). They cannot test whether the model's output meets quality standards, because the model is not deterministic code. Prompt CI tests actual output quality on real model calls.",
+        "C. Prompt CI is only necessary for large language models; unit tests are sufficient for smaller models.",
+        "D. Unit tests are slower than prompt CI, so prompt CI is simply more efficient."
+      ],
+      "answer": "B",
+      "explanation": "Unit tests mock or stub the LLM call and verify that your code called the API correctly. They do not test what the model actually returns. Prompt CI runs real model calls and scores the outputs. You can pass every unit test while your prompt produces wrong, unsafe, or malformatted outputs. The two test types are complementary, not interchangeable."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your baseline experiment was created 90 days ago against prompt version 1.0.0. You are now on version 2.3.0, which has significantly different behavior. Your CI keeps flagging regressions even on correct PRs.",
+      "question": "What is the root cause and the correct fix?",
+      "options": [
+        "A. The golden set is too old and needs to be replaced with fresh user queries.",
+        "B. The baseline is stale: it reflects prompt v1.0.0 behavior, not v2.3.0. Update the baseline by running the current system against the golden set and tagging the result as the new baseline.",
+        "C. The CI thresholds are too tight for version 2.x; raise them to 10%.",
+        "D. You should run the baseline experiment daily to keep it current automatically."
+      ],
+      "answer": "B",
+      "explanation": "A baseline that reflects old system behavior will produce false regressions when compared to current behavior. The baseline should be updated whenever a significant intentional behavior change is merged to main. The update process: run the harness with the current system, review the scores manually, and if the new scores represent the intended behavior, tag that experiment as the new baseline. Do not update the baseline automatically; it should be a deliberate, reviewed act."
+    }
+  ]
+}

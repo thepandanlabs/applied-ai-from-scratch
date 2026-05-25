@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "01-why-evals-are-the-job",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team just shipped a new system prompt for a legal document summarizer. A week later, users report the summaries are missing key liability clauses. You investigate and find that a prompt change three days ago silently broke clause extraction. No one noticed because the manual testing was done on two sample documents that happened not to have liability clauses.",
+      "question": "Which practice would have caught this regression before it reached users?",
+      "options": [
+        "A. Testing the new prompt manually on five documents before deploying",
+        "B. Having a fixed eval dataset that includes documents with liability clauses, and running it before every deploy",
+        "C. Asking the PM to review the output before shipping",
+        "D. Using a more capable model to reduce the chance of errors"
+      ],
+      "answer": "B",
+      "explanation": "A fixed eval dataset with cases that cover known failure modes (like liability clauses) is the only approach that scales and has memory. Manual testing on a few documents misses edge cases and has no memory of previous runs."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building a RAG-based customer support system. You want to know if your retrieval quality is affecting answer quality. You run evals and get an aggregate score of 0.78. Your manager asks 'is that good?'",
+      "question": "What information do you need to give a meaningful answer to that question?",
+      "options": [
+        "A. A larger dataset so the score is more statistically reliable",
+        "B. The baseline score from the previous version, so you know if 0.78 is better or worse than before",
+        "C. A more sophisticated scorer that would give a more accurate number",
+        "D. User satisfaction ratings to validate the eval score"
+      ],
+      "answer": "B",
+      "explanation": "A score without a baseline is almost meaningless. 0.78 could be a great improvement over 0.62 or a regression from 0.91. The delta matters more than the absolute number."
+    },
+    {
+      "id": "c3",
+      "scenario": "You build a fuzzy string match scorer for a recipe assistant. Your scorer gives 0.6 to this case: expected='Add 2 tablespoons of olive oil', actual='Use extra virgin olive oil, about 2 tablespoons'. A human reviewer says the actual answer is correct and complete.",
+      "question": "What does this case reveal about your scorer?",
+      "options": [
+        "A. The actual answer is wrong because it adds unnecessary information",
+        "B. Fuzzy string match fails for semantically equivalent but lexically different answers",
+        "C. The scorer threshold should be lowered from 0.8 to 0.5",
+        "D. The expected answer needs to be rewritten to be more specific"
+      ],
+      "answer": "B",
+      "explanation": "Fuzzy match compares character sequences, not meaning. 'Extra virgin olive oil, about 2 tablespoons' is semantically equivalent to '2 tablespoons of olive oil' but lexically different enough to score low. This is exactly why LLM-as-judge exists."
+    },
+    {
+      "id": "c4",
+      "scenario": "An engineer proposes the following eval-driven development workflow: (1) change the prompt, (2) write test cases that the new prompt passes, (3) run evals, (4) ship if score is high. You identify a critical flaw.",
+      "question": "What is the flaw in this workflow?",
+      "options": [
+        "A. The engineer should run evals before writing test cases",
+        "B. Test cases written after seeing the new prompt output will be biased toward passing it, missing cases the old prompt handled correctly",
+        "C. The engineer should use a framework instead of manual test cases",
+        "D. Evals should be run in CI, not manually by the engineer"
+      ],
+      "answer": "B",
+      "explanation": "Writing test cases after making a change is confirmation bias by design. The correct order is: write test cases first (from user stories, past failures, edge cases), run the baseline, then make the change. This is the eval-driven development loop."
+    },
+    {
+      "id": "c5",
+      "scenario": "You have a customer service bot that handles refund requests. You run evals monthly on a dataset of 200 cases and get a pass rate of 87%. Last month it was 88%. Your boss flags this as a regression and asks you to roll back.",
+      "question": "What additional analysis would help you decide whether this is a real regression or noise?",
+      "options": [
+        "A. Run the eval on a larger dataset to get a more stable score",
+        "B. Look at which specific cases changed from pass to fail, and whether they cluster around a particular failure mode",
+        "C. Ask the model provider if they updated their model recently",
+        "D. Lower the pass threshold from 0.8 to 0.75 to recover the lost point"
+      ],
+      "answer": "B",
+      "explanation": "A 1% change in aggregate score (87% vs 88%) could easily be noise. What matters is the distribution of failures: are 2-3 specific cases now failing that weren't before? If so, is it a prompt regression, a model update, or a data drift? Looking at the cases is how you find out."
+    },
+    {
+      "id": "c6",
+      "scenario": "You're comparing two prompts (A and B) for a summarization task. Prompt A scores 0.82 on your eval dataset. Prompt B scores 0.79. You're about to ship Prompt A.",
+      "question": "Before shipping, what would make you more confident this is the right decision?",
+      "options": [
+        "A. Run the eval 10 more times and average the scores",
+        "B. Check whether Prompt B outperforms Prompt A on the failure cases from Prompt A's errors",
+        "C. Ask three colleagues which prompt output they prefer on a sample of 5 cases",
+        "D. Use exact match instead of fuzzy match to get a more precise comparison"
+      ],
+      "answer": "B",
+      "explanation": "The aggregate score hides per-case behavior. Prompt A might score higher overall but fail badly on a specific failure mode that Prompt B handles well. Checking whether B handles A's failures (and vice versa) reveals whether the trade-off is acceptable."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your eval harness has been running for three months. You notice the scorer almost always gives scores between 0.82 and 0.94, regardless of how obviously wrong or right the answers are. A clearly hallucinated answer scores 0.87. A perfect answer scores 0.91.",
+      "question": "What is the most likely cause, and what should you do?",
+      "options": [
+        "A. The model has gotten better over three months, so most answers are genuinely good",
+        "B. The scorer is not sensitive to the quality dimension that matters; it needs to be redesigned or replaced",
+        "C. The pass threshold should be raised to 0.93 to better distinguish good from bad answers",
+        "D. The eval dataset needs more difficult questions to increase variance"
+      ],
+      "answer": "B",
+      "explanation": "A scorer that compresses all answers into a narrow band (0.82-0.94) is not measuring quality, it's measuring surface-level similarity. A hallucinated answer scoring 0.87 is a clear sign the scorer is missing the actual failure mode. Redesign the scorer around the specific quality criteria that matter for your task."
+    },
+    {
+      "id": "c8",
+      "scenario": "Two engineers independently score 20 customer support responses as pass/fail. Engineer A passes 14, Engineer B passes 11. They agree on 13 cases (both pass or both fail). They disagree on 7 cases.",
+      "question": "What does this human agreement rate tell you about your automated scorer?",
+      "options": [
+        "A. The eval criteria are too subjective to automate; you should rely on human review only",
+        "B. Your automated scorer should target at least 65% agreement with each human reviewer, since the humans only agree 65% of the time with each other",
+        "C. Engineer A has a lower bar; you should use Engineer B's labels as ground truth",
+        "D. You need a larger dataset before drawing any conclusions about agreement"
+      ],
+      "answer": "B",
+      "explanation": "Human agreement is 13/20 = 65%. This is the ceiling for your automated scorer: if humans only agree 65% of the time, an automated scorer that claims 90% agreement with one reviewer is probably overfitting to that reviewer's idiosyncrasies. Your scorer should match the consensus, not a single reviewer."
+    }
+  ]
+}

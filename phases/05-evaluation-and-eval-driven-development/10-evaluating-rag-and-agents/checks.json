@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "10-evaluating-rag-and-agents",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your RAG system scores 0.94 on end-to-end 'answer quality'. Users report that answers frequently contain incorrect facts. You add faithfulness scoring and find it is 0.58.",
+      "question": "What does this combination tell you, and where should you focus the fix?",
+      "options": [
+        "A. High answer quality and low faithfulness means the retriever is returning irrelevant chunks. Fix the embedding model.",
+        "B. High answer quality means the eval is wrong. Trust the end-to-end score.",
+        "C. Low faithfulness means the generator is not staying grounded in the retrieved context and is hallucinating. Fix the generation step.",
+        "D. The two scores contradict each other, which means the golden set is bad. Rebuild it."
+      ],
+      "answer": "C",
+      "explanation": "High answer relevance means the answers address the right topic. Low faithfulness (0.58) means 42% of answer content is not grounded in the retrieved chunks, indicating the generator is hallucinating. The fix is in the generation step: add stronger grounding instructions, reduce temperature, or add a post-generation grounding check. The retrieval step may be fine."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your RAG system has high faithfulness (0.91) but low context relevance (0.32). Users say answers are confident but consistently wrong.",
+      "question": "What failure mode does this combination represent?",
+      "options": [
+        "A. The generator is hallucinating beyond the retrieved context.",
+        "B. The retriever is returning irrelevant chunks and the generator is faithfully grounded in those wrong chunks: confidently wrong.",
+        "C. The answer relevance metric is not working correctly.",
+        "D. The chunking strategy is producing chunks that are too long."
+      ],
+      "answer": "B",
+      "explanation": "High faithfulness means the generator is staying grounded in the retrieved context. Low context relevance means the retriever is returning chunks that are not relevant to the query. The generator is faithfully answering based on irrelevant information: it is confidently wrong. The fix is in the retrieval step, not the generation step."
+    },
+    {
+      "id": "c3",
+      "scenario": "An agent is supposed to call [search_docs, read_doc, summarize] in that order. The actual trace shows [search_docs, search_docs, read_doc, summarize].",
+      "question": "What do the trajectory metrics look like, and what does the extra call indicate?",
+      "options": [
+        "A. exact_match=0, tool_coverage=1.0, order_score=1.0, extra_calls=1. The agent covered all tools in order but made one redundant search call.",
+        "B. exact_match=0, tool_coverage=0.67, order_score=0.67, extra_calls=1. The agent missed summarize.",
+        "C. exact_match=1, tool_coverage=1.0, order_score=1.0, extra_calls=0. Duplicate calls do not affect the score.",
+        "D. exact_match=0, tool_coverage=1.0, order_score=0.0, extra_calls=1. The order was completely wrong."
+      ],
+      "answer": "A",
+      "explanation": "exact_match=0 because [search, search, read, summarize] != [search, read, summarize]. tool_coverage=1.0 because all three expected tools (search, read, summarize) appear. order_score=1.0 because the LCS of the expected sequence in the actual sequence is 3/3 (search, read, summarize all appear in order, just with an extra search inserted). extra_calls=1 because the actual sequence has 4 calls vs 3 expected."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your agent trace shows 7 tool calls before emitting a final_answer. Your golden set says the correct number of steps is 3 (final_answer at step 3). The termination eval flags this as 'looped'.",
+      "question": "What score does the termination eval assign, and what should you investigate?",
+      "options": [
+        "A. Score 0.0 (never_stopped): the agent never emitted a final_answer.",
+        "B. Score 0.3 (looped): the agent kept calling tools beyond the expected stopping point.",
+        "C. Score 0.5 (too_early): the agent stopped before gathering enough information.",
+        "D. Score 1.0 (correct): the agent eventually stopped, so termination is fine."
+      ],
+      "answer": "B",
+      "explanation": "The termination eval gives a score of 0.3 when the agent emits a final_answer but only after exceeding the expected stopping step. 'Looped' means the agent kept running past the point where it should have stopped. Common causes: missing or weak stopping conditions in the agent prompt, a reasoning step that incorrectly concludes it needs more information, or a tool that returns partial results causing repeated retries."
+    },
+    {
+      "id": "c5",
+      "scenario": "Each tool in your agent (search, read, summarize) has 100% unit test coverage. You run end-to-end evals and find 28% of agent runs fail to produce a correct final answer.",
+      "question": "Why do the unit tests not catch this failure rate?",
+      "options": [
+        "A. Unit tests do not test with real LLM calls; use integration tests instead.",
+        "B. Unit tests verify each tool in isolation with fixed inputs. They cannot test whether the agent calls the right tools in the right order given a real user query. Trajectory and termination evals test the agent's planning behavior.",
+        "C. Unit test coverage of 100% means the tools are correct; the 28% failure rate must be in the golden set.",
+        "D. Unit tests are too slow for agent evaluation; replace them with trajectory evals."
+      ],
+      "answer": "B",
+      "explanation": "Unit tests verify that a specific function returns the correct output for a specific input. They cannot test the agent's decision about which tool to call, when to call it, and when to stop. A tool that works perfectly in isolation can still cause an agent failure if it is called at the wrong time or in the wrong order. Trajectory evals and termination evals cover what unit tests cannot."
+    },
+    {
+      "id": "c6",
+      "scenario": "You compute RAGAS faithfulness on 20 RAG traces and get a mean of 0.88. You manually review 5 randomly sampled traces and find that 3 of them contain clear hallucinations that you would rate as not faithful.",
+      "question": "What does this discrepancy suggest, and what should you do?",
+      "options": [
+        "A. Your manual review is wrong; trust RAGAS with a larger sample size.",
+        "B. RAGAS faithfulness may be miscalibrated for your content domain. Run RAGAS on the 5 manually reviewed traces and compare its scores to your ratings; if it disagrees on more than 2/5, tune the faithfulness prompt for your domain.",
+        "C. A 0.88 mean is good enough; 3 failures in 5 is within acceptable variance.",
+        "D. RAGAS faithfulness requires a minimum of 100 traces to be reliable; run more traces."
+      ],
+      "answer": "B",
+      "explanation": "RAGAS uses an LLM judge internally, which can be miscalibrated for specialized content domains (legal, medical, technical). The correct response is to run RAGAS on your manually labeled cases and compare. If RAGAS disagrees with your human ratings more than 20% of the time, it is not reliable for your domain and you should tune the faithfulness metric prompt or use a custom LLM judge."
+    },
+    {
+      "id": "c7",
+      "scenario": "You need to choose between RAGAS and a custom eval harness for evaluating your agent system that makes 4 tool calls per run.",
+      "question": "What is the correct choice and why?",
+      "options": [
+        "A. RAGAS, because it handles all multi-step system evaluation patterns.",
+        "B. A custom harness for the agent trajectory and termination evals; optionally RAGAS if the agent also includes a RAG step for the faithfulness metric.",
+        "C. Neither: agent evaluation requires a dedicated commercial platform.",
+        "D. RAGAS for speed; build custom only if RAGAS scores seem wrong."
+      ],
+      "answer": "B",
+      "explanation": "RAGAS is purpose-built for RAG pipelines: retrieval, faithfulness, answer relevance. It does not have trajectory or termination evals because those are application-specific. The correct tool sequence for your agent depends on your application's logic, which RAGAS cannot know. Use RAGAS where it fits (the RAG component of a RAG+agent system) and build custom evals for trajectory and termination."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your component evals all look healthy (context relevance 0.88, faithfulness 0.85, answer relevance 0.90) but your end-to-end user satisfaction score is 0.62 after a recent change.",
+      "question": "What type of failure does this pattern indicate, and how do you investigate?",
+      "options": [
+        "A. The user satisfaction metric is unreliable; trust the component scores.",
+        "B. A cross-stage failure: the interaction between stages is producing a problem that no individual component metric captures. Review individual failing cases manually to find the emergent failure.",
+        "C. The golden set used for component evals is out of date; rebuild it from recent user queries.",
+        "D. The component evals need higher thresholds; 0.88 context relevance is too low."
+      ],
+      "answer": "B",
+      "explanation": "When component evals are healthy but end-to-end quality is low, the failure is emergent: it lives in the interaction between components, not within any single component. Common examples: the retriever returns correct chunks but the prompt does not instruct the generator to use them; the generator produces a technically faithful answer that misses what the user actually asked; or a format issue makes a correct answer unreadable. Investigate by manually reviewing the traces where user satisfaction is low, looking for patterns that the component metrics did not flag."
+    }
+  ]
+}

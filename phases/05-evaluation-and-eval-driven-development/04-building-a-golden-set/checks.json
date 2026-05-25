@@ -1,0 +1,108 @@
+{
+  "version": "1.0",
+  "lesson": "04-building-a-golden-set",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You're building a customer support bot for an insurance company. The team pulls 5,000 chat logs and proposes using all of them as the golden set.",
+      "question": "What is the primary reason this approach is flawed?",
+      "options": [
+        "A. 5,000 cases is too large to run efficiently.",
+        "B. Chat logs don't have verified expected outputs, so you don't know which responses are actually correct.",
+        "C. Insurance domain requires synthetic cases only.",
+        "D. Logs should only be used after the system is deployed for 6 months."
+      ],
+      "answer": "B",
+      "explanation": "A golden set requires verified expected outputs. Chat logs contain both good and bad responses. Without human review to confirm what 'correct' looks like, you're testing against a mix of right and wrong answers."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your golden set has 100 cases: 85 normal, 10 edge, 5 adversarial. Your latest model scores 92% pass rate. A week later a customer reports the bot mishandles a known adversarial input.",
+      "question": "What does this outcome suggest about your golden set?",
+      "options": [
+        "A. The model regressed on all 100 cases after the update.",
+        "B. The adversarial cases are underrepresented, so a regression on them barely moves the overall pass rate.",
+        "C. 92% is below the acceptable threshold for production.",
+        "D. Edge cases should be removed to make the metric cleaner."
+      ],
+      "answer": "B",
+      "explanation": "With only 5 adversarial cases out of 100, failing all 5 only moves the pass rate from 92% to 87%. The metric looked fine while a real failure mode was undetected. The fix is to increase adversarial case representation to at least 10% of the set."
+    },
+    {
+      "id": "c3",
+      "scenario": "You ask two domain experts to independently label the same 10 golden cases. They agree on 6 out of 10.",
+      "question": "What should you do before adding more cases to the golden set?",
+      "options": [
+        "A. Discard the 4 disagreements and keep the 6 agreements.",
+        "B. Flip a coin on the 4 disagreements to maintain progress.",
+        "C. Improve the labeling guide: clarify what 'correct' means for the cases where they disagreed.",
+        "D. Switch to a single labeler to eliminate disagreements."
+      ],
+      "answer": "C",
+      "explanation": "60% agreement means the criteria are underspecified. Before labeling more cases, the team must agree on what correctness means for the edge cases causing disagreement. Switching to a single labeler removes the signal that tells you when criteria are unclear."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your team ships a golden set in March. In July the product adds a new 'subscription' feature with its own FAQ, billing behavior, and return policy.",
+      "question": "What is the minimum required action for your golden set?",
+      "options": [
+        "A. Archive the March set and build a completely new one from scratch.",
+        "B. Add at least 2-3 golden cases covering the new subscription feature, covering normal, edge, and adversarial inputs.",
+        "C. No action needed until the first customer complaint about subscriptions.",
+        "D. Increase the total case count to 500 to ensure statistical significance."
+      ],
+      "answer": "B",
+      "explanation": "The golden set must cover the current system's failure modes. A new feature introduces new failure modes not represented in the March set. Adding cases for the new feature is the minimum viable action. You don't need to rebuild from scratch."
+    },
+    {
+      "id": "c5",
+      "scenario": "You're building an AI code reviewer before launch. You have no production data. What is the correct sourcing strategy?",
+      "options": [
+        "A. Wait until the system is live for 30 days before building any golden set.",
+        "B. Generate synthetic cases from your specification: code review criteria, known bug patterns, and style rules you want enforced.",
+        "C. Use cases from a competitor's public eval benchmark.",
+        "D. Ask the LLM to generate its own test cases and expected outputs."
+      ],
+      "answer": "B",
+      "explanation": "Synthetic cases from your specification are the correct pre-launch sourcing strategy. They cover your intent before you have production data. Competitor benchmarks may not match your system's purpose, and having the LLM generate its own test cases is circular (it will generate cases it's already good at)."
+    },
+    {
+      "id": "c6",
+      "scenario": "A teammate proposes tracking 'overall accuracy: 91%' as the primary eval metric on the golden set dashboard.",
+      "question": "What addition to the reporting would make this metric actionable?",
+      "options": [
+        "A. Report accuracy as a percentage with two decimal places for precision.",
+        "B. Break down pass rate by category and difficulty so regressions on specific failure modes are visible.",
+        "C. Track the metric weekly instead of per-deploy.",
+        "D. Add a second metric: response length average."
+      ],
+      "answer": "B",
+      "explanation": "Overall accuracy hides regressions. If adversarial cases drop from 80% to 40% but normal cases hold steady, the overall number barely moves. Segmenting by category and difficulty makes regressions visible before they reach customers."
+    },
+    {
+      "id": "c7",
+      "scenario": "You're running a label consistency check. You pick 10 cases and ask a second reviewer to approve the expected output for each. They reject 4 cases, saying the expected outputs are 'too verbose and don't match what the policy actually says.'",
+      "question": "What is the correct interpretation of this result?",
+      "options": [
+        "A. The second reviewer is wrong; the original labeler is the domain expert.",
+        "B. The expected outputs may not actually represent correct behavior, and you should update them based on the policy document.",
+        "C. Verbose expected outputs are always acceptable because they are more complete.",
+        "D. Discard all 10 cases and start the labeling process over with a new labeler."
+      ],
+      "answer": "B",
+      "explanation": "Label consistency checks are designed to catch exactly this: expected outputs that don't accurately represent correct behavior. A 60% consistency rate means the golden set has quality problems. Update the flagged expected outputs to match the actual policy, then re-run consistency on a fresh sample."
+    },
+    {
+      "id": "c8",
+      "scenario": "You load your golden set, run validation, and get an 88% pass rate. You want to investigate failures. Which filter operation gives you the most actionable starting point?",
+      "options": [
+        "A. Filter to normal difficulty cases to see baseline performance.",
+        "B. Filter to adversarial and edge cases that failed, then review their notes field for the failure mode each case was designed to catch.",
+        "C. Sample 5 random failed cases and review them manually.",
+        "D. Filter to the category with the most total cases."
+      ],
+      "answer": "B",
+      "explanation": "Adversarial and edge cases that failed tell you exactly which known failure modes regressed, because the notes field records why each case was added. This is the most direct path to understanding what broke and why. Random sampling may surface easy cases rather than the riskiest failures."
+    }
+  ]
+}

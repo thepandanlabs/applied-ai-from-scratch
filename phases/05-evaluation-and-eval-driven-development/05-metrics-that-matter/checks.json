@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-metrics-that-matter",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team ships a RAG-based product assistant. Overall average score is 4.1/5. One week later, a customer reports the bot cited a discontinued product as still available. You investigate and find the score on 'product availability' questions was 2.8/5.",
+      "question": "What was the root cause of missing this regression before it reached the customer?",
+      "options": [
+        "A. The LLM judge was not calibrated.",
+        "B. The metric was not segmented by question category, so the 2.8 score on product availability was hidden inside the 4.1 overall average.",
+        "C. The threshold was set too high.",
+        "D. The RAG retrieval system was not evaluated at all."
+      ],
+      "answer": "B",
+      "explanation": "An overall average metric hides category-level regressions. If product availability is 10% of your test cases and scores 2.8, it barely moves the overall 4.1. Segmenting by category would have surfaced the drop immediately."
+    },
+    {
+      "id": "c2",
+      "scenario": "You implement a fuzzy_match scorer using SequenceMatcher. You test it on two cases: (1) expected='30 days', actual='30 days return window', and (2) expected='No, only one promo code', actual='Yes, combine promo codes freely'. Both return fuzzy_match scores above 0.5.",
+      "question": "What does this outcome reveal about fuzzy_match as a metric?",
+      "options": [
+        "A. SequenceMatcher is broken and should be replaced with BERT embeddings.",
+        "B. Fuzzy match can give high scores for semantically opposite answers if they share enough character sequences, so it should not be used as the only metric for correctness.",
+        "C. Both cases are actually correct because the expected output was too strict.",
+        "D. Fuzzy match is only valid for exact string comparisons."
+      ],
+      "answer": "B",
+      "explanation": "Fuzzy match measures string similarity, not semantic correctness. Two strings can be character-similar while being semantically opposite (e.g., 'No, only one' vs 'Yes, combine'). Fuzzy match is useful as a supporting metric, but correctness for open-ended answers requires an LLM judge."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your classification system outputs JSON with keys 'category', 'intent', and 'confidence'. You add a format_compliance check requiring those three keys. In production, the model occasionally outputs 'category' and 'intent' but omits 'confidence'.",
+      "question": "What score does format_compliance return for an output that contains 'category' and 'intent' but not 'confidence'?",
+      "options": [
+        "A. 0.0, because the output is not fully compliant.",
+        "B. 0.67, because 2 of 3 required keys are present.",
+        "C. 1.0, because the output is valid JSON.",
+        "D. 0.5, because at least half the keys are present."
+      ],
+      "answer": "B",
+      "explanation": "The format_compliance function returns (keys_present / total_required). With 2 of 3 keys present, the score is 0.67. This partial-credit design lets you distinguish 'completely broken' (0.0) from 'usually works but sometimes drops a field' (0.67), which drives different remediation actions."
+    },
+    {
+      "id": "c4",
+      "scenario": "A data scientist proposes tracking the average response length as the primary metric, arguing that longer answers mean the model is more thorough.",
+      "question": "Why is response length a vanity metric for most AI systems?",
+      "options": [
+        "A. Short responses are always better than long ones.",
+        "B. Response length does not correlate with correctness. A wrong answer can be very long, and a correct answer can be very short.",
+        "C. Response length is too difficult to compute automatically.",
+        "D. It is a valid metric but should only be used for classification tasks."
+      ],
+      "answer": "B",
+      "explanation": "Response length measures verbosity, not quality. LLMs are prone to verbosity bias: they can produce long, confident-sounding, incorrect answers. Length as a proxy for thoroughness is a vanity metric because it doesn't tell you whether the answer is right."
+    },
+    {
+      "id": "c5",
+      "scenario": "You run your metric suite before and after a prompt change. Exact match: 0.72 -> 0.74. Fuzzy match: 0.81 -> 0.79. You examine segmented results: normal-case fuzzy match rose from 0.83 to 0.88, but adversarial-case fuzzy match dropped from 0.61 to 0.44.",
+      "question": "Should you ship the prompt change?",
+      "options": [
+        "A. Yes. Overall exact match improved.",
+        "B. No. The adversarial case regression is significant and likely represents a real degradation on the hardest inputs.",
+        "C. Yes. Fuzzy match overall is only slightly down and within noise.",
+        "D. Not enough information to decide without running RAGAS faithfulness."
+      ],
+      "answer": "B",
+      "explanation": "A drop from 0.61 to 0.44 on adversarial cases is a 17-point regression on the failure modes your team deliberately identified as important. Easy cases improving while hard cases degrade is a classic sign of a prompt that over-fits to common inputs. This is exactly why segmented metrics exist."
+    },
+    {
+      "id": "c6",
+      "scenario": "You want to evaluate a RAG system for faithfulness: does the answer stay grounded in the retrieved documents? You're choosing between using RAGAS faithfulness and writing a custom fuzzy_match scorer comparing answer to retrieved context.",
+      "question": "Why is RAGAS faithfulness better than fuzzy_match for this measurement?",
+      "options": [
+        "A. RAGAS is faster to compute.",
+        "B. RAGAS faithfulness uses an LLM to check if each claim in the answer can be attributed to the retrieved context, which fuzzy_match cannot do because it measures character similarity, not semantic entailment.",
+        "C. Fuzzy_match requires more labeled data than RAGAS.",
+        "D. RAGAS is more accurate because it uses a larger language model internally."
+      ],
+      "answer": "B",
+      "explanation": "Faithfulness requires checking semantic entailment: can this claim be derived from this document? Fuzzy match checks character overlap. An answer can have low character overlap with the source document but still be faithful (if it paraphrases), and vice versa. RAGAS faithfulness uses an LLM to check claim-level attribution."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your team proposes the following actionability test for your primary metric: 'If average score drops below 4.0, we will investigate.' Two weeks later, average score is 3.9 and the investigation reveals no specific failure mode.",
+      "question": "What is wrong with how this actionability test is formulated?",
+      "options": [
+        "A. The threshold of 4.0 is too high.",
+        "B. The metric is not segmented, so 'investigate' has no specific direction. A better form is: 'If [metric] in [segment] drops below [X], I will investigate [specific failure mode].'",
+        "C. Actionability tests are only useful for safety metrics.",
+        "D. The investigation should have been automated, not manual."
+      ],
+      "answer": "B",
+      "explanation": "An actionability test needs a specific segment and a specific failure mode to investigate. 'Average score drops below 4.0' tells you something is wrong but not where to look. 'Faithfulness on financial-documents drops below 0.80, investigate retrieval quality for that document set' points directly to the problem."
+    },
+    {
+      "id": "c8",
+      "scenario": "You want to verify that your fuzzy_match metric is actually measuring something meaningful. You deliberately introduce a regression: you replace the model with one that returns 'I don't know' for every input. You run the metric suite and fuzzy_match mean is 0.21.",
+      "question": "What does this result confirm?",
+      "options": [
+        "A. The metric is broken because it should return 0.0 for a completely wrong model.",
+        "B. The metric passes the sensitivity test: it dropped significantly when a known regression was introduced, which confirms it responds to real quality changes.",
+        "C. Fuzzy_match is too strict for production use.",
+        "D. The baseline model was already performing near random chance."
+      ],
+      "answer": "B",
+      "explanation": "The sensitivity test works by deliberately breaking the system and verifying the metric drops. A score of 0.21 on a model that always says 'I don't know' confirms the metric detects real failures. It's not 0.0 because 'I don't know' shares some character sequences with some expected outputs, which is expected behavior for SequenceMatcher."
+    }
+  ]
+}

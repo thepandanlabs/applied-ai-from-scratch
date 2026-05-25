@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "06-llm-as-judge",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You deploy an LLM judge to evaluate your support bot. After two weeks, you review 50 judgments and find that every output scored between 3.5 and 4.5. A clearly wrong answer ('Yes, you can stack promo codes!') scored 3.8.",
+      "question": "What is the name of this failure mode and what is the most likely cause?",
+      "options": [
+        "A. Position bias. The judge is putting the answer first in the prompt.",
+        "B. Score compression. The rubric anchors are too vague, so the judge doesn't have clear signal for when to use 1, 2, or 5.",
+        "C. Self-preference bias. The judge model was trained on similar outputs.",
+        "D. Calibration drift. The model version changed without re-running calibration."
+      ],
+      "answer": "B",
+      "explanation": "Score compression happens when rubric anchors are vague. If the judge doesn't have a concrete description of what a '1' or '5' looks like, it defaults to the middle of the scale. Fix: add concrete examples in the rubric, e.g., 'Score 1 = states the opposite of policy or hallucinates a number.'"
+    },
+    {
+      "id": "c2",
+      "scenario": "You run calibration: your judge has a Pearson correlation of 0.45 with human scores. A colleague says 'at least it's better than random (0.0), let's use it.'",
+      "question": "Is the colleague right? What is the correct decision?",
+      "options": [
+        "A. Yes, any positive correlation is sufficient for production use.",
+        "B. No. A 0.45 correlation is too low for the judge to be used as a primary metric. Fix the rubric before deploying.",
+        "C. Yes, but only use the judge for non-adversarial cases.",
+        "D. No. A Pearson correlation below 0.9 is never acceptable for any eval use case."
+      ],
+      "answer": "B",
+      "explanation": "The production threshold is Pearson r >= 0.7. At 0.45, the judge's scores are weakly related to human judgment. It might catch some obvious failures but will miss subtle ones and create false confidence. First step: print the score distribution and find cases where human and judge disagreed by 2 or more points."
+    },
+    {
+      "id": "c3",
+      "scenario": "You test your judge for verbosity bias. Short correct answer scores 4.1 on average. Long verbose correct answer scores 4.7 on average. The gap is 0.6.",
+      "question": "What does this mean and how do you fix it?",
+      "options": [
+        "A. The gap is within normal variance. No fix needed.",
+        "B. Verbosity bias is confirmed (gap > 0.5). Add an explicit conciseness criterion with a concrete rubric anchor that penalizes unnecessary length.",
+        "C. Long answers are objectively better, so the higher score is correct.",
+        "D. The fix is to use a different LLM as the judge model."
+      ],
+      "answer": "B",
+      "explanation": "A gap of 0.6 (above the 0.5 threshold) means the judge rewards verbosity even when both answers are equally correct. Fix: add conciseness as an explicit scoring criterion with a concrete anchor like 'Score 5 requires conciseness. A correct but padded answer is at most a 4.'"
+    },
+    {
+      "id": "c4",
+      "scenario": "You run a pairwise eval where the judge compares Answer A vs Answer B for 10 cases. You then swap the order (B first) and re-run. In 4 out of 10 cases, the winner changed when you swapped the order.",
+      "question": "Is position bias present, and what is the correct fix?",
+      "options": [
+        "A. No. 4 out of 10 is within acceptable noise for pairwise evals.",
+        "B. Yes. Consistency rate is 60% (below 80% threshold). Fix: always run both orders and take the majority vote.",
+        "C. Yes. Fix: increase max_tokens so the judge has more space to reason.",
+        "D. No. Position bias only applies to models with fewer than 7B parameters."
+      ],
+      "answer": "B",
+      "explanation": "60% consistency (below the 80% threshold) confirms position bias. The judge is partially deciding based on order, not quality. The fix is to always run both orderings (A vs B, then B vs A) and use the consistent result or majority vote. Never rely on a single ordering for pairwise evaluation."
+    },
+    {
+      "id": "c5",
+      "scenario": "You're evaluating a Claude-powered customer support bot. Your team proposes using Claude as the judge for the same outputs.",
+      "question": "What risk does this introduce and how do you mitigate it?",
+      "options": [
+        "A. No risk. Claude is the best available model and will give the most accurate scores.",
+        "B. Self-preference bias: Claude may score its own outputs higher than an independent judge would. Mitigate by using a different model (e.g., GPT-4) as the judge, or by running calibration against human scores to detect the bias.",
+        "C. The only risk is cost. Claude is more expensive than other judge models.",
+        "D. Claude cannot evaluate its own outputs because it doesn't have memory of what it previously generated."
+      ],
+      "answer": "B",
+      "explanation": "Self-preference bias means a model tends to rate its own outputs higher than a human or independent model would. Using the same model as both generator and judge can systematically inflate scores. The mitigation is either to use a different model as judge or to run calibration against human labels, which will detect the inflation."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your judge prompt produces free-text output like: 'I would give this answer a 4 out of 5 because it correctly identifies the return window, though it omits the receipt requirement.' You're running evals on 500 cases per day.",
+      "question": "Why is free-text judge output a problem at this scale?",
+      "options": [
+        "A. Free-text output is not a problem. You can read 500 paragraphs per day.",
+        "B. Free-text output cannot be reliably parsed into numeric scores for tracking and alerting. You need structured JSON output to aggregate scores, compute statistics, and trigger alerts.",
+        "C. Free-text output is slower to generate, increasing latency.",
+        "D. Free-text output is not a problem if you use regex to extract numbers."
+      ],
+      "answer": "B",
+      "explanation": "At 500 cases/day, you need to aggregate scores into statistics (mean, pass rate, segmented breakdown) and compare across experiment runs. Free-text output requires fragile regex parsing that breaks on format variations. Requiring JSON output with a fixed schema makes the judge output programmatically reliable."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your team updates from Claude claude-sonnet-4-5 to Claude claude-sonnet-4-6 as the judge model. Calibration was last run 6 months ago on claude-sonnet-4-5.",
+      "question": "What should happen immediately after the model version upgrade?",
+      "options": [
+        "A. Nothing. The judge prompt didn't change, so calibration is still valid.",
+        "B. Re-run calibration on the same holdout set immediately. Model behavior can change between versions, which may shift scoring distribution without any prompt changes.",
+        "C. Update the holdout set with 20 new cases before re-running calibration.",
+        "D. Increase the holdout set to 100 cases to account for model variance."
+      ],
+      "answer": "B",
+      "explanation": "Model behavior changes between versions. A rubric that produced a 0.82 Pearson correlation on claude-sonnet-4-5 might produce 0.65 on claude-sonnet-4-6 if the new model interprets conciseness differently or applies stricter factual standards. Re-running calibration on the same holdout set (same cases, new model) detects these shifts immediately."
+    },
+    {
+      "id": "c8",
+      "scenario": "You have a judge calibrated for customer support Q&A (Pearson r = 0.81). Your company launches a new AI code review tool and the team proposes using the same judge prompt.",
+      "question": "Is this appropriate? What should you do?",
+      "options": [
+        "A. Yes. A high Pearson correlation means the judge is domain-agnostic.",
+        "B. No. The rubric anchors are specific to Q&A quality (factual accuracy, policy compliance). Code review requires different criteria (correctness of code suggestions, security awareness, style). Build and calibrate a separate judge for the new domain.",
+        "C. Yes, but reduce the score scale from 1-5 to 1-3 for code review.",
+        "D. No, but you can reuse the judge if you add 'code review' to the system prompt."
+      ],
+      "answer": "B",
+      "explanation": "Calibration is domain-specific. A judge calibrated on customer support Q&A has rubric anchors tied to customer support quality criteria. Code review quality (correct syntax, security, performance) requires completely different anchors and a different holdout set with code-review-specific human labels. Reusing the Q&A judge for code review would produce uncalibrated, unreliable scores."
+    }
+  ]
+}

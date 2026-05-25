@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "08-eval-harnesses",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team has a set of scorers that work well. You run them in a Python script using a for loop, print the results to the terminal, and discard them. A week later, you change the prompt and want to see if quality improved.",
+      "question": "What is the core problem this workflow creates?",
+      "options": [
+        "A. The scorers are not deterministic, so results will differ each time.",
+        "B. There is no results store, so the previous run's scores are gone and comparison is impossible.",
+        "C. Python for loops are too slow for production eval workloads.",
+        "D. You need a vector database to store eval results properly."
+      ],
+      "answer": "B",
+      "explanation": "Without a results store (even a simple JSON file), previous experiment results are lost. A harness without persistent storage cannot support comparison, regression detection, or experiment history. The harness pattern exists specifically to fix this: every run is named and written to disk before results are used."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building an eval harness scorer for a system that generates structured JSON outputs. Your scorer must verify that the output is valid JSON and contains a required 'summary' field.",
+      "question": "Which scorer interface is correct?",
+      "options": [
+        "A. def my_scorer(input_text: str, expected_json: str) -> bool",
+        "B. def my_scorer(case: dict, actual: str) -> float",
+        "C. def my_scorer(actual: str) -> dict",
+        "D. def my_scorer(case: dict, actual: str, model: str) -> float"
+      ],
+      "answer": "B",
+      "explanation": "The standard scorer interface takes (case, actual) and returns a float in [0.0, 1.0]. 'case' is the full golden set item (which may contain expected, input, and any metadata). 'actual' is the system's output. Returning a float (not bool) allows partial credit. The model is not a scorer parameter."
+    },
+    {
+      "id": "c3",
+      "scenario": "You run your eval harness baseline experiment. Two weeks later you re-run it with identical code and the same golden set. The exact_match score is 0.800 the first time and 0.820 the second time.",
+      "question": "What does this discrepancy most likely indicate?",
+      "options": [
+        "A. Your golden set has incorrect expected answers that need to be updated.",
+        "B. The harness has a bug in how it loads the dataset.",
+        "C. The system under test is non-deterministic (temperature > 0), producing different outputs each run.",
+        "D. exact_match is unreliable and should be replaced with fuzzy_match."
+      ],
+      "answer": "C",
+      "explanation": "If you run the same code on the same dataset twice and get different scores, the system under test is non-deterministic. The most common cause is temperature > 0 in the LLM call. Baselines must be run with deterministic settings (temperature=0 or a fixed seed) to be trustworthy. Non-deterministic baselines make comparisons meaningless."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your comparison report shows: exact_match delta = -0.020, fuzzy_match delta = -0.050, format_compliance delta = -0.200. Your regression threshold is set at -0.03.",
+      "question": "Which metrics trigger a regression flag, and what is the right action?",
+      "options": [
+        "A. All three metrics flag as regressions; the new prompt must be reverted.",
+        "B. fuzzy_match and format_compliance flag as regressions; investigate before shipping.",
+        "C. Only format_compliance flags; the other changes are within acceptable noise.",
+        "D. None flag because -0.200 means format_compliance improved by 200%."
+      ],
+      "answer": "B",
+      "explanation": "A delta of -0.050 on fuzzy_match exceeds the -0.03 threshold. A delta of -0.200 on format_compliance far exceeds it. The exact_match delta of -0.020 is within threshold and does not flag. The format_compliance regression is the most severe and likely indicates the new prompt stopped producing valid JSON. Investigate both flagged metrics before shipping."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your full golden set has 500 cases. Running the harness takes 45 minutes because each case makes an LLM API call. You want eval CI to complete in under 10 minutes on every PR.",
+      "question": "What is the best approach that does not sacrifice coverage of your most important cases?",
+      "options": [
+        "A. Reduce the model from claude-3-5-sonnet to claude-3-haiku to cut API latency by 50%.",
+        "B. Create a 20-30 case smoke set for PR checks; run the full 500-case set only on merge to main.",
+        "C. Run the harness only when the prompt file changes, not on every PR.",
+        "D. Increase the API timeout so runs complete without failing."
+      ],
+      "answer": "B",
+      "explanation": "The smoke set pattern maintains two datasets: a small set (20-30 high-value cases) for fast PR feedback and the full set for merge gates. The smoke set should cover your most regression-prone cases. This gives fast CI without sacrificing coverage on your most important inputs. Switching models changes what you're testing and is not the right fix."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your company's security policy prohibits sending model outputs to any third-party service. You need to run evals with team-visible history and a comparison UI.",
+      "question": "What is the most appropriate tooling choice?",
+      "options": [
+        "A. Braintrust, using its data encryption feature.",
+        "B. LangSmith, since it is owned by a large company and therefore compliant.",
+        "C. Arize Phoenix deployed in your own infrastructure, or a homegrown harness with shared storage.",
+        "D. Skip the comparison UI and use print statements in your CI logs."
+      ],
+      "answer": "C",
+      "explanation": "Arize Phoenix is open-source and can be self-hosted inside your VPC, meaning model outputs never leave your infrastructure. A homegrown harness writing to shared storage (S3, internal database) is the other option. Braintrust and LangSmith are cloud SaaS products that receive your data on their servers, which violates the constraint."
+    },
+    {
+      "id": "c7",
+      "scenario": "You add a new scorer called 'citation_accuracy' to your harness after running the baseline experiment. When you compare the baseline to the new experiment, the comparison report shows 'a_mean: 0.0000' for citation_accuracy.",
+      "question": "What is the correct explanation for this behavior?",
+      "options": [
+        "A. The citation_accuracy scorer has a bug and is returning 0.0 for all cases.",
+        "B. The baseline experiment file predates citation_accuracy and has no stored scores for it; the harness defaults to 0 when the metric is missing.",
+        "C. The new experiment has a scoring error that set all citation_accuracy values to 0.",
+        "D. You must delete and re-run the baseline experiment with the new scorer before comparing."
+      ],
+      "answer": "B",
+      "explanation": "The baseline experiment was run before citation_accuracy was added, so its stored JSON has no scores for that metric. When the comparison engine looks up citation_accuracy in the baseline, it finds nothing and defaults to 0. This is expected behavior. The correct fix depends on your needs: you can re-run the baseline with all scorers, or note in your report that citation_accuracy has no baseline and only track it going forward."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are choosing between Braintrust and LangSmith for your eval platform. Your team built a RAG pipeline with LangChain and you already use LangSmith for tracing production requests.",
+      "question": "Which platform is the better choice and why?",
+      "options": [
+        "A. Braintrust, because its comparison UI is better and you should switch your tracing too.",
+        "B. LangSmith, because you already have tracing there and can correlate traces with eval results in one tool.",
+        "C. Build your own harness, because third-party platforms introduce vendor lock-in.",
+        "D. Arize Phoenix, because it is free and open-source."
+      ],
+      "answer": "B",
+      "explanation": "When you already use LangSmith for tracing, adding evals there means you can correlate a failing eval case directly to the production trace that produced it. This correlation is the main advantage of keeping tracing and evals in one tool. Switching to Braintrust would mean maintaining two platforms, losing the trace-to-eval link."
+    }
+  ]
+}

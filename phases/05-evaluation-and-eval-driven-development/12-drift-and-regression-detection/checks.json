@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "12-drift-and-regression-detection",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your AI assistant's eval scores have been stable at 0.88 for 6 weeks. This week they dropped to 0.81. You made no changes to prompts or code. Your model provider sent an email saying they updated their base model.",
+      "question": "What type of drift is this, and what is your first diagnostic step?",
+      "options": [
+        "A. Input drift. Check if user query volume increased this week.",
+        "B. Output drift. Pin the old model version ID and re-run your golden set to confirm the provider change caused the drop.",
+        "C. Concept drift. Review whether your FAQ content changed this week.",
+        "D. Regression. Run a diff on your last 5 git commits."
+      ],
+      "answer": "B",
+      "explanation": "When model behavior changes without any code change, it's output drift. The diagnostic is to isolate the variable: pin the dated old model version and run the golden set. If the old version passes and the new version doesn't, you've confirmed the provider change is the cause."
+    },
+    {
+      "id": "c2",
+      "scenario": "You set up a 7-day rolling mean drift detector with threshold=0.05. A production incident post-mortem shows the score dropped 8% over 12 days before your detector fired. The drop was gradual: 0.5% per day.",
+      "question": "Why did the detector take so long to fire, and how would you reconfigure it to detect this faster?",
+      "options": [
+        "A. The detector was broken. A drop of 8% should always fire within 2 days.",
+        "B. A 7-day window means a gradual 0.5%/day drop only becomes visible in the window after most of the damage is done. Lower the threshold to 0.03 or use a shorter window.",
+        "C. The score log had missing data days, which diluted the rolling mean.",
+        "D. Increase the window to 14 days to smooth noise and detect the trend earlier."
+      ],
+      "answer": "B",
+      "explanation": "A 7-day rolling mean window means you compare the last 7 days to the previous 7 days. With a 0.5%/day drop, after 7 days the window mean is about 1.75% below the previous window (not yet at the 5% threshold). After 10+ days the accumulated drop becomes visible. Lowering the threshold to 0.03 or using a 3-day window would have detected this sooner, at the cost of more false alarms."
+    },
+    {
+      "id": "c3",
+      "scenario": "You run the specificity test on your drift detector: 14 days of normal noise (gaussian with std=0.015). The detector fires and reports drift_detected=True. Your threshold is 0.05.",
+      "question": "What is the most likely explanation?",
+      "options": [
+        "A. The detector is working correctly -- std=0.015 noise is sufficient to trigger a 5% threshold.",
+        "B. Your noise parameters (std=0.015) can produce a 7-day window variance large enough to exceed the threshold by chance. Lower the threshold or increase test repetitions.",
+        "C. The rolling mean computation has a bug. Check the window boundary indexing.",
+        "D. 14 days is too few data points to run a specificity test."
+      ],
+      "answer": "C",
+      "explanation": "With std=0.015 and threshold=0.05, the probability of a false alarm on any given day is very low. If the test fires, the most likely explanation is a boundary condition bug in the rolling mean computation (off-by-one in the window index). Check that window means are computed over exactly `window` days and that the comparison is between non-overlapping windows."
+    },
+    {
+      "id": "c4",
+      "scenario": "You promoted prompt-v4 to production. Your RegressionDetector comparison shows: faithfulness regressed from 0.91 to 0.87 (delta=-0.04, threshold=0.03), but answer_relevance improved from 0.85 to 0.91.",
+      "question": "What should you do?",
+      "options": [
+        "A. Ship prompt-v4 because the overall quality improved when you average both metrics.",
+        "B. Block the deploy. A faithfulness regression exceeds the threshold. Investigate whether the improvement in relevance can be preserved while fixing faithfulness.",
+        "C. Raise the regression threshold to 0.05 so prompt-v4 passes.",
+        "D. Ship with a feature flag affecting 5% of users to monitor in production."
+      ],
+      "answer": "B",
+      "explanation": "Regression detection is not about averages -- it's about individual metric contracts. Faithfulness at 0.87 is below the 0.03 threshold delta. The improvement in relevance doesn't cancel the regression. Block the deploy, identify what in prompt-v4 caused the faithfulness drop, and fix it before shipping."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your team uses a version string 'gpt-4o' (no date pinned) in your model configuration. Six months later, scores are mysteriously lower than they were at launch.",
+      "question": "Why is the unpinned model version a problem for regression detection, and what is the fix?",
+      "options": [
+        "A. Unpinned versions are fine -- providers guarantee backwards compatibility.",
+        "B. Without a pinned version, you can't know whether a score drop is from your code or a provider model update. Pin to a dated version ID and log the model version with every eval result.",
+        "C. You should switch to an open-source model to avoid this problem entirely.",
+        "D. Version pinning only matters for major version changes, not minor updates."
+      ],
+      "answer": "B",
+      "explanation": "Without version pinning, you can't bisect score drops. The model changes silently under you, and your eval history becomes ambiguous: was that drop from your prompt change or the model update two days earlier? Pin to dated model IDs (e.g., gpt-4o-2024-11-20) and log the model version in every eval entry."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your product launched in English for US users. You're now launching in Spanish for Latin American users. The same AI feature is used, but eval scores for Spanish traffic are 0.15 lower than English traffic.",
+      "question": "What type of drift is this, and how do you handle it?",
+      "options": [
+        "A. Output drift caused by the model performing worse in Spanish. Switch to a Spanish-specialized model.",
+        "B. Input drift: a new user population is asking different-style questions in a different language. Build a Spanish golden set, run evals against it, and set separate monitoring thresholds for each language segment.",
+        "C. Concept drift: Spanish users have different expectations of what a correct answer is.",
+        "D. Regression: the Spanish launch introduced a bug in the prompt that affects all users."
+      ],
+      "answer": "B",
+      "explanation": "Launching in a new language introduces a new input distribution (new user type, different query patterns, different language). This is input drift. The fix is to build a Spanish golden set that covers the new query types, run evals against it separately, and monitor the two segments independently. A single aggregate score would mask the language-specific quality gap."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are giving a presentation to your engineering director. They ask: 'Our support ticket volume is low. Doesn't that mean our AI quality is fine? Why do we need drift detection?'",
+      "question": "What is the strongest argument for drift detection that directly addresses this question?",
+      "options": [
+        "A. Support tickets are expensive to process, so it's cheaper to detect drift before they arrive.",
+        "B. Support tickets lag quality drops by days or weeks, capture only users who complain (not users who churn), and become visible only after the damage to user trust is already done.",
+        "C. Support ticket volume is correlated with user volume, not quality.",
+        "D. Drift detection helps you optimize for future quality improvements, not just maintain current quality."
+      ],
+      "answer": "B",
+      "explanation": "Support tickets are a severely lagged and biased signal. Users who get a bad answer are more likely to silently churn or stop using the feature than to file a ticket. A 10% quality drop can cause significant churn for weeks before support tickets reflect it. Drift detection catches the drop within days, before the user relationship damage accumulates."
+    }
+  ]
+}

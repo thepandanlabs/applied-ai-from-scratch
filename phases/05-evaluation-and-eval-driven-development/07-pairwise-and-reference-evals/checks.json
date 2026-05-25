@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "07-pairwise-and-reference-evals",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You ran pointwise evals on prompt v1 and prompt v2 on different days. V1 scored 3.6/5 and v2 scored 3.8/5. Your team wants to ship v2.",
+      "question": "What is the main problem with concluding v2 is better from these scores?",
+      "options": [
+        "A. The scores should be normalized to a 10-point scale before comparing.",
+        "B. The 0.2-point difference may fall within judge variance between the two separate evaluation runs.",
+        "C. Pointwise scores always underestimate quality, so both scores are too low.",
+        "D. You need at least 1000 cases before pointwise scores are valid."
+      ],
+      "answer": "B",
+      "explanation": "Pointwise scores from different runs are not anchored to each other. Judge variance, temperature, and prompt wording shifts can produce 0.1-0.3 point differences that have nothing to do with actual quality. Pairwise puts both outputs in the same call, canceling out this variance."
+    },
+    {
+      "id": "c2",
+      "scenario": "You run a pairwise eval on 40 cases comparing System A vs System B. System A wins 24 cases, B wins 12, and 4 are ties.",
+      "question": "What is the preference rate for System A?",
+      "options": [
+        "A. 60% (24 out of 40 total cases)",
+        "B. 67% (24 out of 36 decisive cases, excluding ties)",
+        "C. 53% (24 out of 40, then adjusted for ties)",
+        "D. 80% (A won more than 3x as many cases as B)"
+      ],
+      "answer": "B",
+      "explanation": "Preference rate excludes ties from the denominator. You compute wins_A / (wins_A + wins_B) = 24 / (24 + 12) = 24/36 = 67%. Ties indicate cases where systems are equivalent and should not count against either side."
+    },
+    {
+      "id": "c3",
+      "scenario": "You run 50 pairwise comparisons. You always put the new system's output as 'Response A' in the judge prompt. After analysis, you notice System A wins 72% of cases.",
+      "question": "What should you investigate before trusting this result?",
+      "options": [
+        "A. Whether your golden set has enough hard cases.",
+        "B. Whether position bias is inflating A's win rate, since A is always listed first.",
+        "C. Whether 50 cases is a large enough sample size.",
+        "D. Whether the judge model is the correct choice for your domain."
+      ],
+      "answer": "B",
+      "explanation": "LLM judges have a documented tendency to favor whichever output appears first. Since you always put the new system as 'A' (first), a 72% win rate may be inflated by position bias rather than genuine quality. Run each comparison in both orders and check the flip rate."
+    },
+    {
+      "id": "c4",
+      "scenario": "After implementing position-bias mitigation, you find your pairwise eval has a 45% flip rate across 60 cases.",
+      "question": "What does a 45% flip rate indicate, and what should you do?",
+      "options": [
+        "A. The systems are very similar in quality; you should ship either one.",
+        "B. The judge prompt has underspecified criteria, making results unreliable; revise the criteria.",
+        "C. Your golden set is too small; run the same eval with 200 cases.",
+        "D. The LLM judge is broken; switch to a different model."
+      ],
+      "answer": "B",
+      "explanation": "A flip rate above 30% means the judge is choosing based on position rather than quality. The root cause is usually underspecified criteria: the judge cannot tell which output is genuinely better, so order determines the winner. Add more specific evaluation criteria (accuracy, completeness, format, tone) to your judge prompt."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your BLEU approximation score for an output compared to a reference is 0.08. The difflib ratio for the same pair is 0.61.",
+      "question": "What does this combination most likely indicate about the output?",
+      "options": [
+        "A. The output is low quality and should be discarded.",
+        "B. The output uses different words to express similar content: good semantic overlap, low verbatim word-sequence match.",
+        "C. The output is too short compared to the reference.",
+        "D. The difflib score is incorrect and should be recalculated."
+      ],
+      "answer": "B",
+      "explanation": "BLEU measures n-gram overlap (verbatim word sequences). A low BLEU (0.08) means few word sequences are shared. But difflib ratio of 0.61 measures character-level similarity and is quite high, suggesting the output is semantically on-topic but paraphrased. This is common with generative models: they convey the right meaning without copying the reference's phrasing."
+    },
+    {
+      "id": "c6",
+      "scenario": "You have a golden set of 8 pairwise comparison cases. Your new prompt wins 5 of them. A product manager says this proves the new prompt is better and asks you to ship it.",
+      "question": "What is the correct response?",
+      "options": [
+        "A. Agree and ship: 5/8 is a 62.5% preference rate, which is above the 60% threshold.",
+        "B. Push back: 8 cases is too small a sample; a 5-3 split at n=8 is not statistically meaningful.",
+        "C. Ask the judge to re-run with stricter criteria to get a cleaner result.",
+        "D. Average the pairwise result with existing pointwise scores before deciding."
+      ],
+      "answer": "B",
+      "explanation": "At n=8, a 5-3 split has a very wide confidence interval. You need 30-50 cases minimum before a preference rate is meaningful for shipping decisions. At 8 cases, random variation easily produces a 5-3 split even when systems are equivalent."
+    },
+    {
+      "id": "c7",
+      "scenario": "You run pairwise evals on 60 cases across two categories: 30 'factual lookup' questions and 30 'reasoning' questions. System A has an overall preference rate of 60%. But A wins 80% on factual lookup and loses 53% on reasoning questions.",
+      "question": "What is the right decision and next step?",
+      "options": [
+        "A. Ship System A because the overall preference rate exceeds the 60% threshold.",
+        "B. Ship System B because it wins on the harder reasoning category.",
+        "C. Do not ship either system yet. Segment your golden set permanently by category and tune System A specifically on reasoning before deciding.",
+        "D. Increase the sample size on factual lookup cases to balance the win rates."
+      ],
+      "answer": "C",
+      "explanation": "An aggregate win rate hiding a per-category regression is a common trap. System A regresses on reasoning, which may be more important for your users. The right move is to track preference rates separately by category, then improve the system on its weak category before shipping. Do not let an aggregate number overrule a segmented regression."
+    },
+    {
+      "id": "c8",
+      "scenario": "You want to use reference-based evals to score generated SQL queries against golden SQL queries written by your DBA.",
+      "question": "Which limitation of BLEU-style scoring is most significant for this use case?",
+      "options": [
+        "A. BLEU cannot handle text longer than 512 tokens.",
+        "B. BLEU rewards verbatim word overlap, so a semantically correct query that uses different column aliases or join order will score poorly even if it produces the correct result.",
+        "C. BLEU requires a minimum of 100 reference examples to calibrate correctly.",
+        "D. BLEU only works for natural language, not structured query languages."
+      ],
+      "answer": "B",
+      "explanation": "BLEU measures surface-level n-gram overlap. For SQL, two queries can be functionally identical but syntactically different (different aliases, reordered joins, subquery vs CTE). BLEU would score the correct-but-differently-written query poorly. For SQL evaluation, execution-based scoring (does the query return the right rows?) or semantic parse comparison is more appropriate than n-gram overlap."
+    }
+  ]
+}

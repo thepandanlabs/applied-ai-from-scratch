@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "13-ab-testing-llm-features",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your A/B test router uses a random number generator seeded with the current timestamp for each request. User 1234 sends a question, gets assigned to variant A. The same user sends another question 30 minutes later and gets assigned to variant B.",
+      "question": "What problem does this cause, and how do you fix it?",
+      "options": [
+        "A. No problem -- randomness ensures a fair distribution.",
+        "B. Carryover effect: the same user sees both variants, contaminating their outcomes. Fix by using a deterministic hash of user_id + experiment_name so each user always gets the same variant.",
+        "C. The test will be biased toward power users who ask more questions.",
+        "D. Two assignments double-count the user, inflating sample size."
+      ],
+      "answer": "B",
+      "explanation": "Non-deterministic assignment means users get both variants over time. Their behavior in B is influenced by their experience in A (or vice versa), making the variants non-independent. Deterministic hashing (same user_id always maps to same bucket) prevents this. It's also necessary for reproducibility: if you need to replay a user's experience for debugging, you need consistent assignment."
+    },
+    {
+      "id": "c2",
+      "scenario": "You launch a new AI summarization feature. Your A/B test shows variant B (new version) has a quality score of 0.91 vs variant A at 0.87. The test ran for 3 days. P-value is 0.02. Your PM says: 'p < 0.05, it's significant, let's ship.'",
+      "question": "What important caveat should you raise before shipping?",
+      "options": [
+        "A. The p-value of 0.02 is too close to 0.05 to be reliable. Wait for 0.01.",
+        "B. A 3-day test may be capturing the novelty effect: users engage more with any new feature in the first few days regardless of quality. Run for at least 2 full weeks.",
+        "C. You need to run an A/A test first to validate the infrastructure before trusting B vs A results.",
+        "D. The quality score metric is not a business metric and cannot justify shipping."
+      ],
+      "answer": "B",
+      "explanation": "Novelty effect is a well-documented phenomenon: users interact differently with new features in the first 1-2 weeks simply because it's new. A 3-day significant result may disappear once novelty wears off. The standard practice is to run tests for at least 2 full weeks (and across at least one weekend/weekday cycle) before calling a winner."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your A/B test of two RAG configurations (A: top-2 retrieval, B: top-5 retrieval) runs for 2 weeks with 300 users per variant. Results: quality_score A=0.84, B=0.87, p=0.08. Latency A=850ms, B=1,200ms, p=0.001.",
+      "question": "What is the correct interpretation and recommendation?",
+      "options": [
+        "A. Ship B: quality is trending better even if not significant.",
+        "B. Ship A: latency is significantly worse in B and quality improvement is not significant.",
+        "C. Run the test longer until quality reaches significance.",
+        "D. Ship B with a feature flag for 10% of users to gather more latency data."
+      ],
+      "answer": "B",
+      "explanation": "Quality improvement in B is not statistically significant (p=0.08 > 0.05). The latency regression in B is highly significant (p=0.001). A 350ms latency increase is a real user experience cost for an unconfirmed quality benefit. The right call is to keep A, and if you want to improve quality, find a way to do it without the latency cost."
+    },
+    {
+      "id": "c4",
+      "scenario": "You run an A/A test (same feature, same model against itself) to validate your A/B infrastructure. The result shows p=0.03, significant difference between the two 'variants.'",
+      "question": "What does this mean and what do you do?",
+      "options": [
+        "A. The test is working correctly -- random variation creates significant results ~5% of the time.",
+        "B. Your infrastructure has a bug: the router, scorer, or log parser is producing biased results. Fix the bug before running any real A/B tests.",
+        "C. Your LLM judge has high variance. Switch to a rule-based scorer for A/B tests.",
+        "D. Increase your sample size for all future tests to overcome this baseline noise."
+      ],
+      "answer": "B",
+      "explanation": "An A/A test should not produce a significant result. If it does, your infrastructure is broken: the router may be non-deterministic (users see both 'variants'), the scorer may behave differently for identically-labeled A and B (caching issue, model variance), or the log parser has a parsing bug. An A/A test is the most important infrastructure validation step -- run it before every new A/B test setup."
+    },
+    {
+      "id": "c5",
+      "scenario": "You want to A/B test a new prompt for a medical information chatbot. You plan to run variant B on 50% of users for 2 weeks. A colleague suggests running B on only 10% to limit risk.",
+      "question": "What is the tradeoff, and how should you decide between 50% and 10% exposure?",
+      "options": [
+        "A. Always use 50/50 -- anything else is not a valid A/B test.",
+        "B. 10% exposure reduces potential harm from a bad variant but requires ~5x longer to achieve the same statistical power. Use 10% when the downside of a bad variant is severe, and accept the longer test duration.",
+        "C. Use 50% and add a human review layer to catch bad outputs before they reach users.",
+        "D. Use 10% but analyze the 10% as if it were 50% using statistical correction."
+      ],
+      "answer": "B",
+      "explanation": "Exposure and statistical power are directly linked: halving exposure roughly doubles the time to significance. In high-stakes domains (medical, legal, financial), 10% exposure is a reasonable risk management choice even if it extends the test. Set a clear stopping rule: if variant B shows any absolute floor violation (harmful outputs), halt immediately regardless of sample size."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your A/B test result: quality_score B wins (p=0.01), but user satisfaction survey ratings are lower for B than A (4.1 vs 4.3 stars). Both results are statistically significant.",
+      "question": "Which metric should guide your shipping decision, and why?",
+      "options": [
+        "A. Quality score, because it is more objective and less susceptible to user bias.",
+        "B. User satisfaction, because that is the actual business outcome. Investigate the specific cases where B scores high on quality but low on satisfaction.",
+        "C. Average both metrics and ship B if the combined score favors it.",
+        "D. Trust neither: the conflict means your experiment is invalid."
+      ],
+      "answer": "B",
+      "explanation": "User satisfaction is the business outcome signal. The quality metric measures what the LLM judge thinks is good; users are telling you something different. This gap is informative: variant B may be more accurate but also more verbose, more formal, or less actionable. The right next step is to read the traces where B scores high on quality but received low satisfaction ratings to understand the gap."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are reviewing an A/B test where variant B won significantly on quality score (p=0.02) after 5 days. You notice the test ran Monday through Friday and was paused over the weekend.",
+      "question": "Why is this a problem, and what would you do?",
+      "options": [
+        "A. No problem: weekday users are the core user base and the results are valid for that segment.",
+        "B. Seasonal confound: weekday users may behave differently than weekend users. Re-run the test for at least 2 full weeks including weekends before calling a winner.",
+        "C. Pause duration inflates the novelty effect for users who return on Monday.",
+        "D. The test is valid but should be labeled as 'weekday users only' in your results."
+      ],
+      "answer": "B",
+      "explanation": "Pausing over weekends means you're only measuring weekday user behavior. If weekday and weekend users have different query patterns, needs, or expectations, your result doesn't generalize to your full user base. A/B tests should run continuously across a full week cycle. If you paused for operational reasons, acknowledge it as a limitation and extend the test to include weekends."
+    }
+  ]
+}
