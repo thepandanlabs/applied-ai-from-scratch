@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "08-tool-use-and-error-recovery",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "An agent calls a payment API. The call raises a Python exception: 'requests.exceptions.Timeout: Request timed out after 5s'. The raw traceback is passed back to the LLM as the tool_result.",
+      "question": "What is the most likely failure mode from the LLM's perspective?",
+      "options": [
+        "A. The LLM will correctly identify the timeout and ask the user to wait",
+        "B. The LLM may hallucinate a successful payment response because it cannot interpret the traceback as actionable information",
+        "C. The LLM will terminate the conversation with an error",
+        "D. The LLM will retry the tool call automatically after reading the traceback"
+      ],
+      "answer": "B",
+      "explanation": "Raw tracebacks give the LLM no structured signal about what happened or what to do. Facing ambiguous error text, models often produce a plausible-sounding response as if the tool succeeded. This is the most dangerous failure mode: the agent appears to work while actually hallucinating results."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your tool executor catches a ConnectionError from the search API and sets retry_after=2. The same error keeps occurring. After 2 retries, you want to pass a structured message to the LLM.",
+      "question": "Which structured error message gives the LLM the best signal to act on?",
+      "options": [
+        "A. 'Error: ConnectionError'",
+        "B. 'Tool failed.'",
+        "C. 'The search tool is temporarily unavailable (rate limited). Suggestion: Try a different search query or wait before retrying.'",
+        "D. 'None' - pass an empty string so the LLM knows nothing was returned"
+      ],
+      "answer": "C",
+      "explanation": "The error message to the LLM must include: what happened (temporarily unavailable, rate limited), and what the LLM can do next (try different query, wait). Options A and B have neither. Option D causes ambiguity - the LLM cannot distinguish between an empty result and a failed call."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your tool executor classifies HTTP 401 Unauthorized as a retryable error with retry_after=2. In production, the API key expired three days ago. Every agent run retries twice, fails three times, and then surfaces the error.",
+      "question": "What was the mistake and what should the classification be?",
+      "options": [
+        "A. The retry delay should be longer - try retry_after=30",
+        "B. 401 is a terminal error. The credentials will not fix themselves by waiting. Set retry_after=None and surface immediately with a message about checking API credentials.",
+        "C. 401 should be retried at most once, not twice",
+        "D. The tool should silently return an empty result on 401 to avoid crashing the agent"
+      ],
+      "answer": "B",
+      "explanation": "Retryable errors are transient: they resolve on their own given time (rate limits, network blips, server overload). 401 is structural: the credentials are wrong or expired. No amount of waiting fixes it. Classifying it as retryable wastes API calls and delays the error surfacing. Set retry_after=None and include a suggestion about credential configuration."
+    },
+    {
+      "id": "c4",
+      "scenario": "An agent runs 4 tool calls in a single turn. 3 succeed and 1 fails with a terminal error. The loop passes structured errors for failed tools and real results for successful tools. The LLM produces a final response that uses information that was only available in the failed tool's expected output.",
+      "question": "What is this failure mode and how do you detect it in production?",
+      "options": [
+        "A. Context overflow - the LLM forgot the error message because the context was too long",
+        "B. Hallucination on error - the LLM filled in what the failed tool 'should' have returned using its training knowledge; detect by cross-referencing claims in the response against successful tool results",
+        "C. Tool contamination - results from successful tools leaked into the failed tool's slot",
+        "D. Retry logic failure - the terminal error should have been retried"
+      ],
+      "answer": "B",
+      "explanation": "When a tool fails, the LLM sometimes uses its training knowledge to complete the response as if the tool had succeeded. This is hallucination triggered by incomplete context. Detect it by logging all successful tool results and checking the final response for claims that cannot be traced to any of them. This check should be automated for high-stakes domains."
+    },
+    {
+      "id": "c5",
+      "scenario": "You add a new tool to your agent. You register it in TOOL_REGISTRY and add it to TOOL_DEFINITIONS. Six months later, a new engineer adds a fourth parameter to the tool function but only updates TOOL_REGISTRY. The tool definition still shows 3 parameters.",
+      "question": "What runtime behavior results from this inconsistency?",
+      "options": [
+        "A. The code raises an ImportError when the tool is loaded",
+        "B. The LLM will never pass the fourth parameter because it does not know it exists; the tool executes without it, potentially producing incorrect results silently",
+        "C. The Anthropic API rejects the call because the tool definition does not match",
+        "D. The tool executor raises a TypeError immediately when the LLM tries to call the tool"
+      ],
+      "answer": "B",
+      "explanation": "Tool definitions control what parameters the LLM knows about. If a parameter is missing from the definition, the LLM will never include it in its tool call. The tool function receives only the 3 defined parameters, and the fourth gets its default value (or causes a TypeError if no default). This is a silent correctness failure - no exception, just wrong behavior. The ToolRegistry with @tool decorator addresses this by auto-generating definitions from the function signature."
+    },
+    {
+      "id": "c6",
+      "scenario": "A junior engineer proposes removing the max_retries cap: 'If the error is retryable, we should keep retrying until it works.' The search API sometimes takes 30 minutes to recover from a rate limit outage.",
+      "question": "Why is an unbounded retry loop dangerous in an agentic context?",
+      "options": [
+        "A. It will cause the agent to lose track of the conversation history",
+        "B. It ties up the agent indefinitely, blocks the user from getting any response, and accumulates API costs during the wait; use max_retries with a time budget instead",
+        "C. The Anthropic API will automatically cancel requests that take too long",
+        "D. It is fine for tools, but dangerous for LLM calls"
+      ],
+      "answer": "B",
+      "explanation": "A 30-minute retry loop means the user sees no response for 30 minutes and the system accumulates costs while waiting. The correct design is a small max_retries (2-3) with immediate structured error surfacing. If the service is down for 30 minutes, the agent should tell the user and offer alternatives, not silently retry. Exponential backoff with a maximum total wait time is the production pattern."
+    },
+    {
+      "id": "c7",
+      "scenario": "You implement the ToolRegistry with @tool decorator. A colleague points out that the auto-generated tool definitions show 'The query parameter' as the description for every string parameter, which is not helpful.",
+      "question": "What is the right way to fix this without abandoning auto-generation?",
+      "options": [
+        "A. Switch back to manually written tool definitions for all tools",
+        "B. Add a docstring per-parameter using a convention (e.g., Args section) and parse it in the decorator, or override specific field descriptions after registration",
+        "C. Use longer variable names that are self-documenting",
+        "D. Add the description as a default argument value: def search(query: str = 'The search query')"
+      ],
+      "answer": "B",
+      "explanation": "Auto-generation handles structure (types, required fields) reliably. Descriptions require context that type hints alone cannot provide. The pragmatic fix: auto-generate the structure, then allow overrides for descriptions. Parse docstrings (Google style Args: section or NumPy style) to extract per-parameter descriptions, or provide a way to pass a description dict to the @tool decorator."
+    },
+    {
+      "id": "c8",
+      "scenario": "You run your agent on 200 production queries. You review logs and find that tool errors occurred in 34 cases. In 12 of those 34 cases, the agent's final response appears to use information from the failed tool despite never receiving it.",
+      "question": "This 35% hallucination-on-error rate suggests what specific improvement to the error message sent to the LLM?",
+      "options": [
+        "A. Make the error message shorter so the LLM processes it more reliably",
+        "B. Add an explicit statement to the error: 'You do not have this information. Do not guess or infer what the result would have been.'",
+        "C. Retry all failed tools 5 times instead of 2",
+        "D. Remove the suggestion field from the error to avoid confusing the LLM"
+      ],
+      "answer": "B",
+      "explanation": "A 35% hallucination rate on error means the LLM is inferring what the tool 'should' have returned. The error message needs an explicit prohibition: 'You do not have this information. Do not guess.' Without this explicit instruction, the model's default behavior is to complete the response using its training knowledge, which produces plausible-sounding but ungrounded answers."
+    }
+  ]
+}

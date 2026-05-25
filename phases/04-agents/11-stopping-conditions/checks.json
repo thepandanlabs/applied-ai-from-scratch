@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "lesson": "11-stopping-conditions",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "An agent is given the task 'research everything about our market.' It runs for 40 minutes, makes 520 API calls, and costs $31. It never terminates. The engineer who launched it is not at their desk.",
+      "question": "Which two stopping conditions would have prevented this outcome most directly?",
+      "options": [
+        "A. Max iterations and a better system prompt",
+        "B. Max iterations and a token budget (cost ceiling)",
+        "C. A more capable model that finishes faster",
+        "D. Reducing the number of available tools"
+      ],
+      "answer": "B",
+      "explanation": "Max iterations provides a hard cap on the number of loop passes. A token budget provides a hard cap on cost. Together they guarantee the loop terminates before spending an unbounded amount. A better system prompt might reduce unnecessary calls but doesn't guarantee termination. Tool reduction limits capability but doesn't bound cost."
+    },
+    {
+      "id": "c2",
+      "scenario": "You configure an agent with max_iterations=20. On a complex research task, it uses all 20 iterations but spends only $0.12. On a simple task, it uses 3 iterations and spends $0.08. A colleague says 'max_iterations is all you need.'",
+      "question": "What failure mode does the token budget check catch that max_iterations alone misses?",
+      "options": [
+        "A. An agent that never calls any tools",
+        "B. A single iteration that generates very long responses or triggers many expensive tool calls, spending more than the budget in one pass",
+        "C. An agent that ignores the system prompt",
+        "D. A loop that exits before reaching max_iterations"
+      ],
+      "answer": "B",
+      "explanation": "Max_iterations counts loop passes, not cost. One iteration with a 10,000-token response and 5 tool calls each returning 3,000 tokens can cost more than 20 iterations of a simple task. The token budget converts iterations into a cost-stable bound, regardless of how expensive each individual iteration is."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your agent uses a third-party web scraping tool. Occasionally, the tool hangs indefinitely waiting for a response. When it hangs, the agent loop also hangs. Max_iterations=20 does not help because the iteration never completes.",
+      "question": "Which stopping mechanism is specifically designed for this failure mode?",
+      "options": [
+        "A. Token budget, because hanging tools spend no tokens",
+        "B. Wall-clock timeout, which stops the loop if total elapsed time exceeds the configured limit",
+        "C. Kill switch, which must be set manually by an operator",
+        "D. Soft stop, which asks the model if it has enough information"
+      ],
+      "answer": "B",
+      "explanation": "A tool that hangs never returns, so the iteration never calls governor.record_usage() and the iteration counter never increments. Max_iterations, token budget, and soft stop all require the iteration to complete. Wall-clock timeout checks elapsed time regardless of iteration count, making it the only check that catches a hung tool."
+    },
+    {
+      "id": "c4",
+      "scenario": "You implement a soft stop check that asks the model 'Do you have enough information?' after every iteration. On a 20-iteration run, the model says NO 18 times and YES on iteration 19. The check costs 200 input tokens per call.",
+      "question": "What is the cost implication of checking every iteration versus every 5 iterations?",
+      "options": [
+        "A. Checking every iteration is always better because it stops the loop sooner",
+        "B. Checking every iteration adds 19 extra soft-stop calls (3,800 tokens) for a run that would have soft-stopped on iteration 19 regardless of check frequency",
+        "C. The cost of soft stop checks is negligible because the model responds with a single word",
+        "D. Soft stop should never be used because it adds unnecessary API calls"
+      ],
+      "answer": "B",
+      "explanation": "The soft stop check itself costs tokens. If you check every iteration, you pay for N-1 NO answers before the YES. If you check every 5 iterations, you pay for at most (N/5) checks. The savings compound on long-running agents. The tradeoff: less frequent checks may overshoot the optimal stopping point by up to soft_stop_every_n iterations."
+    },
+    {
+      "id": "c5",
+      "scenario": "A user launches an agent task from a web UI and then clicks 'Cancel' after 10 seconds. The agent is running in a background Python thread. How does the kill switch pattern handle this?",
+      "options": [
+        "A. The thread is forcibly killed by the operating system when the user clicks Cancel",
+        "B. The web handler calls governor.kill(), which sets a threading.Event; the loop checks the event at the next iteration boundary and stops cleanly",
+        "C. The agent cannot be cancelled once started; a new request must be made",
+        "D. The kill switch only works in async code, not threaded code"
+      ],
+      "answer": "B",
+      "explanation": "threading.Event is thread-safe. The web handler (running in one thread) calls governor.kill() to set the event. The agent loop (in another thread) checks the event at the top of each iteration. On the next iteration boundary, should_continue() returns False with stop_reason='kill_switch'. The loop exits cleanly, which is safer than forcibly killing a thread."
+    },
+    {
+      "id": "c6",
+      "scenario": "You run a governed agent loop that stops at max_iterations=10. The stop_reason is 'max_iterations (10)'. The final_answer variable is empty. Your code returns None to the user.",
+      "question": "What is the production-correct behavior when the governor stops the loop without a final answer?",
+      "options": [
+        "A. Retry the entire task from scratch",
+        "B. Return the partial context or a message indicating the task was stopped, with the stop_reason, so the caller can handle it gracefully",
+        "C. Raise an exception so the error surfaces immediately",
+        "D. Log the error silently and return an empty string"
+      ],
+      "answer": "B",
+      "explanation": "Partial output with a stop reason is better than None or an exception in most production contexts. The caller can show the user a meaningful message ('Research was stopped after budget was reached. Here is what was found:') rather than a blank screen or unhandled error. Raising an exception is appropriate only if the caller has specific error-handling logic for governor stops."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your soft stop implementation asks the model 'do you have enough to answer?' and sometimes gets YES after only 2 iterations on a task that actually requires 8 tool calls. Users report incomplete answers.",
+      "question": "How do you fix the soft stop without removing it entirely?",
+      "options": [
+        "A. Increase soft_stop_every_n so the check runs less frequently, giving the agent more time to gather information before being asked",
+        "B. Change the soft stop prompt to be more conservative: 'Only say YES if you have information about ALL required aspects of the task'",
+        "C. Both A and B together: run the check less frequently AND make the stopping criterion more strict",
+        "D. Remove the soft stop and rely on max_iterations alone"
+      ],
+      "answer": "C",
+      "explanation": "Both changes help. Running less frequently prevents early YES answers from terminating a loop that hasn't collected enough data. A stricter prompt ('ALL required aspects') reduces false positives on partial answers. Using both together is the production-safe approach."
+    },
+    {
+      "id": "c8",
+      "scenario": "You're designing a governor for a long-running overnight agent that processes 500 documents. The task is expected to take 4 hours and cost $15. You need to set max_iterations, token_budget_usd, and max_seconds.",
+      "question": "Which configuration is most appropriate?",
+      "options": [
+        "A. max_iterations=20, token_budget_usd=$0.50, max_seconds=120 (default values)",
+        "B. max_iterations=2000, token_budget_usd=$20.00, max_seconds=18000 (5 hours)",
+        "C. max_iterations=500, token_budget_usd=$15.00, max_seconds=14400 (4 hours exactly)",
+        "D. max_iterations=100, token_budget_usd=$5.00, max_seconds=3600 (1 hour)"
+      ],
+      "answer": "B",
+      "explanation": "The configuration should allow the task to complete with reasonable headroom. max_iterations=2000 allows ~4 iterations per document. token_budget_usd=$20 gives $5 headroom over the expected $15. max_seconds=18000 (5 hours) gives 1 hour of buffer over the expected 4 hours. Option C is too tight: if the task runs even slightly over, it stops mid-way. Options A and D would stop the task far too early."
+    }
+  ]
+}

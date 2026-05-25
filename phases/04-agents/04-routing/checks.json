@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "lesson": "04-routing",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your customer support router classifies 'I've been charged twice this month' as account_issue and routes it to the account handler, which responds with steps to check billing history. The customer escalates to a human, citing a cold and unhelpful response. Later analysis shows the message should have been routed to the complaint handler.",
+      "question": "What is the root cause and the minimal fix?",
+      "options": [
+        "A. The account handler's system prompt needs to be more empathetic.",
+        "B. The classification prompt lacks examples that distinguish account questions (procedural) from complaints (emotional + account reference). Adding 1-2 boundary-case examples to the classification prompt would prevent this misclassification.",
+        "C. The router should always route messages containing 'charged' to the complaint handler.",
+        "D. The account_issue and complaint handlers should be merged into one handler that adapts its tone."
+      ],
+      "answer": "B",
+      "explanation": "The classification failure is at the classifier, not the handler. 'Charged twice' is an account reference (triggers account_issue) but the customer's intent may be complaint or account_issue depending on whether emotional language is present. Adding examples for the boundary - e.g., 'I've been charged twice and I'm furious' -> complaint vs 'I've been charged twice, please check my account' -> account_issue - teaches the classifier the distinction."
+    },
+    {
+      "id": "c2",
+      "scenario": "You add a new intent category (product_feedback) to your router after shipping. You update the classification prompt but forget to register a handler for it. A customer sends a message that gets classified as product_feedback.",
+      "question": "What happens, and what prevents this from being a silent failure?",
+      "options": [
+        "A. The router raises a KeyError exception, which crashes the service.",
+        "B. The router returns the escalation handler's response, since escalation is the last registered handler.",
+        "C. If a fallback handler is registered, the router uses it and records the resolved intent as 'fallback (classified: product_feedback)'. Without a fallback, the router returns an error dict with the unhandled intent.",
+        "D. The router silently drops the message and returns an empty response."
+      ],
+      "answer": "C",
+      "explanation": "The Router class checks for a fallback when no handler is found for an intent. The resolved intent string includes the original classification, so logs show exactly which intents are hitting the fallback. This is why the fallback rate metric matters: a spike in fallback rate is the signal that a new intent type appeared in production without a registered handler."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are designing a router for a legal document assistant that classifies documents as: contract_review, compliance_check, litigation_research, or general_query. You expect 40% general_query, 30% contract_review, 20% compliance_check, and 10% litigation_research. Litigation_research requires the most expensive model.",
+      "question": "What is the correct model assignment strategy, and what is the approximate cost savings vs. routing everything to the expensive model?",
+      "options": [
+        "A. Use the expensive model for all intents to avoid misrouting costs.",
+        "B. Use the cheapest model for all intents and accept lower quality on litigation_research.",
+        "C. Use the cheap model for general_query (40%) and the expensive model for contract_review, compliance_check, and litigation_research. Savings: approximately 40% * (expensive_cost - cheap_cost) per message.",
+        "D. Use the cheap model for general_query and contract_review (70%), the mid model for compliance_check (20%), and the expensive model for litigation_research (10%). Savings are proportional to the fraction routed to cheaper models."
+      ],
+      "answer": "D",
+      "explanation": "Routing saves money in proportion to the fraction sent to cheaper models and the cost differential. Using three tiers (cheap for 70%, mid for 20%, expensive for 10%) saves more than using two tiers (cheap for 40%, expensive for 60%). The key constraint is that quality requirements for each intent must be met by the assigned model - routing litigation_research to the cheap model would be false economy if it produces unreliable output."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your classification model returns 'account_issue.' (with a trailing period) instead of 'account_issue' for 3% of messages. These messages hit the fallback handler because 'account_issue.' is not in the handler registry.",
+      "question": "What is the correct fix in the classify_intent function?",
+      "options": [
+        "A. Add 'account_issue.' as a registered intent that maps to the same handler as 'account_issue'.",
+        "B. Strip trailing punctuation from the model's response before validating against VALID_INTENTS.",
+        "C. Set max_tokens to 1 to prevent the model from generating punctuation.",
+        "D. Switch to a different model that does not add punctuation."
+      ],
+      "answer": "B",
+      "explanation": "Normalizing the classifier's output (strip whitespace, lowercase, strip punctuation) before validation is the correct and minimal fix. The classify_intent function should always normalize: response.text.strip().lower().rstrip('.!?,') before checking against VALID_INTENTS. This is cheaper, more reliable, and more maintainable than registering duplicate intents or switching models."
+    },
+    {
+      "id": "c5",
+      "scenario": "You measure classification accuracy on 100 labeled messages and find 88% overall accuracy. The confusion matrix shows that 'complaint' is classified as 'account_issue' in 7 out of 10 cases. Your overall target is 90%.",
+      "question": "What is the most efficient next step?",
+      "options": [
+        "A. Re-label the 7 misclassified messages as account_issue since the model might be right.",
+        "B. Add 5-8 examples to the classification prompt that show the boundary between complaint and account_issue, focusing on messages that contain both emotional language and account references.",
+        "C. Switch the classifier to a more powerful model to improve overall accuracy.",
+        "D. Merge the complaint and account_issue handlers into one handler and collapse the two intents."
+      ],
+      "answer": "B",
+      "explanation": "The confusion matrix tells you exactly which boundary to fix. complaint/account_issue confusion is the dominant error. Adding targeted examples for that boundary in the classification prompt is the highest-leverage change. Switching to a more powerful model is expensive and may not fix a prompt-level issue. Merging the handlers would degrade quality for both intents since they require different handling strategies."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your router is in production for 3 months. Latency for 'complaint' handler responses has increased from 1.2s to 2.8s p50. The complaint handler's system prompt has grown from 3 sentences to 14 sentences as the team added more guidelines.",
+      "question": "What is the likely cause and the correct diagnosis approach?",
+      "options": [
+        "A. The complaint handler is now routing to a more expensive model due to a config change.",
+        "B. A longer system prompt increases input token count, which increases cost but should not significantly affect latency.",
+        "C. The system prompt growth increases input tokens on every call, which increases both cost and latency. Profile the token count before and after the prompt growth, and reduce the prompt to the minimal effective set of instructions.",
+        "D. The latency increase is due to increased production traffic, not the system prompt."
+      ],
+      "answer": "C",
+      "explanation": "System prompt length directly increases input token count and latency. Going from 3 sentences to 14 sentences can add 200-400 tokens to every call. Profiling the call with the short vs. long prompt will confirm the correlation. The fix is to audit the 14-sentence prompt: which instructions are redundant, which can be expressed more concisely, and which address edge cases that occur rarely enough to not belong in the main prompt."
+    },
+    {
+      "id": "c7",
+      "scenario": "A new regulation requires that messages classified as 'escalate' must be logged to a compliance database within 500ms of receipt. Your current escalation handler returns a text response but does not log. Where should the logging be added?",
+      "options": [
+        "A. Add logging to the classification prompt so the model knows to mark escalation messages.",
+        "B. Add the compliance logging call inside the handle_escalate function, before returning the response.",
+        "C. Add logging in the router's route() method, after the handler returns, for all intents.",
+        "D. Add logging in a separate post-processing step that runs asynchronously after the route() call returns."
+      ],
+      "answer": "B",
+      "explanation": "The logging requirement is specific to the 'escalate' intent and has a latency constraint (500ms). Logging inside handle_escalate is the correct location: it is executed only for escalation messages, it runs synchronously before returning (ensuring the 500ms window is within the handler's control), and it keeps the compliance logic co-located with the escalation handler for auditability."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are building a router for a developer tools product. Users can ask questions about: documentation (quick lookups), API debugging (technical investigation), billing (account), and feature requests (feedback). You estimate 50% documentation, 30% API debugging, 15% billing, 5% feature requests.",
+      "question": "What is the minimum number of model tiers you need, and how should you assign them?",
+      "options": [
+        "A. One tier: use the same model for all intents to simplify the system.",
+        "B. Two tiers: a cheap/fast model for documentation (50%) and a more capable model for API debugging, billing, and feature requests (50%).",
+        "C. Four tiers: a different model for each intent.",
+        "D. Two tiers: a cheap model for documentation and feature requests (55%), and a capable model for API debugging and billing (45%)."
+      ],
+      "answer": "D",
+      "explanation": "The correct grouping is by complexity requirement, not by volume. Documentation lookups and feature requests both have straightforward response requirements (retrieve and present, or acknowledge and log). API debugging and billing both require careful reasoning about specific technical or financial details. Two tiers cover the actual complexity distribution. Four tiers add management overhead without meaningful quality improvement for a four-intent system."
+    }
+  ]
+}

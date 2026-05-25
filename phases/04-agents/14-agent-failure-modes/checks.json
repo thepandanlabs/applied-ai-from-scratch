@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "14-agent-failure-modes",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "An agent is tasked with summarizing 10 documents. In the trace, you see the same web_search call with the identical query appearing 8 times. The agent never completes the task and hits a timeout.",
+      "question": "Which MAST category best describes this failure?",
+      "options": [
+        "A. Action - the agent called the wrong tool.",
+        "B. Task - the agent misunderstood the goal.",
+        "C. Memory - the agent has no record of what it already tried and keeps repeating the same action.",
+        "D. Supervision - the agent had no stopping condition."
+      ],
+      "answer": "C",
+      "explanation": "The defining symptom is the repeated identical tool call, which is the Memory failure signature. The agent cannot see its own history, so it cannot detect that it already made this call. Supervision also applies (no stopping condition), but Memory is the root cause: the loop exists because the agent has no memory of prior attempts."
+    },
+    {
+      "id": "c2",
+      "scenario": "An agent calls a database_write tool with {'table': 'users', 'data': null}. The tool returns 'Error: data field cannot be null.' The agent's next message is: 'The user record has been written successfully.'",
+      "question": "How many MAST failures are present in this sequence?",
+      "options": [
+        "A. One: Action failure (null argument).",
+        "B. Two: Action failure (null argument) and Action failure (error ignored).",
+        "C. Three: Action failure (null argument), Action failure (error ignored), and Task failure (false completion).",
+        "D. One: Task failure (false completion)."
+      ],
+      "answer": "C",
+      "explanation": "Three distinct failures: (1) Action/null_tool_argument: the 'data' field is null. (2) Action/error_ignored: the tool returned an error but the agent declared success. (3) Task/false_completion: the agent reported successful completion of a task that objectively failed. MAST failures often cascade: the null argument causes the error, the error is ignored, and false completion is the final symptom."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are building a FailureDetector. You want to detect when an agent's run is likely missing a stopping condition. Your history has 18 turns. The last 3 turns contain no terminal words like 'stop', 'complete', 'done', or 'escalate'.",
+      "question": "What FailureDetector rule fires and what MAST category does it belong to?",
+      "options": [
+        "A. repeated_tool_call, Memory.",
+        "B. no_stop_signal, Supervision.",
+        "C. false_completion, Task.",
+        "D. error_ignored, Action."
+      ],
+      "answer": "B",
+      "explanation": "When turn count exceeds MAX_TURNS_THRESHOLD (15 by default) and the last 3 turns contain no terminal signals, the no_stop_signal rule fires. This is a Supervision failure: the agent lacks a stopping condition and will run until an external limit (timeout, rate limit) stops it."
+    },
+    {
+      "id": "c4",
+      "scenario": "A colleague proposes fixing all MAST failures by adding automatic retry logic: if any failure flag is detected, retry the entire agent run from scratch.",
+      "question": "Why is this approach likely to make things worse for Memory and Supervision failures?",
+      "options": [
+        "A. Retry logic is only valid for network failures, not LLM failures.",
+        "B. Retrying a Memory failure without fixing the context means the agent loops again. Retrying a Supervision failure means the agent runs even longer before hitting limits.",
+        "C. Retry adds latency but is otherwise harmless for all MAST categories.",
+        "D. Retry only works for Action failures where the tool input was malformed."
+      ],
+      "answer": "B",
+      "explanation": "MAST failures require category-specific fixes: Memory needs context repair (add step summary), Supervision needs budget enforcement (add governor). Retrying without fixing the underlying cause restarts the same broken pattern. For a Supervision failure with no stopping condition, retry doubles or triples the runaway execution time."
+    },
+    {
+      "id": "c5",
+      "scenario": "An agent is asked 'What is the cheapest flight from NYC to London next week?' It answers 'The cheapest direct flight from NYC to London is $487.' The user asked for any flight, including connections. The agent found only direct flights.",
+      "question": "Which MAST category does this represent?",
+      "options": [
+        "A. Memory - the agent forgot to search for connecting flights.",
+        "B. Action - the agent used the wrong search tool.",
+        "C. Task - the agent solved a narrower version of the goal than what was asked.",
+        "D. Supervision - the agent stopped too early."
+      ],
+      "answer": "C",
+      "explanation": "This is a Task failure (goal drift or satisficing). The agent answered a valid but narrower question than the one asked. It treated 'cheapest flight' as 'cheapest direct flight' without verifying this interpretation against the original goal. The fix is explicit success criteria in the prompt and a self-check step before declaring completion."
+    },
+    {
+      "id": "c6",
+      "scenario": "You want to detect Tool failures where the tool call has missing required fields. Your message history uses the Anthropic API format where tool calls appear as content blocks with type='tool_use' and an 'input' dict.",
+      "question": "What is the correct detection logic in the FailureDetector?",
+      "options": [
+        "A. Check if the tool name is in a known list of valid tool names.",
+        "B. Check if any value in the 'input' dict is None and flag it as null_tool_argument.",
+        "C. Check if the tool call appears more than once in the history.",
+        "D. Check if the tool result contains the word 'error'."
+      ],
+      "answer": "B",
+      "explanation": "The _check_action method iterates over assistant messages, finds tool_use blocks, and checks for None values in the input dict. Any None value in a required field means the agent formed an invalid call. This is the direct detection for the null_tool_argument rule."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your FailureDetector is producing many false positives: healthy 5-turn agent runs are being flagged with no_stop_signal because the last 3 turns happen to not contain the word 'done'.",
+      "question": "What is the most appropriate fix?",
+      "options": [
+        "A. Remove the no_stop_signal rule entirely.",
+        "B. Increase the MAX_TURNS_THRESHOLD so the rule only fires on genuinely long runs.",
+        "C. Add 'done' to the list of terminal signals.",
+        "D. Switch to a different MAST taxonomy."
+      ],
+      "answer": "B",
+      "explanation": "The no_stop_signal rule only fires when turn_count > MAX_TURNS_THRESHOLD. If short, healthy runs are being flagged, the threshold is too low. Raising it (e.g., from 15 to 25) limits the rule to genuinely long runs. Removing the rule (A) eliminates valuable detection. Adding terminal signals (C) might help but is treating a symptom: a 5-turn run should not trigger this rule regardless of terminal words."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are conducting a post-mortem on an agent incident. The agent was tasked with deleting duplicate customer records. It ran for 40 minutes, made 200 tool calls, deleted records it should not have, and then declared success. You need to assign MAST categories to file tickets.",
+      "question": "Which MAST categories apply to this incident? Choose all that apply.",
+      "options": [
+        "A. Memory only.",
+        "B. Action and Task only.",
+        "C. Supervision and Task, and possibly Action if the deletion calls were malformed.",
+        "D. All four: Memory (it may have repeated deletions), Action (wrong records deleted), Supervision (40 minutes, 200 calls, no budget), Task (declared success despite incorrect deletions)."
+      ],
+      "answer": "D",
+      "explanation": "This incident touches all four categories. Memory: repeating deletions of already-processed records. Action: deleting wrong records indicates wrong tool arguments or wrong decision logic. Supervision: 40 minutes and 200 calls with no stopping condition or human escalation. Task: declaring success on an incorrect result. Complex incidents commonly span all four MAST categories, which is why having the taxonomy matters: it directs separate fixes to separate root causes."
+    }
+  ]
+}

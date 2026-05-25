@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "01-the-agent-loop",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your agent calls a tool and gets a result. You need to send that result back to the model. You add the tool_result to the messages list as a new assistant message.",
+      "question": "What is wrong with this approach, and what is the correct structure?",
+      "options": [
+        "A. Nothing is wrong. Tool results can go in either assistant or user messages.",
+        "B. Tool results must go in a user message as a content block with type 'tool_result', not in an assistant message.",
+        "C. Tool results should be appended to the existing user message, not as a new message.",
+        "D. Tool results should be sent as a system message to avoid breaking the assistant/user alternation."
+      ],
+      "answer": "B",
+      "explanation": "The Anthropic API requires tool_result blocks to live in user messages. The message history must alternate assistant/user. After the model sends a tool_use in an assistant message, the next user message contains the tool_result block(s) with matching tool_use_id values."
+    },
+    {
+      "id": "c2",
+      "scenario": "You build an agent that searches the web and summarizes findings. In production, it starts looping: it calls web_search, reads the result, then calls web_search again with a slightly different query, then again, 40 times before hitting your iteration limit.",
+      "question": "Which combination of changes is most likely to fix the runaway loop?",
+      "options": [
+        "A. Increase max_iterations to 100 so the agent has room to finish.",
+        "B. Remove the web_search tool entirely and use a fixed workflow instead.",
+        "C. Update the system prompt to tell the model when one search result is sufficient, and add loop detection that exits if the same tool is called with identical inputs twice.",
+        "D. Switch to a more powerful model that is less likely to loop."
+      ],
+      "answer": "C",
+      "explanation": "Runaway loops usually have two causes: the model lacks a stopping criterion (fix with system prompt guidance) and repeated identical calls (detect with a seen-inputs set). Increasing the limit just makes the loop worse. Removing the tool eliminates needed functionality. A more powerful model may still loop if the stopping criterion is unclear."
+    },
+    {
+      "id": "c3",
+      "scenario": "A colleague shows you an agent loop where the assistant message is appended as: messages.append({'role': 'assistant', 'content': [tool_use_block]}) - only the tool_use blocks, not the full response.content list.",
+      "question": "What production issue will this cause?",
+      "options": [
+        "A. No issue. The API only needs the tool_use blocks in the assistant message.",
+        "B. The API will reject the message history because the assistant message is missing required text content blocks.",
+        "C. The model will not receive the full context of its own reasoning, which can cause it to repeat work or lose track of partial results.",
+        "D. The token count will be slightly lower, which may cause the model to behave differently."
+      ],
+      "answer": "C",
+      "explanation": "The assistant message must contain the full response.content list, which may include both text and tool_use blocks. If the model produced reasoning text before calling a tool, stripping that text means the model loses its own chain of thought in subsequent turns. The API may accept the message, but the agent's behavior will be degraded."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your calculator tool raises a ZeroDivisionError when the model passes '10 / 0'. You have not caught this exception. The exception propagates up and crashes the agent loop.",
+      "question": "What is the correct fix, and why does it matter?",
+      "options": [
+        "A. Validate tool inputs before calling the tool and reject invalid expressions before they reach the executor.",
+        "B. Catch the exception in the tool function and return an error string like 'Error: division by zero'. The model reads the error and decides what to do next.",
+        "C. Catch the exception in the loop and append a tool_result with content 'null' to keep the history valid.",
+        "D. Add a try/except in the main agent loop and restart from the beginning if any tool fails."
+      ],
+      "answer": "B",
+      "explanation": "Tools should always return strings, including error strings. The model can read 'Error: division by zero' and adjust its next action. Returning 'null' loses the error signal. Restarting the loop discards all previous context. Validating inputs alone does not handle all error cases and the model cannot predict every malformed expression."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are debugging a production agent that returned a wrong answer. Your colleague says 'just print the final response and you can see what went wrong.' You want to find the actual source of the error.",
+      "question": "What would you inspect to identify whether the error came from tool execution, tool dispatch, or the model's reasoning?",
+      "options": [
+        "A. Only the final assistant message, since that contains the answer.",
+        "B. The stop_reason values across all turns and the full message history, including every tool_use block and its corresponding tool_result.",
+        "C. The model's usage stats (input_tokens and output_tokens) to see if the context was too large.",
+        "D. The system prompt, since almost all agent errors come from poor instructions."
+      ],
+      "answer": "B",
+      "explanation": "The full message history is the agent's complete audit trail. stop_reason tells you whether each turn was a tool call or completion. The tool_use blocks show exactly what the model asked for. The tool_result blocks show exactly what was returned. Comparing tool_use input to tool_result output tells you whether the tool itself failed or whether the model misinterpreted a correct result."
+    },
+    {
+      "id": "c6",
+      "scenario": "An agent needs to complete a 5-step research task. You set max_iterations=3. The agent reaches the limit before finishing and returns the guard message instead of an answer.",
+      "question": "What is the right way to handle this in production?",
+      "options": [
+        "A. Always set max_iterations high enough that it never triggers.",
+        "B. Remove max_iterations entirely so the agent can always finish.",
+        "C. Set max_iterations based on the expected complexity of the task, log when the limit is hit, and return whatever partial result is available along with a clear indication that the task was incomplete.",
+        "D. Catch the incomplete result and automatically restart the agent with a higher limit."
+      ],
+      "answer": "C",
+      "explanation": "max_iterations is a safety guard, not a bug. Set it to 2-3x the expected number of tool calls for the task. When it triggers, log the full message history (this is the debugging artifact), return any partial result the model produced, and surface the incompletion clearly to the caller. Never remove the guard: uncapped loops are how you generate a $3,000 API bill overnight."
+    },
+    {
+      "id": "c7",
+      "scenario": "You have two tools in your registry. The model's response contains two tool_use blocks in a single assistant message: one for web_search and one for calculator.",
+      "question": "How should the loop handle this, and what should the user message contain?",
+      "options": [
+        "A. Execute only the first tool_use block, send that result, and wait for the model to request the second.",
+        "B. Execute both tools in sequence, then send two separate user messages, one tool_result per message.",
+        "C. Execute both tools, then send a single user message containing both tool_result blocks.",
+        "D. Return an error to the model because multiple tool calls in one turn are not supported."
+      ],
+      "answer": "C",
+      "explanation": "When the model returns multiple tool_use blocks in one assistant message, execute all of them and send a single user message containing all matching tool_result blocks (one per tool_use block, matched by tool_use_id). The API requires every tool_use to have a corresponding tool_result before the next model call. Sending them in separate messages breaks the alternation requirement."
+    },
+    {
+      "id": "c8",
+      "scenario": "You switch from the non-streaming agent loop to the streaming version. A junior engineer asks: 'Does streaming change the message history or the tool dispatch logic?'",
+      "question": "What is the correct answer?",
+      "options": [
+        "A. Yes. With streaming, tool_result blocks are sent incrementally as the stream arrives.",
+        "B. Yes. Streaming uses a different message format where tool_use blocks are sent as events, not content blocks.",
+        "C. No. Streaming only changes how tokens are delivered to the client. The message structure, tool dispatch, and loop logic are identical. You call stream.get_final_message() to get the same response object the non-streaming call returns.",
+        "D. No, but you must set a different stop_reason value when using streaming to indicate tool use."
+      ],
+      "answer": "C",
+      "explanation": "Streaming is purely a delivery mechanism. The message history structure, the tool_use/tool_result pattern, and the loop logic are identical. stream.get_final_message() returns the same response object you get from client.messages.create(). The only difference is that text tokens arrive incrementally during the stream, improving perceived latency for the user."
+    }
+  ]
+}

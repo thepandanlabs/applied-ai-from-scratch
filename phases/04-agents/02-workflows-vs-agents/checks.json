@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "02-workflows-vs-agents",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team builds an agent to process incoming invoices. The agent calls tools: extract_vendor, extract_amount, extract_date, validate_fields, write_to_database. In production traces, the agent calls the same tools in the same order on every invoice, with no variation. Costs are 8x higher than the previous rule-based system.",
+      "question": "What is the correct diagnosis and fix?",
+      "options": [
+        "A. The agent needs a better system prompt so it calls fewer tools.",
+        "B. The task is structurally a workflow. The steps are fixed and enumerable. Rewrite as a deterministic pipeline with one structured prompt per step or a single multi-step prompt.",
+        "C. The agent should use a more powerful model so it can combine steps more efficiently.",
+        "D. Add a max_iterations guard of 3 to limit the number of tool calls."
+      ],
+      "answer": "B",
+      "explanation": "When an agent calls the same tools in the same order on every input, the task is a workflow wearing an agent costume. The model is not making control-flow decisions - it is executing a fixed script. The correct fix is to remove the agent loop and implement the pipeline as deterministic Python with LLM calls at the steps that require natural language processing."
+    },
+    {
+      "id": "c2",
+      "scenario": "You need to build a customer support bot that: reads a customer message, determines if it is a billing question or a technical issue, then responds with either the billing policy or a troubleshooting guide. The two response types have different templates.",
+      "question": "Which architecture is most appropriate?",
+      "options": [
+        "A. Multi-agent: one agent for billing, one for technical, a third to coordinate.",
+        "B. Workflow: classify the message with one LLM call, then branch to the appropriate template with a second LLM call.",
+        "C. Agent: let the model decide dynamically which response to give, with tools for fetching policies and guides.",
+        "D. Workflow: use a regex to classify the message, then an LLM call for the response."
+      ],
+      "answer": "B",
+      "explanation": "This task has exactly two branches with known conditions. The branching logic can be encoded in Python once the classification is made. A workflow with two LLM calls (classify, then respond) is cheaper, faster, and fully testable. An agent would add a loop with no benefit since the decision tree is shallow and all branches are known."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your team is building a research assistant that takes a question, searches the web for relevant sources, reads each source, decides if more searching is needed, and synthesizes an answer. The number of searches varies from 1 to 8 depending on what is found.",
+      "question": "What is the structural property that makes this an agent rather than a workflow?",
+      "options": [
+        "A. It uses web search, which requires a tool.",
+        "B. The number of steps is unknown until execution begins and each step's next action depends on what was found in the current step.",
+        "C. It produces a synthesis, which is too complex for a single prompt.",
+        "D. It requires reading multiple sources, which cannot be done in one prompt."
+      ],
+      "answer": "B",
+      "explanation": "The defining property of an agent is that the LLM must read intermediate results to decide what to do next. Here, the model reads a search result and decides: is this sufficient, or do I need to search again? That control-flow decision cannot be made before execution begins. Using tools, producing a synthesis, or reading multiple sources are all possible in workflows - they do not by themselves require an agent."
+    },
+    {
+      "id": "c4",
+      "scenario": "You implement the should_use_agent() decision function and it returns 'workflow' for a task. A product manager says: 'But what if the task becomes more complex in the future? Shouldn't we build the agent version now so we don't have to refactor?'",
+      "question": "What is the correct engineering response?",
+      "options": [
+        "A. Agree - building the agent version now is a reasonable hedge against future complexity.",
+        "B. Build the workflow now. If the task evolves to require real-time decisions, refactoring from workflow to agent is a small change. The cost of running an unnecessary agent loop in production for months is not recoverable.",
+        "C. Build both versions and run them in parallel, routing to the agent only when the workflow fails.",
+        "D. Ask the PM to specify exactly what the more complex future version will look like before deciding."
+      ],
+      "answer": "B",
+      "explanation": "Over-engineering for hypothetical future complexity is a real cost, not a theoretical one. An agent loop running in production consumes 3-10x more API calls than a workflow for the same task. That cost accumulates every day. Refactoring from workflow to agent when the need is proven takes 1-2 days. The workflow is not a limitation - it is the correct architecture for the current task."
+    },
+    {
+      "id": "c5",
+      "scenario": "You run the should_use_agent() function on a task and it returns 'workflow'. When you implement the workflow, you find that 15% of inputs cause an edge case where the standard steps fail and a different approach is needed. Your current workflow returns an error for those inputs.",
+      "question": "What is the right next step?",
+      "options": [
+        "A. Switch the entire task to an agent so it can handle the edge cases dynamically.",
+        "B. Handle the 15% edge case explicitly in the workflow with an additional branch or a fallback LLM call for that specific condition.",
+        "C. Drop the 15% of inputs that cause errors and only process the 85% that work.",
+        "D. Use a more powerful model that is less likely to encounter the edge case."
+      ],
+      "answer": "B",
+      "explanation": "An edge case rate of 15% does not change the architecture recommendation for the 85% case. Add an explicit branch in the workflow for the edge case condition. If the edge case itself requires dynamic decisions, you can embed a small agent loop just for that branch while keeping the main path as a workflow. Promoting the entire task to an agent to handle 15% of inputs pays the agent overhead on 100% of inputs."
+    },
+    {
+      "id": "c6",
+      "scenario": "A team debugs a production issue at 2 a.m. The customer reported a wrong answer from the AI system. The system is implemented as an agent with 5 tools. The trace shows 12 tool calls across 7 turns.",
+      "question": "What is the specific debuggability advantage that a workflow implementation would have had in this incident?",
+      "options": [
+        "A. A workflow would have prevented the wrong answer entirely.",
+        "B. A workflow would have been faster to fix because it uses fewer tokens.",
+        "C. A workflow's steps are explicit Python functions with inspectable inputs and outputs. The bug would be localized to a specific step, not distributed across 12 tool calls where the model's intermediate reasoning is opaque.",
+        "D. A workflow would have generated better error messages."
+      ],
+      "answer": "C",
+      "explanation": "In a workflow, you know exactly which step produced the wrong output because each step is a named Python function. You can add a print statement or a log call to any step and re-run. In an agent, the 'step' is an implicit decision made by the model during turn 3 of 7, based on context that evolved over the previous 2 turns. Localizing the bug requires understanding the full message history and the model's reasoning, which may not be logged."
+    },
+    {
+      "id": "c7",
+      "scenario": "You need to generate a weekly report that pulls data from a database, formats it into sections, and emails it. The database schema is fixed. The report format is fixed. The email template is fixed.",
+      "question": "Which architecture and why?",
+      "options": [
+        "A. Agent: the model should decide how to present the data based on what it finds.",
+        "B. Multi-agent: one agent for data, one for formatting, one for email.",
+        "C. Workflow: all steps are fixed and enumerable. Use Python for data and formatting, one LLM call for any natural-language sections, a Python library for email.",
+        "D. Agent: the report needs to be personalized, which requires dynamic decisions."
+      ],
+      "answer": "C",
+      "explanation": "Every step is deterministic. Data retrieval is SQL. Formatting is string templates. Email is an SMTP call. The only LLM call is for any narrative sections, and that is a single prompt with a known schema. This is a classic workflow: scheduled Python job, LLM as a component at one specific step. Using an agent here would be like using a GPS to walk from the kitchen to the fridge."
+    },
+    {
+      "id": "c8",
+      "scenario": "You measure the cost of your agent implementation: $0.018 per request. Your workflow prototype costs $0.003 per request. The task currently handles 50,000 requests per month. You need to make the case to your manager to authorize the refactor.",
+      "question": "What is the monthly cost difference, and what additional argument strengthens the case beyond cost?",
+      "options": [
+        "A. $750/month difference. The additional argument is that the workflow is faster.",
+        "B. $750/month difference. The additional argument is that the workflow is fully testable with deterministic assertions, enabling a proper regression suite, while the agent requires probabilistic evals.",
+        "C. $1,500/month difference. The additional argument is that agents are harder to scale.",
+        "D. $900/month difference. The additional argument is that the workflow uses fewer HTTP connections."
+      ],
+      "answer": "B",
+      "explanation": "($0.018 - $0.003) * 50,000 = $750/month. Beyond cost, the testability argument is often more persuasive to engineering leadership: a workflow with deterministic steps can be unit tested with 100% coverage, regression-tested on every deploy, and its failure modes are bounded and predictable. An agent's behavior is probabilistic, its failure modes include infinite loops, and its test coverage is inherently incomplete."
+    }
+  ]
+}

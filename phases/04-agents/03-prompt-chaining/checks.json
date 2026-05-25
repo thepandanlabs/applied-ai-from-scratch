@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "03-prompt-chaining",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You have a content pipeline with 4 steps: extract, draft, review, publish. Step 3 (review) returns a list of suggested edits. Step 4 (publish) expects a clean final string. When you connect them, step 4 receives the list of edits instead of the final text.",
+      "question": "What is the correct fix?",
+      "options": [
+        "A. Change step 4 to accept a list of edits and apply them internally.",
+        "B. Add a step between review and publish that applies the edits to the draft and returns the revised string.",
+        "C. Combine steps 3 and 4 into one prompt so the model applies edits and publishes in one call.",
+        "D. Pass the original draft along with the edits list to step 4 as a tuple."
+      ],
+      "answer": "B",
+      "explanation": "Each step should have a single, well-defined input type and output type. When consecutive steps have incompatible types, the correct fix is to add an explicit step that handles the transformation (apply_edits). Combining steps defeats the purpose of chaining. Passing a tuple makes the type contract implicit and harder to test."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your prompt chain extracts facts from articles. On 8% of inputs, the extraction step returns valid JSON but with only 1-2 vague facts. The gate rejects these. Your PM asks why the chain is failing on 8% of inputs and whether you should lower the gate threshold to 1 fact.",
+      "question": "What is the correct response?",
+      "options": [
+        "A. Lower the gate threshold to 1 fact so more inputs pass through.",
+        "B. The gate is working correctly. Articles with insufficient content should be rejected early rather than producing a polished section with hallucinated facts. Investigate the 8% to determine if they are genuinely thin articles or if the extraction prompt needs improvement.",
+        "C. Remove the gate and let downstream steps handle the bad input however they can.",
+        "D. Add an LLM-judged gate after the structural gate to provide a second opinion."
+      ],
+      "answer": "B",
+      "explanation": "The gate exists to prevent downstream contamination. If the threshold is lowered without evidence that the rejected articles are actually good, you will produce confident-sounding hallucinations. The right question is: are the 8% of rejected articles genuinely thin, or is the extraction prompt failing on good content? Inspect the rejections before changing the threshold."
+    },
+    {
+      "id": "c3",
+      "scenario": "You run the prompt chain on 100 articles. The final polished output has an average quality score of 3.2/5. You suspect the problem is in step 2 (drafting), not step 3 (polishing). How do you isolate the issue?",
+      "question": "What is the correct debugging approach?",
+      "options": [
+        "A. Rewrite both step 2 and step 3 prompts simultaneously and check if the score improves.",
+        "B. Run step 3 (polishing) in isolation on 20 manually written high-quality drafts. If step 3 scores well on those, the problem is in step 2. Then run step 2 on 20 representative extraction outputs to confirm.",
+        "C. Add more detailed instructions to the step 2 prompt and re-run the full chain.",
+        "D. Switch to a more powerful model for step 2 and re-run the full chain."
+      ],
+      "answer": "B",
+      "explanation": "The key advantage of a chain is that each step can be tested in isolation. Test step 3 with known-good inputs first to establish that the polishing prompt is sound. If step 3 passes isolation testing, the problem is definitively in step 2. Changing two steps at once makes it impossible to know which change caused the improvement. Switching models before isolating the problem wastes money."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your chain's extraction step sometimes returns an empty list instead of JSON when the API response is malformed. This propagates to the gate, which correctly rejects it with 'found 0 facts.' However, you notice the empty list was caused by a transient API timeout, not bad content.",
+      "question": "What is the right fix?",
+      "options": [
+        "A. Lower the gate threshold to allow empty lists through so transient failures don't block the chain.",
+        "B. Add retries=1 or retries=2 to the extraction step so transient API failures trigger a retry before the gate sees the result.",
+        "C. Catch the timeout exception in the extraction step and return a default list of generic facts.",
+        "D. Add a second extraction step after the gate that re-runs if the first extraction returned 0 facts."
+      ],
+      "answer": "B",
+      "explanation": "Transient failures should be handled with retries at the step level, before the gate evaluates the result. The gate should only see the best available output after retries. Returning default facts from a timeout is worse - it produces fabricated content. Lowering the gate threshold hides the failure mode. A duplicate extraction step adds complexity that retries handle more cleanly."
+    },
+    {
+      "id": "c5",
+      "scenario": "A colleague proposes replacing your 3-step chain (extract, draft, polish) with one combined prompt: 'Extract facts, write a draft, and polish it - all in one response.' They argue it is simpler and uses fewer API calls.",
+      "question": "What is the concrete trade-off, and when would the colleague's approach be correct?",
+      "options": [
+        "A. The colleague is always wrong. Chains always outperform single prompts.",
+        "B. The chain produces better output because each step focuses on one role. The single prompt is correct when the task is simple enough that role-switching does not degrade quality, or when latency is the primary constraint.",
+        "C. The colleague is always right. Single prompts are faster and cheaper, which always outweighs quality differences.",
+        "D. The single prompt is better because it maintains context across all three steps."
+      ],
+      "answer": "B",
+      "explanation": "Both approaches have legitimate use cases. The chain wins on quality for multi-role tasks because each step gets undivided attention. The single prompt wins on latency and cost when the task is simple or when the quality difference is below acceptable thresholds. The correct answer is to measure: run both on 20 samples, score the outputs, and let data decide."
+    },
+    {
+      "id": "c6",
+      "scenario": "You have a 5-step chain. Step 4 fails with an exception. The Chain class has retries=0 on step 4. What does the caller receive, and what state is the chain in?",
+      "question": "Which statement correctly describes the behavior?",
+      "options": [
+        "A. The chain restarts from step 1 and re-runs until step 4 succeeds.",
+        "B. The caller receives a ChainError with the step name and exception message. The chain halts at step 4 with no side effects on subsequent steps.",
+        "C. The chain skips step 4 and continues to step 5 with the output from step 3.",
+        "D. The chain returns the output from step 3 as a partial result, with an attached error flag."
+      ],
+      "answer": "B",
+      "explanation": "The Chain class returns a ChainError and halts immediately when a step fails and retries are exhausted. Steps 5 through N are never executed. This is the correct behavior: partial results from a chain are usually worse than no result, because the caller cannot know which steps ran and which did not. The ChainError includes the step name for debugging."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your polishing step (step 3) is receiving the full original article as input rather than the draft from step 2. The polished output is 3x longer than expected and sometimes contradicts the draft.",
+      "question": "What caused this, and how do you fix it?",
+      "options": [
+        "A. The polishing prompt is incorrect and needs to be told to use only the draft.",
+        "B. The chain is passing the wrong value to step 3. The output of step 2 is not being captured as the input for step 3 - the initial input is being passed through instead.",
+        "C. The polishing model is too powerful and is generating extra content.",
+        "D. The chain needs a gate between steps 2 and 3 to filter out the original article."
+      ],
+      "answer": "B",
+      "explanation": "In a chain, each step must return the value that the next step receives. If step 3 is getting the original article instead of the draft, the chain wiring is wrong: either step 2 is returning the wrong value, or the lambda wrapper is incorrectly capturing the original article from the outer scope. Inspect the return value of each step function and the lambda that connects them."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are designing a new chain for a legal document review pipeline. Step 1 extracts clauses. Step 2 classifies each clause as standard, non-standard, or high-risk. Step 3 writes a summary for each non-standard and high-risk clause. You want to add a gate. Where should it go?",
+      "question": "Where is the gate most useful, and what should it check?",
+      "options": [
+        "A. After step 3, to check that the summary length is within bounds.",
+        "B. After step 1, to check that at least N clauses were extracted and that the extracted text looks like legal clauses (contains legal terms) rather than garbled output.",
+        "C. After step 2, to check that the model did not classify every clause as 'high-risk'.",
+        "D. Both B and C are good gate locations."
+      ],
+      "answer": "D",
+      "explanation": "Both gates add value. The gate after step 1 prevents garbage from propagating: if extraction failed, classification and summarization will produce confident-sounding nonsense. The gate after step 2 catches a degenerate classification (all high-risk) that would cause step 3 to summarize every clause - a strong signal that the classification prompt is misbehaving. Multiple gates at different checkpoints are correct for high-stakes pipelines."
+    }
+  ]
+}

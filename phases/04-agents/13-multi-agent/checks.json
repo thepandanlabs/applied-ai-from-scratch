@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "13-multi-agent",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team has a single customer support agent that resolves 87% of tickets in 2 seconds. A colleague proposes rebuilding it as a 5-agent network with a supervisor, intent classifier, knowledge retriever, response drafter, and tone reviewer.",
+      "question": "What is the most important question to ask before proceeding with the redesign?",
+      "options": [
+        "A. Which LLM provider should each specialist use?",
+        "B. Does the current agent hit a context limit, need independent verification, or have tasks that benefit from parallel execution?",
+        "C. How many agents is the industry standard for customer support?",
+        "D. Should we use the supervisor-workers pattern or the handoff pattern?"
+      ],
+      "answer": "B",
+      "explanation": "Multi-agent architecture earns its complexity only when a task exceeds one context window, requires independent verification, or has genuinely parallelizable workstreams. If none of these apply, the single agent is better. The pattern choice (C) is secondary to the justification question."
+    },
+    {
+      "id": "c2",
+      "scenario": "A supervisor agent is dispatching to three specialists: researcher, writer, reviewer. After the researcher runs, the writer produces a draft. The reviewer then flags that the draft contains a claim not supported by the research.",
+      "question": "What design flaw most likely caused this, given the code pattern in this lesson?",
+      "options": [
+        "A. The supervisor used the wrong specialist prompt.",
+        "B. The writer received only the task string but not the researcher's output in its context.",
+        "C. The reviewer was called before the writer.",
+        "D. The model temperature was too high."
+      ],
+      "answer": "B",
+      "explanation": "The pattern requires passing cumulative outputs to each specialist. If the writer only received the task string and not outputs['researcher'], it has no source material and must invent or guess. Context passing is the most common failure mode in supervisor pipelines."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are building a pipeline to process 500 customer feedback documents. Each document needs to be summarized and categorized. The summaries are independent of each other.",
+      "question": "Which multi-agent condition justifies this architecture?",
+      "options": [
+        "A. Independent verification improves accuracy.",
+        "B. Tasks benefit from specialist parallelism.",
+        "C. The task exceeds one context window.",
+        "D. Both B and C apply here."
+      ],
+      "answer": "D",
+      "explanation": "500 documents almost certainly exceed a single context window (C), and summaries that do not depend on each other can be processed in parallel by multiple specialists (B). Both conditions apply, making multi-agent justified here."
+    },
+    {
+      "id": "c4",
+      "scenario": "A supervisor returns this JSON: {'specialist': 'writer', 'task': 'write the blog post', 'done': false}. The writer calls call_specialist() and receives a response. The pipeline state is then updated.",
+      "question": "What should be stored in pipeline_state['outputs'] after the writer runs?",
+      "options": [
+        "A. Only the writer's output, replacing all previous outputs.",
+        "B. The writer's output added under the key 'writer', alongside all prior outputs.",
+        "C. The full message history of the writer's API call.",
+        "D. Nothing - outputs are stored in the supervisor's context, not pipeline state."
+      ],
+      "answer": "B",
+      "explanation": "The pattern uses cumulative outputs: pipeline_state['outputs']['writer'] = output. Prior outputs (e.g., outputs['researcher']) must remain intact so the reviewer can access the research notes. Replacing outputs destroys context that later specialists need."
+    },
+    {
+      "id": "c5",
+      "scenario": "You need to build a pipeline where: step 1 always runs before step 2, step 2 always runs before step 3, and there is never any branching or conditional routing.",
+      "question": "Which pattern is more appropriate and why?",
+      "options": [
+        "A. Supervisor-Workers, because it is more flexible.",
+        "B. Handoffs, because the fixed sequence means routing logic adds no value.",
+        "C. Supervisor-Workers, because the supervisor can add verification steps.",
+        "D. Either pattern works equally well for fixed sequences."
+      ],
+      "answer": "B",
+      "explanation": "When the sequence is fixed, a supervisor adds overhead without adding value. The supervisor's job is routing decisions, but if the route is always the same, hardcoding the sequence in the handoff pattern is simpler, cheaper, and has a smaller failure surface."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your supervisor agent is in a 6-step pipeline. At step 4 it returns the same JSON as step 2, dispatching the researcher again even though research is already complete.",
+      "question": "What is the most direct fix?",
+      "options": [
+        "A. Switch from supervisor-workers to handoffs.",
+        "B. Add completed_steps to the pipeline state the supervisor receives, and add a rule that each specialist should only run once.",
+        "C. Reduce the model temperature for the supervisor.",
+        "D. Limit max_steps to 3."
+      ],
+      "answer": "B",
+      "explanation": "The supervisor loops because it cannot see what has already been done. Including completed_steps in the state (already in the pattern) and adding an explicit rule ('do not dispatch a specialist that appears in completed_steps') prevents re-dispatch. Reducing max_steps (D) masks the problem without fixing it."
+    },
+    {
+      "id": "c7",
+      "scenario": "A colleague says: 'We should use a multi-agent system for our Q&A bot. Each agent can specialize in a different topic: one for billing, one for technical support, one for account management.' The current single-agent bot handles all three topics in one call and performs well.",
+      "question": "What is the strongest argument against this proposal?",
+      "options": [
+        "A. Q&A bots should never use multi-agent systems.",
+        "B. Specialization requires separate model fine-tuning, which is expensive.",
+        "C. Topic routing adds latency and a failure mode without providing independent verification, parallel speedup, or context overflow relief - none of the three justifications apply.",
+        "D. The handoff pattern would be better than supervisor-workers for this use case."
+      ],
+      "answer": "C",
+      "explanation": "The three conditions that justify multi-agent complexity do not apply: topics fit in one context window, Q&A does not need independent verification, and billing/technical/account questions are not parallelizable for a single user query. Adding three agents adds three failure points and routing latency with no benefit."
+    },
+    {
+      "id": "c8",
+      "scenario": "You have a supervisor-workers pipeline in production. The supervisor occasionally returns malformed JSON, causing the pipeline to crash at the parse step.",
+      "question": "What is the most robust approach to handle this?",
+      "options": [
+        "A. Switch to a more capable model for the supervisor.",
+        "B. Wrap the JSON parse in a try/except, log the raw output, and either retry the supervisor call or fail gracefully with an error state.",
+        "C. Ask the supervisor to return plain text instead of JSON.",
+        "D. Remove the max_steps limit so the pipeline has more chances to succeed."
+      ],
+      "answer": "B",
+      "explanation": "LLMs occasionally produce malformed output even with explicit instructions. The robust pattern is try/except around the parse, log the raw output for debugging, and implement a retry or graceful failure. Switching models (A) reduces frequency but does not eliminate the problem. Removing the step limit (D) creates an infinite loop risk."
+    }
+  ]
+}

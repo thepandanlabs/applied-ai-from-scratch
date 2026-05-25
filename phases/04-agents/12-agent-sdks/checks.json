@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "12-agent-sdks",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team builds a customer service bot with 4 tools (search KB, look up order, issue refund, send confirmation email). The flow is always the same linear sequence. After 8 months, they have 35 LangGraph nodes and a state dict with 18 keys. Adding a new tool takes 2 days.",
+      "question": "What was the original error, and what should they have used instead?",
+      "options": [
+        "A. They used too many tools; reduce to 2 tools maximum",
+        "B. They chose LangGraph for a linear flow that needed no resumable state or human-in-loop; the Claude Agent SDK or Raw SDK was the right choice",
+        "C. They should have used OpenAI instead of Anthropic",
+        "D. The state dict is too large; they should use a database instead"
+      ],
+      "answer": "B",
+      "explanation": "LangGraph's value is resumable state, human-in-loop checkpoints, and complex branching. A linear 4-tool customer service flow needs none of those. The Agents SDK would have provided the same behavior in half the code with no graph topology to maintain. The 35-node graph and 18-key state dict are the price of choosing the wrong abstraction level."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your team is building a financial document processing pipeline. Every document goes through: (1) OCR, (2) field extraction, (3) compliance check, (4) human review if flagged, (5) approval or rejection, (6) record update. Step 4 requires a human to review the document and either approve or send back for re-extraction.",
+      "question": "Which SDK is most appropriate, and why?",
+      "options": [
+        "A. Raw Anthropic SDK, because you need full control over the loop",
+        "B. Claude Agent SDK, because it handles retries automatically",
+        "C. LangGraph, because the human-in-the-loop step requires the workflow to pause and resume after human input",
+        "D. Neither; this workflow should be implemented without an agent framework"
+      ],
+      "answer": "C",
+      "explanation": "LangGraph's built-in checkpointing is specifically designed for workflows that must pause at a step, wait for external input (human review), and resume. Without checkpointing, a human review step requires the entire process to stay in memory or be rebuilt from scratch after the human responds. This is exactly the use case that justifies LangGraph's complexity."
+    },
+    {
+      "id": "c3",
+      "scenario": "An engineer is implementing a custom streaming chat interface where the agent's thoughts are streamed token-by-token to the UI, tool calls are intercepted and rendered specially, and the message format is non-standard (not the default Anthropic format). They ask which SDK to use.",
+      "question": "Which approach is most appropriate for this use case?",
+      "options": [
+        "A. LangGraph, because complex UI requirements need a stateful graph",
+        "B. Claude Agent SDK, because it has built-in streaming",
+        "C. Raw Anthropic SDK, because the non-standard message format and custom streaming behavior are outside the standard SDK's abstractions",
+        "D. OpenAI Agents SDK, because it is better for streaming"
+      ],
+      "answer": "C",
+      "explanation": "When the loop pattern, message format, or streaming behavior is genuinely non-standard, the Raw SDK gives you complete control. The Agents SDK's built-in streaming assumes standard output formats. Forcing a custom pattern into an SDK abstraction often results in fighting the abstraction rather than using it. This is the legitimate use case for going raw."
+    },
+    {
+      "id": "c4",
+      "scenario": "A developer measures that their 3-tool research agent takes 80 lines in raw SDK and 40 lines with the Agents SDK. Their manager asks: 'Why use the Agents SDK if raw SDK is just 40 more lines?' ",
+      "question": "What is the best answer that goes beyond line count?",
+      "options": [
+        "A. Fewer lines are always better regardless of other factors",
+        "B. The Agents SDK provides retry logic, input validation, and streaming that would add another 60+ lines of reliable infrastructure to the raw implementation",
+        "C. The Agents SDK is faster at runtime",
+        "D. The Agents SDK is required for production deployments"
+      ],
+      "answer": "B",
+      "explanation": "Line count is a proxy for the real benefit: the SDK also provides production-grade retry with exponential backoff, automatic input validation via Pydantic, streaming support, and standardized error handling. These are 3-6 weeks of work to implement reliably from scratch. The 40-line raw version doesn't include any of that. The comparison should be 80 lines (raw, no retries) vs 40 lines (SDK, with retries, validation, streaming)."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are evaluating a LangGraph implementation of a research agent. The agent has 8 nodes: start, search, check_results, search_more, aggregate, verify, format, end. The state dict has 12 keys. There is no human-in-loop step and no checkpointing configured. The task is linear with no real branching.",
+      "question": "How would you characterize this implementation?",
+      "options": [
+        "A. Correct use of LangGraph; the 8 nodes provide useful structure",
+        "B. Premature adoption of LangGraph for a task that has no branching state, human-in-loop, or resumable state requirement",
+        "C. The implementation needs more nodes to handle edge cases",
+        "D. LangGraph is always the best choice for production agents"
+      ],
+      "answer": "B",
+      "explanation": "The three justifications for LangGraph are: resumable state, human-in-loop, and complex branching. None of these are present. The 8 nodes and 12-key state dict are pure overhead. The same flow would be 40 lines with the Agents SDK. The team is now committed to maintaining LangGraph's graph topology, state schema, and routing logic for a workflow that didn't need it."
+    },
+    {
+      "id": "c6",
+      "scenario": "A junior engineer is starting a new agent project. They say 'I'll use LangGraph because we might need persistence later.' The current requirements are: 3 tools, linear flow, no human steps, expected runtime under 2 minutes.",
+      "question": "What is the production-correct guidance?",
+      "options": [
+        "A. Start with LangGraph so you don't have to refactor later",
+        "B. Start with the Agents SDK; refactor to LangGraph only when the requirement for resumable state, human-in-loop, or complex branching actually appears",
+        "C. Start with raw SDK because it is always the safest choice",
+        "D. The junior engineer is correct; premature optimization is fine for frameworks"
+      ],
+      "answer": "B",
+      "explanation": "Start with the simplest tool that meets the current requirements. 'Might need it later' is not a current requirement. Refactoring from Agents SDK to LangGraph when the need genuinely appears is a contained, understandable change. Starting with LangGraph for a simple agent means you maintain its full complexity indefinitely, even if the requirement for it never arrives."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your LangGraph implementation has grown to 40 nodes. A new engineer joins and asks: 'Which node sets the user_tier key in the state dict?' They spend 45 minutes tracing conditional edges to find the answer.",
+      "question": "What does this debugging experience reveal about the tradeoff LangGraph makes?",
+      "options": [
+        "A. The state dict should use simpler types",
+        "B. Complex LangGraph graphs trade debuggability for features (resumable state, human-in-loop); when the graph grows beyond a few nodes, tracing state becomes expensive",
+        "C. The engineer should learn LangGraph better",
+        "D. LangGraph should not be used with state dicts; only TypedDicts are appropriate"
+      ],
+      "answer": "B",
+      "explanation": "This is the fundamental LangGraph tradeoff: you gain resumable state and human-in-loop at the cost of debuggability. State mutations are spread across nodes; routing is spread across edge functions. In a raw loop, you trace a linear execution. In a 40-node graph, you trace a topology. Both are valid engineering choices; LangGraph's complexity cost must be justified by genuine use of its features."
+    },
+    {
+      "id": "c8",
+      "scenario": "A startup is building a code review agent that: (1) reads a PR, (2) categorizes the changes, (3) runs one of four specialized review flows based on the category (security review, performance review, style review, or logic review), and (4) synthesizes a final report. All four flows use different tools and take different amounts of time.",
+      "question": "Apply the decision rubric. Which SDK is most appropriate?",
+      "options": [
+        "A. Raw SDK, for maximum control over the four different flows",
+        "B. LangGraph, because the conditional routing to 4 different flows is genuine branching logic that benefits from graph structure",
+        "C. Agents SDK, because retries are the most important feature here",
+        "D. Any SDK works; the choice doesn't matter for 4 branches"
+      ],
+      "answer": "B",
+      "explanation": "Four distinct execution paths based on runtime state (the category) is genuine branching. LangGraph's conditional edges are designed for exactly this: route to 'security_review_node' vs 'performance_review_node' vs 'style_review_node' vs 'logic_review_node' based on the category. With 4 branches and different tools per branch, the graph structure makes the routing explicit and inspectable. This is a legitimate LangGraph use case."
+    }
+  ]
+}

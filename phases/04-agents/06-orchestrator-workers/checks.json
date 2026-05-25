@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "06-orchestrator-workers",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A single LLM call is asked to simultaneously find market data, analyze competitive dynamics, and write an executive summary. The output is mediocre across all three dimensions but not obviously wrong in any one area.",
+      "question": "What is the root cause of the mediocre output, and what pattern directly addresses it?",
+      "options": [
+        "A. The model is too small; switch to a larger model with a single call",
+        "B. Role collision: one context window cannot encode three distinct expert personas simultaneously; use orchestrator-workers to give each role a dedicated call with a specialized prompt",
+        "C. The prompt is too long; split it into smaller prompts in the same call",
+        "D. The task is too complex for an LLM; use a rules-based system instead"
+      ],
+      "answer": "B",
+      "explanation": "Role collision is the core problem. A system prompt encoding three distinct expert roles (researcher, analyst, writer) forces the model to compromise between them. Each worker call with its own specialized system prompt narrows the output space to what that role should produce, eliminating the compromise."
+    },
+    {
+      "id": "c2",
+      "scenario": "An orchestrator produces this plan: [{id: t1, worker_type: data_collector, depends_on: []}, {id: t2, worker_type: analyst, depends_on: [t1]}, {id: t3, worker_type: writer, depends_on: [t1, t2]}]. The t2 worker call fails and returns an error string.",
+      "question": "What should the worker execution logic do before running t3?",
+      "options": [
+        "A. Pass the error string as context to t3 - the writer will handle it",
+        "B. Cancel the entire pipeline and return a failure to the user",
+        "C. Mark t2 as failed, run t3 with only t1's output as context, and instruct the synthesis to acknowledge the gap",
+        "D. Retry t2 immediately with the same prompt until it succeeds"
+      ],
+      "answer": "C",
+      "explanation": "Passing raw error strings as context poisons the downstream call. Canceling the pipeline loses the valid work already done. One retry is reasonable but not guaranteed. The right behavior is to continue with available valid outputs and flag the gap at synthesis, so the final output acknowledges what is missing rather than fabricating a replacement."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are building an orchestrator-workers system. The orchestrator system prompt lists three worker types. In production, the orchestrator occasionally invents a fourth worker type called 'summarizer' that is not in your registry.",
+      "question": "How do you prevent this?",
+      "options": [
+        "A. Add a fourth worker type 'summarizer' to handle it",
+        "B. Explicitly list all allowed worker type names in the orchestrator prompt and add a constraint like 'Use only these worker types. Do not invent new ones.'",
+        "C. Use a lower temperature for the orchestrator call to reduce creativity",
+        "D. Parse the plan and silently skip any unrecognized worker types"
+      ],
+      "answer": "B",
+      "explanation": "LLMs generalize. If the prompt implies there could be more worker types, the model will create them. Enumerating allowed types explicitly and adding a constraint prevents this. Option C helps but does not eliminate the issue. Option D creates silent data loss. Option A chases symptoms instead of fixing the root cause."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your orchestrator correctly breaks a goal into 3 subtasks. The data_collector and analyst have no dependency on each other. Currently they run sequentially, taking 40 seconds total.",
+      "question": "What change reduces the total time for these two calls?",
+      "options": [
+        "A. Increase max_tokens to get faster, more complete responses",
+        "B. Run data_collector and analyst concurrently using asyncio.gather since they have no dependency between them",
+        "C. Merge data_collector and analyst into one worker to reduce API calls",
+        "D. Cache the data_collector output and reuse it for the analyst"
+      ],
+      "answer": "B",
+      "explanation": "Tasks with empty depends_on arrays have no ordering constraint. Running them concurrently with asyncio.gather reduces total time from the sum of both calls to the time of the slower one. Merging them defeats the purpose of specialization. Caching is irrelevant here since each run uses fresh data."
+    },
+    {
+      "id": "c5",
+      "scenario": "A synthesis call receives outputs from a data_collector and an analyst. The final report includes a specific statistic that appears in neither worker's output.",
+      "question": "What is this called and how do you fix it?",
+      "options": [
+        "A. Worker contamination - isolate worker contexts to prevent cross-pollination",
+        "B. Synthesis hallucination - add 'Use only the provided worker outputs. Do not add new facts or statistics.' to the synthesis prompt",
+        "C. Context overflow - reduce the size of worker outputs before passing to synthesis",
+        "D. Temperature drift - set synthesis temperature to 0"
+      ],
+      "answer": "B",
+      "explanation": "Synthesis hallucination occurs when the synthesis call draws on its training knowledge instead of the provided context. The fix is an explicit grounding constraint in the synthesis prompt. Temperature=0 helps but the model can still hallucinate at temperature 0. The constraint addresses the root cause directly."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your team proposes replacing the LLM orchestrator with a hardcoded Python function: if 'market' in goal, dispatch data_collector; if 'analysis' in goal, dispatch analyst; etc.",
+      "question": "What key capability does the LLM orchestrator provide that the hardcoded function cannot?",
+      "options": [
+        "A. The LLM orchestrator is faster because it uses fewer API calls",
+        "B. The LLM orchestrator handles novel goal structures it has never seen before by planning dynamically, whereas hardcoded routing only handles anticipated patterns",
+        "C. The LLM orchestrator validates worker outputs automatically",
+        "D. The LLM orchestrator eliminates the need for worker system prompts"
+      ],
+      "answer": "B",
+      "explanation": "Hardcoded routing is brittle: it only handles the patterns the engineer anticipated. An LLM orchestrator can decompose novel goal structures, determine the right number of workers for varying task complexity, and create appropriate dependency chains it was never explicitly programmed for. This generalization is the core value of an LLM planner."
+    },
+    {
+      "id": "c7",
+      "scenario": "You add a new 'fact_checker' worker type to your system. You add it to WORKER_SYSTEMS but forget to mention it in the orchestrator system prompt.",
+      "question": "What happens in production?",
+      "options": [
+        "A. The orchestrator will discover the new worker type automatically",
+        "B. The orchestrator will never dispatch to fact_checker because it does not know the type exists",
+        "C. The code will raise a KeyError the first time fact_checker is dispatched",
+        "D. The orchestrator will dispatch to fact_checker but with incorrect instructions"
+      ],
+      "answer": "B",
+      "explanation": "The orchestrator only knows about worker types that are explicitly described in its system prompt. If fact_checker is not listed, the orchestrator will never plan a subtask with that worker type. The worker registry and the orchestrator prompt must be kept in sync. This is a common maintenance footgun."
+    },
+    {
+      "id": "c8",
+      "scenario": "During a code review, a colleague points out that your worker validation only checks output length (> 50 characters). The analyst worker sometimes returns 'I cannot analyze this.' which passes the length check but is semantically useless.",
+      "question": "What is a better validation strategy for the analyst worker specifically?",
+      "options": [
+        "A. Increase the minimum length threshold to 200 characters",
+        "B. Check that the output contains expected structural markers like '##' (section headers), which the analyst system prompt requires",
+        "C. Run a second LLM call to validate every worker output",
+        "D. Disable validation and let the synthesis call handle bad inputs"
+      ],
+      "answer": "B",
+      "explanation": "Each worker has a defined output format in its system prompt. The analyst is required to use '## Finding' headers. Checking for these structural markers is a cheap, reliable signal that the worker fulfilled its role. Option A is a band-aid. Option C doubles API costs. Option D passes bad data downstream."
+    }
+  ]
+}

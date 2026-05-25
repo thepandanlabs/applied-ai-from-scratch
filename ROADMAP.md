@@ -90,26 +90,26 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 04: Agents: Patterns That Survive Production [⬚] (~18 hours)
+## Phase 04: Agents: Patterns That Survive Production [✅] (~18 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | The Agent Loop: Raw, No Dependencies | ⬚ | ~60 min |
-| 02 | Workflows vs Agents: When NOT to Use an Agent | ⬚ | ~45 min |
-| 03 | Pattern: Prompt Chaining | ⬚ | ~45 min |
-| 04 | Pattern: Routing | ⬚ | ~45 min |
-| 05 | Pattern: Parallelization | ⬚ | ~45 min |
-| 06 | Pattern: Orchestrator-Workers | ⬚ | ~60 min |
-| 07 | Pattern: Evaluator-Optimizer | ⬚ | ~60 min |
-| 08 | Tool Use + Error Recovery in the Loop | ⬚ | ~60 min |
-| 09 | Memory: Short-Term, Long-Term, When You Don't Need It | ⬚ | ~60 min |
-| 10 | Planning: ReAct, Plan-and-Execute | ⬚ | ~60 min |
-| 11 | Stopping Conditions, Cost Governors, Kill Switches | ⬚ | ~45 min |
-| 12 | Agent SDKs: Claude, OpenAI, LangGraph Tradeoffs | ⬚ | ~60 min |
-| 13 | Multi-Agent: Supervisor, Handoffs, and When It Is Overkill | ⬚ | ~60 min |
-| 14 | Agent Failure Modes: MAST Taxonomy | ⬚ | ~45 min |
-| 15 | Human-in-the-Loop & Approval Gates | ⬚ | ~45 min |
-| 16 | Capstone: Production Agent with Guardrails + Tracing | ⬚ | ~90 min |
+| 01 | The Agent Loop: Raw, No Dependencies | ✅ | ~60 min |
+| 02 | Workflows vs Agents: When NOT to Use an Agent | ✅ | ~45 min |
+| 03 | Pattern: Prompt Chaining | ✅ | ~45 min |
+| 04 | Pattern: Routing | ✅ | ~45 min |
+| 05 | Pattern: Parallelization | ✅ | ~45 min |
+| 06 | Pattern: Orchestrator-Workers | ✅ | ~60 min |
+| 07 | Pattern: Evaluator-Optimizer | ✅ | ~60 min |
+| 08 | Tool Use + Error Recovery in the Loop | ✅ | ~60 min |
+| 09 | Memory: Short-Term, Long-Term, When You Don't Need It | ✅ | ~60 min |
+| 10 | Planning: ReAct, Plan-and-Execute | ✅ | ~60 min |
+| 11 | Stopping Conditions, Cost Governors, Kill Switches | ✅ | ~45 min |
+| 12 | Agent SDKs: Claude, OpenAI, LangGraph Tradeoffs | ✅ | ~60 min |
+| 13 | Multi-Agent: Supervisor, Handoffs, and When It Is Overkill | ✅ | ~60 min |
+| 14 | Agent Failure Modes: MAST Taxonomy | ✅ | ~45 min |
+| 15 | Human-in-the-Loop & Approval Gates | ✅ | ~45 min |
+| 16 | Capstone: Production Agent with Guardrails + Tracing | ✅ | ~90 min |
 
 ---
 

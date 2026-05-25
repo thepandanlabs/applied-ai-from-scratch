@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "16-capstone-production-agent",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "The production codebase assistant governor fires after 12 iterations on a complex query. The agent returns: 'I was unable to complete your request within the resource budget. Reason: iteration limit reached (12/15).' An engineer files a bug report saying the agent stopped early.",
+      "question": "Is this a bug, expected behavior, or a UX problem? What is the correct response?",
+      "options": [
+        "A. Bug - the governor threshold should be raised to 25 so this does not happen.",
+        "B. Expected behavior and a UX problem - the governor is working correctly, but the message should include partial results and a suggestion to narrow the query.",
+        "C. Expected behavior - the message is fine as-is and no change is needed.",
+        "D. Bug - the agent should retry automatically when the governor fires."
+      ],
+      "answer": "B",
+      "explanation": "The governor is working as designed: it prevents unbounded execution. This is correct behavior. The UX problem is that the message does not give the user actionable next steps. The fix is improving the message ('Here is what I found so far... To complete this, try narrowing your query to...'), not raising the governor limit or adding retries."
+    },
+    {
+      "id": "c2",
+      "scenario": "You trace a production agent run and see: turn 3 calls search_files with query='login', turn 5 calls search_files with query='login', turn 7 calls search_files with query='login'. The governor fires at turn 15.",
+      "question": "What MAST category does this represent and what is the most direct fix?",
+      "options": [
+        "A. Supervision failure - raise the max_iterations limit.",
+        "B. Memory failure - the agent does not see its own prior tool calls. Include a completed-steps summary or use trim_history to ensure prior tool results are in context.",
+        "C. Action failure - the search_files tool is returning bad results.",
+        "D. Task failure - the agent misunderstood the goal."
+      ],
+      "answer": "B",
+      "explanation": "Repeated identical tool calls are the signature MAST/Memory failure. The agent repeats the search because it cannot see (or is not attending to) the prior search results in its context. The fix: ensure trim_history retains enough turns that the agent sees its prior tool calls, and verify tool results are included in messages sent to the API."
+    },
+    {
+      "id": "c3",
+      "scenario": "You add a new tool: apply_fix, which actually writes changes to the filesystem. You forget to add requires_approval=True to its definition. You deploy.",
+      "question": "What happens the first time the agent calls apply_fix?",
+      "options": [
+        "A. The API rejects the call because the tool is not in APPROVAL_FLAGS.",
+        "B. The gate fires automatically because all write tools require approval by default.",
+        "C. The tool executes without any approval gate because APPROVAL_FLAGS.get('apply_fix', False) returns False.",
+        "D. The agent refuses to call the tool because it is not in the original TOOLS list."
+      ],
+      "answer": "C",
+      "explanation": "APPROVAL_FLAGS is built from the TOOLS list. If requires_approval is missing from the tool definition, it defaults to False. APPROVAL_FLAGS.get('apply_fix', False) returns False, so execute_tool() skips the gate entirely. The tool executes with no human review. This is why the tagging convention must be enforced: there is no automatic detection of 'write' semantics."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are running the regression eval harness. Before a prompt change, pass_rate was 80% (4/5 golden cases passing). After the change, pass_rate is 80% but a different case is now failing: the 'suggest-01' case (which tests suggest_fix flow) went from PASS to FAIL, and 'general-01' went from FAIL to PASS.",
+      "question": "Should you ship the prompt change? Why or why not?",
+      "options": [
+        "A. Yes - pass rate is unchanged at 80%.",
+        "B. No - a case that was PASS became FAIL. The runbook specifies this is a blocking condition regardless of overall pass rate.",
+        "C. Yes - one case improved and one regressed, so it is a net zero change.",
+        "D. Only if the suggest-01 case is less important than the general-01 case."
+      ],
+      "answer": "B",
+      "explanation": "The runbook states: 'No golden case that was PASS before the change may become FAIL.' The suggest_fix flow is a critical path (it involves the HITL gate). A regression here could mean code changes are being proposed incorrectly. Pass rate as an aggregate masks this. The blocking rule exists for exactly this reason."
+    },
+    {
+      "id": "c5",
+      "scenario": "The trace shows gen_ai.usage.input_tokens climbing from 2,000 at turn 1 to 18,000 at turn 8. The agent is not looping - it is making progress. The governor has not fired.",
+      "question": "What is most likely causing the token growth, and what is the correct response?",
+      "options": [
+        "A. The model is generating longer and longer responses. Reduce max_tokens.",
+        "B. The full conversation history including tool results is being sent on every turn. This is expected context accumulation. Monitor but no action needed unless approaching the token budget.",
+        "C. The agent is calling search_files too many times. Reduce the number of allowed tool calls.",
+        "D. The tracer is double-counting tokens. Fix the tracing logic."
+      ],
+      "answer": "B",
+      "explanation": "Input tokens grow on each turn because the full message history (including all prior tool calls and results) is sent to the API. This is expected and correct. The sliding window (trim_history) limits growth at max_turns=10. If token growth is a concern, check whether trim_history is being applied and whether individual tool results are excessively long (truncate at 10,000 characters if so)."
+    },
+    {
+      "id": "c6",
+      "scenario": "You want to add OTel-compatible tracing to the agent so Langfuse can parse the spans automatically. You are using the gen_ai.* naming convention from the lesson.",
+      "question": "Which attribute name correctly identifies the number of output tokens for a single turn?",
+      "options": [
+        "A. tokens.output",
+        "B. gen_ai.usage.output_tokens",
+        "C. agent.output_token_count",
+        "D. llm.response.tokens"
+      ],
+      "answer": "B",
+      "explanation": "The OpenTelemetry GenAI semantic conventions use gen_ai.usage.output_tokens for output token counts. This naming is what Langfuse, Phoenix, and other OTel-compatible tools parse to build token usage dashboards. Deviating from the convention means the tools cannot auto-parse your traces."
+    },
+    {
+      "id": "c7",
+      "scenario": "The router classifies 'Can you refactor the authentication module?' as 'general' instead of 'suggest'. This causes the agent to enter a generic response loop instead of using the suggest_fix flow.",
+      "question": "What is the most robust fix for this router failure?",
+      "options": [
+        "A. Replace the single-word router with a full agent call that analyzes the intent at length.",
+        "B. Add a fallback rule: if the router returns 'general' but the input contains keywords like 'refactor', 'fix', 'change', or 'improve', reclassify as 'suggest'.",
+        "C. Remove the router and let the main agent classify intent itself.",
+        "D. Add 'refactor' as a new router category."
+      ],
+      "answer": "B",
+      "explanation": "A keyword fallback is cheap, fast, and targeted. It does not require a more expensive model call (A) or restructuring the router. Adding 'refactor' as a new category (D) helps but does not cover all edge cases ('improve', 'clean up', 'rewrite'). The keyword fallback is the minimal effective fix that preserves the router's low cost while covering the missed intent."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are designing a golden eval set for the production agent. You currently have 4 cases. You want to expand to 20. The runbook says to add cases for every failure mode fixed in production.",
+      "question": "Which set of additions most comprehensively covers the agent's production risks?",
+      "options": [
+        "A. Add 16 more variations of search queries with different keywords.",
+        "B. Add cases for: suggest_fix approval flow, suggest_fix rejection flow, governor limit scenario (query that hits the iteration limit), error handling (tool returns error), multi-step search+read+suggest, and router edge cases (ambiguous intent).",
+        "C. Add cases that test the tracer output format.",
+        "D. Add cases that test the Dockerfile builds correctly."
+      ],
+      "answer": "B",
+      "explanation": "The golden set should cover the critical paths and failure modes specific to this agent. The approval flow, rejection flow, governor scenario, error handling, multi-step tasks, and router edge cases are all paths that can silently regress after a prompt change. 16 more search variations (A) adds coverage but all test the same path. Tracer format (C) and Dockerfile (D) are tested separately, not via the eval harness."
+    }
+  ]
+}

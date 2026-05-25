@@ -1,0 +1,108 @@
+{
+  "version": "1.0",
+  "lesson": "15-human-in-the-loop",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "An agent deletes 40,000 customer records overnight after being told to 'clean up duplicates.' A human reviewing the first 10 proposed deletions would have caught a critical edge case in two minutes.",
+      "question": "Which HITL pattern would have prevented this incident, and why?",
+      "options": [
+        "A. Confidence threshold - the agent would have flagged low-confidence deletions.",
+        "B. Interrupt and resume - the agent would have saved state before running.",
+        "C. Approval gate - the agent would have proposed actions before executing them, and a human reviewer would have seen the edge case.",
+        "D. No HITL pattern applies here; the fix is a better system prompt."
+      ],
+      "answer": "C",
+      "explanation": "An approval gate intercepts proposed actions before execution. If the delete_record tool required approval, the agent would have shown the first batch of proposed deletions to a human reviewer, who would have caught the family-members-sharing-email edge case. The Confidence threshold (A) only escalates when the agent's self-assessed confidence is low, but the agent was confident in its (incorrect) deletion logic. Interrupt and resume (B) pauses the agent but still requires a human to review at the right granularity."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building a compliance workflow where an agent drafts regulatory filings. The filing review team reviews and approves submissions asynchronously, typically within 24 hours. The agent must not submit until approved.",
+      "question": "Which HITL pattern is most appropriate?",
+      "options": [
+        "A. Approval gate with synchronous input() prompt.",
+        "B. Interrupt and resume with persistent state storage.",
+        "C. Confidence threshold with a 0.9 cutoff.",
+        "D. No HITL is needed since the agent is only drafting."
+      ],
+      "answer": "B",
+      "explanation": "A 24-hour async review cycle requires the agent to save state, exit, and resume after the human decision is recorded. A synchronous approval gate (A) would block the process for 24 hours. Confidence threshold (C) does not guarantee review for every submission, which is a compliance requirement. The interrupt-and-resume pattern with database-backed state is the correct fit for multi-hour async review workflows."
+    },
+    {
+      "id": "c3",
+      "scenario": "You add requires_approval=True to the send_email tool definition. However, in your tool executor, you forgot to check the APPROVAL_FLAGS dict. You deploy. What happens?",
+      "options": [
+        "A. The API rejects the tool call because requires_approval is not a valid field.",
+        "B. The API accepts it but emails are blocked until you add the flag check.",
+        "C. Emails are sent without any approval gate because the check is in the executor, not the API definition.",
+        "D. The agent refuses to call send_email because it sees requires_approval=True."
+      ],
+      "answer": "C",
+      "explanation": "The requires_approval flag is a local annotation stripped before sending to the API. The API never sees it. The gate only fires if the executor explicitly checks APPROVAL_FLAGS before dispatch. If the executor does not check, the flag has no effect and emails send without approval. This is the most common deployment mistake with this pattern."
+    },
+    {
+      "id": "c4",
+      "scenario": "An agent processes 2,000 customer service emails per day. You want a HITL check on email replies, but requiring a human to approve all 2,000 is not feasible. Historically, about 85% of replies are templated and correct; 15% involve judgment calls.",
+      "question": "Which HITL pattern fits this workload, and what threshold would you start with?",
+      "options": [
+        "A. Approval gate with batch review - show 2,000 replies once per day for bulk approval.",
+        "B. Confidence threshold starting at 0.90 - escalate the roughly 15% of cases the agent is less certain about.",
+        "C. Interrupt and resume - save state for all 2,000 emails and resume after bulk human approval.",
+        "D. No HITL - 85% accuracy is acceptable for customer service email."
+      ],
+      "answer": "B",
+      "explanation": "Confidence threshold matches this pattern: high-volume pipeline, mostly routine, with a predictable minority of edge cases. Starting at 0.90 threshold means the agent escalates when it is less than 90% confident, which should cover most of the 15% judgment-call cases. The threshold is tuned by measuring the false-negative rate (cases that auto-approved but should have been reviewed) against the real data."
+    },
+    {
+      "id": "c5",
+      "scenario": "You implement an approval gate for delete_record. In testing, the gate fires every time. In production, you notice the gate never fires and records are being deleted without review. You check: APPROVAL_FLAGS['delete_record'] is True.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. The model is calling a different tool name than 'delete_record'.",
+        "B. The execute_tool function is not being called; the agent is dispatching tools directly.",
+        "C. The API is stripping the tool result before the executor sees it.",
+        "D. APPROVAL_FLAGS is being evaluated at import time before the tool list is populated."
+      ],
+      "answer": "B",
+      "explanation": "The gate lives in execute_tool(). If tool dispatch bypasses this function and calls the underlying tool directly, the gate never fires even though APPROVAL_FLAGS is correctly set. This happens when the agent loop calls tools with a direct function map instead of routing through the execute_tool wrapper. The fix: ensure all tool dispatch goes through execute_tool, and add a test that explicitly verifies the gate fires when delete_record is called."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are designing the interrupt-and-resume pattern. The agent saves state to /tmp/agent_pending.json and exits. A human sets 'decision': 'approve' in the file. The agent is restarted.",
+      "question": "What are the two most critical things the resume logic must do?",
+      "options": [
+        "A. Re-run the entire agent from the beginning with the original goal, and delete the state file after completion.",
+        "B. Load the saved conversation history and pending action, execute the approved action, and delete the state file to prevent re-processing.",
+        "C. Load the state file, send the pending action to the API for re-evaluation, and save a new state file.",
+        "D. Check the decision field, then re-run the supervisor agent to make the decision independently."
+      ],
+      "answer": "B",
+      "explanation": "Resume logic must: (1) load the conversation history and pending action from the state file so the agent continues from where it stopped, not from the beginning; (2) delete the state file after reading to prevent the same action from being executed twice if the agent is restarted again. Re-running from the beginning (A) defeats the purpose of saving state. Sending to the API for re-evaluation (C) may produce a different action than the one the human approved."
+    },
+    {
+      "id": "c7",
+      "scenario": "A colleague argues: 'Adding approval gates to every write operation defeats the purpose of automation. We might as well just have humans do the work.' Under what specific conditions is this argument valid?",
+      "options": [
+        "A. The argument is never valid. Approval gates are always worth the overhead.",
+        "B. The argument is valid when the approval rate is near 100%, the operations are easily reversible, and the blast radius of a mistake is low.",
+        "C. The argument is valid when the agent has been in production for more than 6 months without errors.",
+        "D. The argument is valid for read operations but never for write operations."
+      ],
+      "answer": "B",
+      "explanation": "If humans approve nearly everything (meaning the agent is almost always right), the gate adds latency without adding safety value. If operations are easily reversible (the mistake can be undone in seconds), the cost of not gating is low. If blast radius is low (a mistake affects one record, not 40,000), gating is disproportionate overhead. When all three conditions hold, remove the gate and use sampling-based review instead."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are calibrating a confidence threshold for an agent that processes loan applications. You set the threshold at 0.7. In your evaluation dataset of 100 applications, the agent escalates 35 (confidence < 0.7). Of the 65 auto-approved, 8 turn out to be edge cases that should have been reviewed.",
+      "question": "What does this tell you about the threshold, and what adjustment do you make?",
+      "options": [
+        "A. The threshold is too high; lower it to 0.5 to reduce the number of escalations.",
+        "B. The threshold is too low; raise it to 0.85 or higher, since 8 cases that should have been reviewed were auto-approved.",
+        "C. The threshold is correctly calibrated at 0.7 since only 8 out of 100 were missed.",
+        "D. The threshold should be eliminated since the agent's confidence scores are not reliable."
+      ],
+      "answer": "B",
+      "explanation": "8 out of 65 auto-approved cases (12%) should have been reviewed. For loan applications, a 12% false-negative rate on edge cases is unacceptably high. The threshold must be raised so the agent escalates more cases. Raising to 0.85 means the agent must be 85% confident before auto-approving, which should capture more of the edge cases. Keep raising until the false-negative rate (missed escalations on genuinely risky cases) approaches zero, even if the escalation volume increases."
+    }
+  ]
+}

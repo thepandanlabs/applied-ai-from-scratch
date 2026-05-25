@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "07-evaluator-optimizer",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A content team uses an LLM to write email subject lines. The first drafts are acceptable but rarely compelling. Three human edits later, each subject line is good. The process takes 45 minutes per batch of 20.",
+      "question": "What does the evaluator-optimizer pattern replace in this workflow?",
+      "options": [
+        "A. The LLM generator - use a better model to get better first drafts",
+        "B. The human revision loop - the evaluator provides structured feedback and the optimizer applies it, iterating until the rubric is met",
+        "C. The batch processing - run one subject line at a time for better quality",
+        "D. The subject line format - switch to longer subject lines that are easier to get right"
+      ],
+      "answer": "B",
+      "explanation": "The evaluator-optimizer pattern automates the read-feedback-revise loop that humans were doing manually. The evaluator encodes the rubric that humans were applying intuitively, the optimizer applies the feedback, and the loop continues until the rubric is met. Humans can still review the final output, but they start from a significantly better draft."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your evaluator system prompt returns feedback like: 'The draft could be clearer' and 'Consider improving the tone.' The optimizer is not producing measurable improvement across iterations.",
+      "question": "What is the root cause and how do you fix it?",
+      "options": [
+        "A. The optimizer needs more max_tokens to apply detailed feedback",
+        "B. The evaluator feedback is too vague; rewrite issues to be specific and actionable (e.g., 'Lead sentence is a feature not a benefit - rewrite to start with what the user gains')",
+        "C. Add more iterations (max_iterations = 5) to give the loop more time",
+        "D. Use a larger model for the evaluator to get better quality feedback"
+      ],
+      "answer": "B",
+      "explanation": "Vague feedback produces vague revisions. The optimizer can only act on what the evaluator gives it. 'Could be clearer' does not tell the optimizer what to change. 'Lead sentence lists three features before mentioning any benefit - rewrite to lead with the benefit' gives the optimizer a specific, actionable target. Specificity in the issues list is the primary driver of revision quality."
+    },
+    {
+      "id": "c3",
+      "scenario": "After implementing the evaluator-optimizer loop, you notice that 85% of inputs are passing on iteration 1 with scores of 7/10. The improvement from using the loop seems minimal.",
+      "question": "What does this pattern of results indicate?",
+      "options": [
+        "A. The loop is working perfectly - 85% pass rate is the target",
+        "B. The evaluator threshold is too lenient; most outputs are getting 7/10 regardless of actual quality",
+        "C. The generator is producing excellent first drafts and no loop is needed",
+        "D. The loop should be removed and replaced with a single-pass generator"
+      ],
+      "answer": "B",
+      "explanation": "If 85% pass on iteration 1 at exactly 7/10, the evaluator is likely calibrated loosely - it treats 'acceptable' as 'passing.' Check 5-10 of those 7/10 outputs manually. If they need obvious improvement, tighten the rubric or raise the pass threshold to 8. The goal is not to maximize pass rate; it is to ensure that 'pass' means 'ready to ship.'"
+    },
+    {
+      "id": "c4",
+      "scenario": "You implement the evaluator-optimizer loop for API documentation. After iteration 2, the evaluator still lists 'Missing usage example' as an issue, even though you can see the optimizer added a usage example in its revision.",
+      "question": "What is the most likely cause of the persistent issue?",
+      "options": [
+        "A. The optimizer ignored the issue and needs a stricter prompt",
+        "B. The evaluator is not reading the updated draft - it is still evaluating the original",
+        "C. The evaluator considers the usage example present but insufficient, but its issue description is not specific enough to communicate this",
+        "D. The model cannot recognize usage examples in code documentation"
+      ],
+      "answer": "C",
+      "explanation": "When the optimizer addresses an issue but the evaluator still flags it, the most common cause is mismatched specificity. The evaluator wrote 'Missing usage example' but means 'Missing a complete runnable usage example with expected output.' The optimizer added a 2-line snippet, which satisfies the literal wording but not the intent. Fix: make the rubric criterion specific enough that passing is unambiguous."
+    },
+    {
+      "id": "c5",
+      "scenario": "A developer proposes this simpler alternative: 'Instead of separate generate-evaluate-optimize calls, just give the model the rubric in the initial prompt and ask it to generate a high-quality output that meets all criteria.'",
+      "question": "What does the generate-evaluate-optimize loop give you that the single-call approach cannot?",
+      "options": [
+        "A. Lower API costs - the loop uses fewer tokens overall",
+        "B. Measurable quality signal: a score per iteration that lets you track whether the loop is actually improving the output and where it fails",
+        "C. Faster latency - the loop completes in less total time",
+        "D. Support for longer outputs - the loop handles content that exceeds the context window"
+      ],
+      "answer": "B",
+      "explanation": "The single-call approach may or may not produce better output - you cannot know without measuring. The loop gives you a score at each iteration, allowing you to detect whether improvement is happening, which criteria are failing, and when the loop is not working. That measurement is what allows you to improve the system over time."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your team needs to use the evaluator-optimizer loop for legal contract summaries. The LLM evaluator scores correctly 70% of the time, but the 30% error rate is unacceptable for legal content.",
+      "question": "What is the cleanest architecture change to address this?",
+      "options": [
+        "A. Increase max_iterations to 5 so the loop self-corrects",
+        "B. Swap the LLMEvaluator for a HumanEvaluator that collects attorney feedback; the loop structure stays identical",
+        "C. Replace the entire loop with a human review workflow with no LLM involvement",
+        "D. Use a larger LLM model for the evaluator to improve accuracy to 95%+"
+      ],
+      "answer": "B",
+      "explanation": "The evaluator is a swappable component. Replacing LLMEvaluator with HumanEvaluator changes who provides the feedback but not how the loop works. The optimizer still applies the feedback and revises the draft. This preserves the automation value of the loop (generator and optimizer are still LLM calls) while adding human judgment at the evaluation step where accuracy is critical."
+    },
+    {
+      "id": "c7",
+      "scenario": "You run the evaluator-optimizer loop on 100 product descriptions. The score trend data shows: iteration 1 mean=4.8, iteration 2 mean=7.1, iteration 3 mean=7.3. 78% pass after iteration 2, 82% after iteration 3.",
+      "question": "What does this data tell you about the optimal max_iterations setting?",
+      "options": [
+        "A. max_iterations should be increased to 5 to push the remaining 18% to pass",
+        "B. max_iterations = 2 is likely optimal: most quality gain happens in iteration 1-2, iteration 3 adds minimal improvement at additional cost",
+        "C. max_iterations = 1 is sufficient because the model should produce 7+ on the first try",
+        "D. The evaluator rubric is broken because the score gap between iteration 2 and 3 is too small"
+      ],
+      "answer": "B",
+      "explanation": "The data shows a 2.3 point gain from iteration 1 to 2, and only a 0.2 point gain from iteration 2 to 3. Pass rate increases by 4 percentage points in iteration 3 at the cost of 100% more API calls for that batch. Unless the 4% matters significantly, max_iterations=2 is the cost-optimal choice. Track this ratio per task type - some tasks (technical writing, code) benefit more from iteration 3 than others."
+    },
+    {
+      "id": "c8",
+      "scenario": "A colleague builds a variation where the evaluator returns only a number (score) with no issues list. The optimizer receives only the score and the draft.",
+      "question": "Why does this design produce poor optimization results?",
+      "options": [
+        "A. The optimizer needs more than 512 max_tokens to work without specific issues",
+        "B. The score alone gives the optimizer no actionable information: it knows the draft got 5/10 but not which specific dimensions failed or what to change",
+        "C. LLMs cannot improve a draft without seeing the original requirements alongside it",
+        "D. The number format is incorrect and should be a float between 0 and 1"
+      ],
+      "answer": "B",
+      "explanation": "A score without issues is like saying 'this code has a bug' without saying where or what kind. The optimizer will make a generic revision attempt that may or may not address the actual problems. The issues list is the mechanism that converts evaluation insight into optimization signal. Without it, the loop is expensive trial-and-error, not systematic improvement."
+    }
+  ]
+}

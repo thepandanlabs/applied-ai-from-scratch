@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-parallelization",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A data pipeline calls an LLM to extract structured fields from 50 customer emails. The emails have no dependency on each other. The sequential version takes 3 minutes.",
+      "question": "Which code change would most directly reduce total latency for this task?",
+      "options": [
+        "A. Switch to a faster model with lower max_tokens",
+        "B. Replace the for loop with asyncio.gather to run all 50 calls concurrently",
+        "C. Add retry logic to handle failed calls more quickly",
+        "D. Cache the prompt template to avoid recomputing it each iteration"
+      ],
+      "answer": "B",
+      "explanation": "The bottleneck is sequentiality, not model speed or retries. Each email is independent, making this embarrassingly parallel. asyncio.gather launches all 50 coroutines concurrently, reducing total time from ~50x single-call latency to roughly 1x single-call latency."
+    },
+    {
+      "id": "c2",
+      "scenario": "You replace a for loop with asyncio.gather for 20 LLM calls. The speedup is only 2x instead of the expected 15-20x. The network latency per call is consistent.",
+      "question": "What is the most likely cause of the limited speedup?",
+      "options": [
+        "A. asyncio.gather has overhead that cancels out the parallelism benefit",
+        "B. The API is rate-limiting the requests and serializing them on its end",
+        "C. The async client is slower than the sync client for individual calls",
+        "D. asyncio is not actually concurrent for I/O-bound work"
+      ],
+      "answer": "B",
+      "explanation": "When parallel speedup is far less than expected, the API's rate limiter is usually the bottleneck. The requests leave your code concurrently but the API queues them and processes them at its allowed rate. Fix: add an asyncio.Semaphore to cap concurrent requests to a level the API allows without throttling."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your team uses a sync Flask codebase. A new feature needs to call the LLM for 8 independent items per request. A team member says you must rewrite the entire codebase to use asyncio to get parallelism.",
+      "question": "Is that correct? What is the right approach?",
+      "options": [
+        "A. Correct. asyncio is required for any concurrent LLM calls",
+        "B. Incorrect. Use concurrent.futures.ThreadPoolExecutor with the sync client instead",
+        "C. Incorrect. Use multiprocessing instead of threading for API calls",
+        "D. Correct, but only rewrite the routes that need parallelism"
+      ],
+      "answer": "B",
+      "explanation": "ThreadPoolExecutor with the sync Anthropic client gives concurrent I/O-bound calls without requiring async. Each thread runs a normal client.messages.create() call. For 8 workers, all 8 calls are in-flight simultaneously. No asyncio, no rewrite needed."
+    },
+    {
+      "id": "c4",
+      "scenario": "You implement voting: the same classification prompt runs 3 times with temperature=0.7. All three votes return POSITIVE. The result is returned as POSITIVE.",
+      "question": "A colleague says: 'If all three agree, that is the strongest possible signal.' Is this always true?",
+      "options": [
+        "A. Yes. Three independent votes all agreeing eliminates model uncertainty",
+        "B. No. If the prompt strongly steers toward one label, all three votes may reflect prompt bias rather than genuine evidence",
+        "C. No. Three votes are only valid when temperature is set above 1.0",
+        "D. Yes, but only if the model has not seen similar examples in training"
+      ],
+      "answer": "B",
+      "explanation": "Unanimous votes on a biased prompt just amplify the bias three times. If the prompt phrasing leads the model toward a label, temperature variation will not overcome that steering. Always test voting on edge cases where the correct answer is the minority label to check for prompt bias."
+    },
+    {
+      "id": "c5",
+      "scenario": "A parallelization pattern runs 12 document summaries concurrently, then passes all 12 to a synthesis call. Users report the synthesis sometimes includes facts that appear in none of the individual summaries.",
+      "question": "What is this problem called and how do you address it?",
+      "options": [
+        "A. Context overflow - reduce max_tokens in the synthesis call",
+        "B. Merger hallucination - instruct the synthesis prompt to use only the provided summaries and not add new information",
+        "C. Temperature drift - set temperature=0 in the synthesis call",
+        "D. Parallel contamination - run summaries sequentially to prevent cross-contamination"
+      ],
+      "answer": "B",
+      "explanation": "Merger hallucination occurs when the synthesis call introduces facts not present in any individual output. The fix is a tighter synthesis prompt: 'Use only the information in the provided summaries. Do not add external knowledge.' Reducing temperature helps but the prompt constraint is the primary defense."
+    },
+    {
+      "id": "c6",
+      "scenario": "You add asyncio.gather to run 30 LLM calls concurrently. The code works in dev (5 calls), but in production it crashes with rate limit errors when processing full batches.",
+      "question": "What is the cleanest fix that preserves concurrency without exceeding rate limits?",
+      "options": [
+        "A. Switch back to sequential processing to avoid rate limits entirely",
+        "B. Add asyncio.Semaphore(10) and wrap each call to limit concurrent in-flight requests",
+        "C. Catch the rate limit exception and retry immediately in a loop",
+        "D. Split the batch into chunks of 5 and process each chunk sequentially"
+      ],
+      "answer": "B",
+      "explanation": "asyncio.Semaphore(N) limits the number of coroutines in a critical section at once. Setting N to your API's concurrent request limit gives maximum throughput without triggering rate limiting. Option D also works but loses parallelism within chunks. Immediate retry (C) just hammers the rate limit harder."
+    },
+    {
+      "id": "c7",
+      "scenario": "A voting implementation runs 3 classification calls. Two return POSITIVE and one returns NEGATIVE. The majority is POSITIVE with 2/3 votes. A developer says: 'We should run 5 votes instead of 3 to be more accurate.'",
+      "question": "When is increasing vote count actually useful, and when is it wasteful?",
+      "options": [
+        "A. Always useful. More votes always reduce variance and improve accuracy",
+        "B. Useful when the task is genuinely ambiguous and votes split frequently; wasteful when the same prompt produces the same answer most of the time",
+        "C. Useful only when using temperature above 1.0, which requires more votes to stabilize",
+        "D. Wasteful for classification, only useful for generative tasks like writing"
+      ],
+      "answer": "B",
+      "explanation": "Track the consensus rate (what fraction of inputs produce unanimous votes). If consensus rate is 90%, adding votes beyond 3 costs tokens with minimal accuracy gain. If consensus rate is 50%, something is wrong with the prompt or task definition. Voting helps most in the 60-80% consensus range where genuine ambiguity exists."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your team debates whether to use asyncio or ThreadPoolExecutor for a new batch processing feature. The feature will run as a background Celery task in a sync Django app.",
+      "question": "Which approach is appropriate here and why?",
+      "options": [
+        "A. asyncio, because it is always faster than threads for API calls",
+        "B. ThreadPoolExecutor, because Celery tasks run in a sync context and asyncio requires async all the way up the call stack",
+        "C. asyncio, because Django async views are now supported",
+        "D. ThreadPoolExecutor only if the batch size exceeds 50 items; otherwise sequential is fine"
+      ],
+      "answer": "B",
+      "explanation": "Celery workers are synchronous. Running asyncio inside a sync context requires asyncio.run(), which works but is awkward and not idiomatic. ThreadPoolExecutor integrates cleanly into the existing sync codebase. For I/O-bound LLM calls with <50 concurrent workers, the throughput difference between threads and async is negligible."
+    }
+  ]
+}

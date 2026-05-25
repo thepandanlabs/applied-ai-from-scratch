@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "10-planning",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your agent is tasked with 'write a market analysis covering 5 competitors.' It starts calling tools immediately, without any reasoning prefix. After 9 tool calls it has covered 2 competitors and runs out of context budget.",
+      "question": "Which change would most directly prevent this pattern?",
+      "options": [
+        "A. Increase the context window so more tool calls fit",
+        "B. Add a Thought: prefix requirement to the system prompt so the agent reasons about coverage before each call",
+        "C. Switch to a more capable model",
+        "D. Reduce the number of tools available"
+      ],
+      "answer": "B",
+      "explanation": "The agent's problem is not capability but lack of self-monitoring. The Thought: prefix forces the model to articulate what it knows and what remains, which naturally surfaces 'I've only covered 2 of 5 competitors' before the next action. This is the ReAct mechanism."
+    },
+    {
+      "id": "c2",
+      "scenario": "You implement ReAct and log the following thought trace for a task that went wrong: [iter 4] Thought: 'I have found pricing for CompA and CompB. That's enough for a comparison.' [iter 4] Action: generate_answer(). The task required 5 competitors.",
+      "question": "What does this thought trace tell you about the failure?",
+      "options": [
+        "A. The tool for retrieving CompC, CompD, and CompE is broken",
+        "B. The model's reasoning incorrectly concluded the task was complete after 2 of 5 required items",
+        "C. The context window filled up between iteration 3 and 4",
+        "D. The task description was too vague for the model to interpret correctly"
+      ],
+      "answer": "B",
+      "explanation": "The thought explicitly says 'that's enough' after 2 competitors. This is a reasoning failure, not a tool failure. The thought log pinpoints the exact iteration where the model misjudged completion. Without thoughts, you would only know 'the agent stopped early'; with thoughts, you know exactly why."
+    },
+    {
+      "id": "c3",
+      "scenario": "A team is choosing between ReAct and Plan-and-Execute for an agent that processes insurance claims. Each claim involves: (1) check if the claim ID exists, (2) retrieve the policy details, (3) calculate the payout based on a fixed formula, (4) write the approval letter. The steps are the same for every claim.",
+      "question": "Which pattern is more appropriate here?",
+      "options": [
+        "A. ReAct, because it is more adaptive",
+        "B. Plan-and-Execute, because the steps are predictable and fixed for every claim",
+        "C. ReAct, because it requires fewer API calls",
+        "D. Plan-and-Execute, because it handles tool failures better"
+      ],
+      "answer": "B",
+      "explanation": "When the steps are known in advance and identical for every task instance, Plan-and-Execute is preferable. The plan can even be hardcoded as a template. ReAct's adaptive reasoning adds overhead with no benefit when the workflow is fully deterministic."
+    },
+    {
+      "id": "c4",
+      "scenario": "You implement Plan-and-Execute for a research task. Step 3 of the plan says 'retrieve pricing from CompC website.' When the executor runs step 3, it finds the URL returns a 404. The executor marks the step as failed and the loop stops.",
+      "question": "What would ReAct have done differently in this situation?",
+      "options": [
+        "A. ReAct would have skipped the failed step and continued to step 4",
+        "B. ReAct could have adapted mid-loop: the thought after the 404 might reason 'no public pricing, try searching for CompC pricing news instead'",
+        "C. ReAct would have retried the same URL three times before stopping",
+        "D. ReAct does not call web retrieval tools, so this failure mode would not apply"
+      ],
+      "answer": "B",
+      "explanation": "ReAct's Thought-Action-Observation cycle is designed for exactly this: the observation 'URL returned 404' feeds into the next thought, which can reason about alternatives. Plan-and-Execute's steps were written before the executor discovered the 404, so the plan has no fallback. This is ReAct's core advantage on tasks with uncertain intermediate steps."
+    },
+    {
+      "id": "c5",
+      "scenario": "An engineer adds the ReAct system prompt to an existing agent. On review, they notice the model sometimes outputs 'Thought: I will now search for X.' but then calls a completely different tool. The thought and action are disconnected.",
+      "question": "What is the most likely cause of this behavior?",
+      "options": [
+        "A. The thought is generated before the tool selection decision, so they can be computed independently by the model",
+        "B. The system prompt does not require the thought to be semantically related to the subsequent action",
+        "C. The model is ignoring the system prompt entirely",
+        "D. This is expected behavior; thoughts are decorative and do not constrain tool selection"
+      ],
+      "answer": "A",
+      "explanation": "The model generates text and tool calls in one pass. A thought that says 'I will search for X' does not mechanically constrain which tool call follows. On complex tasks, the model may produce a thought that represents its initial intention but then select a different action. This is a known limitation of the ReAct prompting approach; it is not a system prompt bug."
+    },
+    {
+      "id": "c6",
+      "scenario": "You run the same multi-step research task on ReAct and Plan-and-Execute. ReAct uses 4,800 input tokens total across all iterations. Plan-and-Execute uses 7,200 input tokens (including the planner call and growing context passed to each executor step).",
+      "question": "Does this mean ReAct is always the cheaper choice?",
+      "options": [
+        "A. Yes, ReAct is always cheaper because it has no separate planner call",
+        "B. No; on deterministic tasks with many steps, Plan-and-Execute can be cheaper because the planner produces a compact plan that avoids redundant reasoning",
+        "C. Yes, fewer tokens always means better quality output",
+        "D. No; Plan-and-Execute is always cheaper because it avoids repeated context building"
+      ],
+      "answer": "B",
+      "explanation": "Token counts depend on the task. ReAct can be more efficient on short, adaptive tasks. Plan-and-Execute can be more efficient on long deterministic tasks where the plan prevents the model from reasoning through the same decisions repeatedly. Neither is universally cheaper; measure for your specific workload."
+    },
+    {
+      "id": "c7",
+      "scenario": "You want to debug why a ReAct agent consistently skips step-by-step verification and jumps to conclusions after 2-3 tool calls. You have access to the thought log and the tool call log.",
+      "question": "What should you look for in the thought log to diagnose this?",
+      "options": [
+        "A. Whether the tools returned correct data",
+        "B. Whether thoughts after the 2nd tool call say 'I have enough information' even when the task is not complete",
+        "C. Whether the model is using the correct tool names",
+        "D. Whether the total token count exceeds the context window after 2 tool calls"
+      ],
+      "answer": "B",
+      "explanation": "The pattern 'agent concludes after 2-3 tool calls' almost always shows up in the thought log as premature 'I have enough information' reasoning. If you find this, the fix is in the system prompt: add explicit completion criteria ('you must cover all N items before concluding') or use Plan-and-Execute where the step count defines done."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your team is building a customer onboarding agent that: (1) retrieves the customer's tier from the database, (2) branches into one of 4 different onboarding flows based on the tier, and (3) runs 3-5 tool calls per flow. Different customers hit different branches every time.",
+      "question": "What is the most appropriate planning pattern?",
+      "options": [
+        "A. Pure ReAct with no upfront planning",
+        "B. Plan-and-Execute where the planner generates a tier-specific plan after reading the customer's tier",
+        "C. No planning pattern needed; hardcode the 4 flows as if-else branches in Python",
+        "D. Plan-and-Execute with a fixed plan that covers all 4 flows sequentially"
+      ],
+      "answer": "B",
+      "explanation": "This is a hybrid case: the first step (retrieve tier) is always the same, but the subsequent steps depend on the result. Plan-and-Execute works well here: run the tier lookup first, then call the planner with 'the customer is tier X, create the onboarding plan.' The plan is dynamic but structured. Pure ReAct would also work but gives less visibility into which flow was selected."
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
   "generated": "2026-05-25",
-  "total": 30,
+  "total": 46,
   "artifacts": [
     {
       "phase": 2,
@@ -146,6 +146,150 @@
       "file": "phases/02-retrieval-and-rag/16-capstone-rag-service/outputs/service-template",
       "name": "service-template",
       "description": "Production-ready FastAPI RAG service with document ingestion, hybrid retrieval, LLM generation, evaluation, and health monitoring."
+    },
+    {
+      "phase": 4,
+      "lesson": 1,
+      "lesson_name": "The Agent Loop",
+      "type": "skill",
+      "file": "phases/04-agents/01-the-agent-loop/outputs/skill-agent-loop.md",
+      "name": "skill-agent-loop",
+      "description": "Copy-paste ready agent loop template with tool registry, dispatch pattern, and message history management for production agents."
+    },
+    {
+      "phase": 4,
+      "lesson": 2,
+      "lesson_name": "Workflows vs Agents",
+      "type": "prompt",
+      "file": "phases/04-agents/02-workflows-vs-agents/outputs/prompt-workflow-vs-agent-decision.md",
+      "name": "prompt-workflow-vs-agent-decision",
+      "description": "Decision prompt and rubric for classifying a task as workflow, agent, or multi-agent before building."
+    },
+    {
+      "phase": 4,
+      "lesson": 3,
+      "lesson_name": "Pattern: Prompt Chaining",
+      "type": "skill",
+      "file": "phases/04-agents/03-prompt-chaining/outputs/skill-prompt-chaining.md",
+      "name": "skill-prompt-chaining",
+      "description": "Gated prompt chain pattern: sequential LLM steps with typed interfaces, quality gates, and per-step retry logic."
+    },
+    {
+      "phase": 4,
+      "lesson": 4,
+      "lesson_name": "Pattern: Routing",
+      "type": "skill",
+      "file": "phases/04-agents/04-routing/outputs/skill-router.md",
+      "name": "skill-router",
+      "description": "Intent classification prompt and Router class with registered handlers, fallback, and model-tiering by intent complexity."
+    },
+    {
+      "phase": 4,
+      "lesson": 5,
+      "lesson_name": "Pattern: Parallelization",
+      "type": "skill",
+      "file": "phases/04-agents/05-parallelization/outputs/skill-parallelization.md",
+      "name": "skill-parallelization",
+      "description": "Sectioning and voting parallelization templates using asyncio.gather and ThreadPoolExecutor with rate-limit semaphore."
+    },
+    {
+      "phase": 4,
+      "lesson": 6,
+      "lesson_name": "Pattern: Orchestrator-Workers",
+      "type": "skill",
+      "file": "phases/04-agents/06-orchestrator-workers/outputs/skill-orchestrator-workers.md",
+      "name": "skill-orchestrator-workers",
+      "description": "Orchestrator system prompt template and worker dispatch pattern for multi-specialist LLM pipelines."
+    },
+    {
+      "phase": 4,
+      "lesson": 7,
+      "lesson_name": "Pattern: Evaluator-Optimizer",
+      "type": "skill",
+      "file": "phases/04-agents/07-evaluator-optimizer/outputs/skill-evaluator-optimizer.md",
+      "name": "skill-evaluator-optimizer",
+      "description": "Generator, evaluator, and optimizer prompt templates for self-improving LLM output loops with structured rubric scoring."
+    },
+    {
+      "phase": 4,
+      "lesson": 8,
+      "lesson_name": "Tool Use + Error Recovery",
+      "type": "skill",
+      "file": "phases/04-agents/08-tool-use-and-error-recovery/outputs/skill-tool-recovery.md",
+      "name": "skill-tool-recovery",
+      "description": "Production tool executor with typed error classification, retry logic, and structured error messages back to the LLM."
+    },
+    {
+      "phase": 4,
+      "lesson": 9,
+      "lesson_name": "Agent Memory",
+      "type": "skill",
+      "file": "phases/04-agents/09-agent-memory/outputs/skill-agent-memory.md",
+      "name": "skill-agent-memory",
+      "description": "MemoryManager combining sliding-window in-context, key-value long-term, and semantic retrieval memory in one per-turn interface."
+    },
+    {
+      "phase": 4,
+      "lesson": 10,
+      "lesson_name": "Planning: ReAct, Plan-and-Execute",
+      "type": "skill",
+      "file": "phases/04-agents/10-planning/outputs/skill-react-planner.md",
+      "name": "skill-react-planner",
+      "description": "ReAct system prompt, thought parser, and plan-and-execute two-phase pattern with diagnostic thought log."
+    },
+    {
+      "phase": 4,
+      "lesson": 11,
+      "lesson_name": "Stopping Conditions & Cost Governors",
+      "type": "skill",
+      "file": "phases/04-agents/11-stopping-conditions/outputs/skill-agent-governor.md",
+      "name": "skill-agent-governor",
+      "description": "AgentGovernor class enforcing max iterations, token budget, wall-clock timeout, soft stop, and async kill switch."
+    },
+    {
+      "phase": 4,
+      "lesson": 12,
+      "lesson_name": "Agent SDKs Tradeoffs",
+      "type": "prompt",
+      "file": "phases/04-agents/12-agent-sdks/outputs/prompt-sdk-tradeoffs.md",
+      "name": "prompt-sdk-tradeoffs",
+      "description": "Five-question SDK selection rubric, comparison table, and task-to-SDK mapping for raw SDK vs Agents SDK vs LangGraph decisions."
+    },
+    {
+      "phase": 4,
+      "lesson": 13,
+      "lesson_name": "Multi-Agent: Supervisor & Handoffs",
+      "type": "skill",
+      "file": "phases/04-agents/13-multi-agent/outputs/skill-multi-agent-supervisor.md",
+      "name": "skill-multi-agent-supervisor",
+      "description": "Supervisor prompt template, specialist dispatch pattern, and handoff context format for multi-agent pipelines."
+    },
+    {
+      "phase": 4,
+      "lesson": 14,
+      "lesson_name": "Agent Failure Modes: MAST",
+      "type": "prompt",
+      "file": "phases/04-agents/14-agent-failure-modes/outputs/prompt-mast-failure-checklist.md",
+      "name": "prompt-mast-failure-checklist",
+      "description": "Pre-ship checklist prompt for self-assessing an agent trace against the MAST failure taxonomy: memory, action, supervision, task."
+    },
+    {
+      "phase": 4,
+      "lesson": 15,
+      "lesson_name": "Human-in-the-Loop & Approval Gates",
+      "type": "skill",
+      "file": "phases/04-agents/15-human-in-the-loop/outputs/skill-hitl-approval-gate.md",
+      "name": "skill-hitl-approval-gate",
+      "description": "Approval gate pattern with tool tagging, interrupt-and-resume state serialization, and confidence-threshold escalation."
+    },
+    {
+      "phase": 4,
+      "lesson": 16,
+      "lesson_name": "Capstone: Production Agent",
+      "type": "runbook",
+      "file": "phases/04-agents/16-capstone-production-agent/outputs/runbook-production-agent.md",
+      "name": "runbook-production-agent",
+      "description": "Operational runbook for deploying and monitoring a production agent: env vars, governor tuning, failure symptoms, and regression eval harness."
     },
     {
       "phase": 5,

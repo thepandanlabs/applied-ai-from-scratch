@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "09-agent-memory",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your agent's message list is configured to keep the last 10 turns. A user stated their dietary restriction ('I'm vegan') in turn 2. On turn 14, the agent recommends a cheese dish. The preference is gone from the message list.",
+      "question": "Which memory type would have prevented this failure, and why?",
+      "options": [
+        "A. A larger context window so the message list holds more turns",
+        "B. A key-value store that loads the preference at session start, regardless of how many turns have passed",
+        "C. A longer system prompt that includes all possible dietary restrictions",
+        "D. Semantic retrieval, which would have embedded the whole conversation"
+      ],
+      "answer": "B",
+      "explanation": "The KV store loads user-specific structured facts (like dietary preferences) at session start. They are available on turn 14 even though turn 2 was truncated. Enlarging the context window delays the problem but doesn't solve it. The system prompt is for developer-defined rules, not user-specific facts."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building an agent for a legal research firm. Each user has accumulated 500 case notes over two years. You need the agent to reference relevant case notes during conversations. Loading all 500 notes into the system prompt would cost roughly $0.80 per turn.",
+      "question": "Which memory type is most appropriate for this use case?",
+      "options": [
+        "A. Short-term message list, since the notes are needed in the current session",
+        "B. Key-value store indexed by user_id, loading all notes at session start",
+        "C. Semantic store, retrieving the top-3 most relevant notes per turn",
+        "D. System prompt with a summary of all 500 notes"
+      ],
+      "answer": "C",
+      "explanation": "With 500 case notes, most are irrelevant to any given question. A semantic store retrieves only the top-K relevant notes per turn, injecting a few hundred tokens instead of the full 500-note corpus. This keeps costs flat as the note set grows."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your agent truncates to the last 8 turns. After truncation, you inspect the message list and find it starts with: [{role: 'assistant', content: '...'}]. The next call to the API returns a validation error.",
+      "question": "What caused this error, and how do you fix the truncation logic?",
+      "options": [
+        "A. The model does not support conversation history; remove all previous messages",
+        "B. Truncation cut at the wrong boundary, leaving an orphaned assistant message; fix by ensuring the list always starts on a user message",
+        "C. The assistant message is too long; truncate individual message content instead",
+        "D. The system prompt is missing; add it back after truncation"
+      ],
+      "answer": "B",
+      "explanation": "The Anthropic API requires conversations to start with a user message. Truncating to 'last N messages' without checking turn boundaries can cut a user/assistant pair in half, leaving an assistant message at position 0. The fix: after truncating, walk forward until messages[0]['role'] == 'user'."
+    },
+    {
+      "id": "c4",
+      "scenario": "An engineer proposes storing all user-specific facts in the system prompt: account tier, timezone, preferences, conversation history, and prior session summaries. 'It's simpler,' they say. 'Everything is always available.'",
+      "question": "What is the primary production failure mode of this approach?",
+      "options": [
+        "A. The system prompt is not available to the model during tool calls",
+        "B. The system prompt is sent on every API call; as user-specific content grows, input token costs scale unboundedly per turn",
+        "C. System prompts have a hard limit of 2,048 tokens on most models",
+        "D. The model treats system prompt content as less reliable than user message content"
+      ],
+      "answer": "B",
+      "explanation": "The system prompt is sent with every single API call. If it contains 200KB of user history, you pay for 200KB of input tokens on every turn of every session. A KV store + semantic retrieval injects only what is needed: a few hundred tokens per turn. The cost difference becomes significant once users accumulate more than a few dozen facts."
+    },
+    {
+      "id": "c5",
+      "scenario": "You implement a SemanticStore for your agent. In testing, you find that simple bag-of-words cosine similarity retrieves the wrong facts 40% of the time when queries use different words than the stored facts (e.g., query: 'eating habits', stored fact: 'user is vegan').",
+      "question": "What is the correct fix for production?",
+      "options": [
+        "A. Lower the similarity threshold so more facts are retrieved",
+        "B. Replace bag-of-words vectors with real sentence embeddings that capture semantic meaning rather than word overlap",
+        "C. Store facts using the exact phrasing the user will query with",
+        "D. Use BM25 keyword search instead of cosine similarity"
+      ],
+      "answer": "B",
+      "explanation": "Bag-of-words similarity requires word overlap. 'Eating habits' and 'vegan' share no words, so cosine similarity is 0 even though they are semantically related. Real sentence embeddings (from Anthropic, OpenAI, or sentence-transformers) place semantically related phrases near each other in vector space, solving this problem."
+    },
+    {
+      "id": "c6",
+      "scenario": "You profile your agent's per-turn token usage. With 10 stored user facts, the semantic approach and the full-history approach use roughly the same tokens. Your manager asks whether the added complexity of semantic retrieval is worth it.",
+      "question": "At what scale does semantic retrieval clearly outperform full-history injection?",
+      "options": [
+        "A. It never outperforms full-history injection; always use the simpler approach",
+        "B. When the stored fact set grows large enough that most facts are irrelevant to any given turn",
+        "C. When queries become longer and require more context to interpret correctly",
+        "D. When the model's context window is smaller than the total number of facts"
+      ],
+      "answer": "B",
+      "explanation": "With 10 facts, full injection is roughly equivalent to top-3 retrieval. With 500 facts, full injection costs 50x more per turn but still only retrieves 3 useful facts. The break-even point depends on fact length, but semantic retrieval becomes the clear winner once the user's fact set outgrows what you'd reasonably inject on every turn."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your agent stores user preferences in the KV store and loads them at session start. Midway through a long session, a user changes their preference: 'Actually, I've switched to eating meat.' The agent continues giving vegetarian recommendations for the rest of the session.",
+      "question": "What is missing from your memory implementation?",
+      "options": [
+        "A. The semantic store should override the KV store when they conflict",
+        "B. The agent needs logic to detect preference updates in user messages and write them back to the KV store mid-session",
+        "C. KV stores do not support mid-session updates; use a database instead",
+        "D. The system prompt should be re-generated after every message to reflect the latest preferences"
+      ],
+      "answer": "B",
+      "explanation": "The KV store is loaded once at session start. If a user changes a preference mid-session, the agent needs to: (1) detect the update (via LLM extraction or pattern matching), (2) call set_preference() to update the in-memory struct, and (3) call save() or write through immediately. Without this, the session continues with stale preferences."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are designing memory for an agent that helps users track fitness goals. Users have: a current workout plan (changes weekly), long-term goal history (2 years of entries), and a preferred coach persona (set once at signup). You need to decide which memory type to use for each.",
+      "question": "What is the correct memory assignment?",
+      "options": [
+        "A. All three in the message list, because they are all needed in the current session",
+        "B. Current workout plan in KV; goal history in semantic store; coach persona in system prompt",
+        "C. Current workout plan in semantic store; goal history in KV; coach persona in the message list",
+        "D. All three in the system prompt for simplicity"
+      ],
+      "answer": "B",
+      "explanation": "The workout plan is structured, always needed, and changes weekly: KV. Goal history is large and only partially relevant to any given question: semantic store retrieves the relevant entries. Coach persona never changes per session and is developer-controlled: system prompt. Each type matches its use case."
+    }
+  ]
+}
