@@ -196,6 +196,9 @@ const SLIDE_DECKS = {
   '07': 'phase-07-observability',
   '08': 'phase-08-security',
   '09': 'phase-09-fine-tuning',
+  '10': 'phase-10-multimodal',
+  '11': 'phase-11-fde-skillset',
+  '12': 'phase-12-capstones',
 };
 
 function phaseCard(phase) {
