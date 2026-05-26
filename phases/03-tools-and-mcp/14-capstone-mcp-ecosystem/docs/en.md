@@ -14,12 +14,6 @@
 
 ---
 
-## MOTTO
-
-A tool ecosystem is not a collection of individual servers. It is a contract between your AI agents and your operational reality.
-
----
-
 ## THE PROBLEM
 
 "Build me an MCP server" and "build me a production MCP tool ecosystem" are different scopes by roughly an order of magnitude.

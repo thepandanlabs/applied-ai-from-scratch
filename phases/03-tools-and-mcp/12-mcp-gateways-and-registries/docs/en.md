@@ -15,12 +15,6 @@
 
 ---
 
-## MOTTO
-
-A gateway turns eight separate MCP servers into one address your apps never have to update.
-
----
-
 ## THE PROBLEM
 
 Your company has grown to eight internal MCP servers: one for the CRM, one for the data warehouse, one for the ticketing system, one for the deployment pipeline, one for the knowledge base, one for finance reporting, one for HR records, and one for infrastructure metrics.

@@ -15,12 +15,6 @@
 
 ---
 
-## MOTTO
-
-Production integration is not connecting to the API. It is handling the 11 ways the API fails before your first real user hits it.
-
----
-
 ## THE PROBLEM
 
 An engineer demos an AI tool that queries the CRM and summarizes customer activity. It works beautifully. Clean data, a well-documented REST API, and a staging environment where nothing is ever slow.
