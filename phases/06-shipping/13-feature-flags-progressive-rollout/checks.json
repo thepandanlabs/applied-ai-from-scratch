@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "lesson": "13-feature-flags-progressive-rollout",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You want to release an updated prompt to production. Your eval suite shows improvement on your test set. You are deciding between: (1) deploy directly to 100% of users, (2) run shadow mode first, or (3) go straight to a 10% canary.",
+      "question": "What is the recommended order and why?",
+      "options": [
+        "A. Deploy directly - your eval suite already validated it",
+        "B. Go straight to 10% canary - shadow mode wastes API calls on outputs users never see",
+        "C. Run shadow mode first to validate on real traffic with zero user risk, then promote to canary",
+        "D. Run an A/B test before shadow mode to measure business metrics first"
+      ],
+      "answer": "C",
+      "explanation": "Your eval test set is not production traffic. Real users send queries you did not anticipate. Shadow mode runs the new prompt on every real request and lets you compare outputs before any user sees them. The cost is double API calls during shadow mode; the benefit is catching regressions on real traffic before users are exposed. Shadow before canary is the safe order."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your feature flag uses `random.random() < 0.10` to route 10% of requests to variant B. After a week you try to analyze which users were in the treatment group, but the same user appears in both A and B cohorts across their request history.",
+      "question": "What is the root cause and how do you fix it?",
+      "options": [
+        "A. The random seed was not set; fix with random.seed(42)",
+        "B. The 10% threshold is too low; increase to 20% for stable assignment",
+        "C. random.random() produces a different value on each call, so users can land in different variants across requests; fix with deterministic hashing: hash(user_id) % 100 < 10",
+        "D. Users should be assigned variants in the database, not at request time"
+      ],
+      "answer": "C",
+      "explanation": "random.random() is stateless across requests - each call is independent. The same user can get A on one request and B on the next. Deterministic hashing uses the user_id as the key, so hash(user_id) % 100 produces the same bucket for the same user on every request. This makes variant assignment stable and your cohort analysis valid."
+    },
+    {
+      "id": "c3",
+      "scenario": "In shadow mode, your service logs show both variant A and variant B token counts per request. But the HTTP response to users always shows prompt_version='v1.0' (variant A). A colleague says this means shadow mode is working correctly.",
+      "question": "Is the colleague correct, and what would indicate shadow mode is broken?",
+      "options": [
+        "A. Incorrect - in shadow mode users should see variant B 50% of the time",
+        "B. Correct - in shadow mode all users see variant A responses; variant B runs in the background for comparison only",
+        "C. Incorrect - the prompt_version should be hidden from the HTTP response entirely",
+        "D. Correct, but only if the b_tokens count in the logs is also zero"
+      ],
+      "answer": "B",
+      "explanation": "Shadow mode by definition shows users only variant A. The new prompt (variant B) runs in the background on every request for comparison purposes, which is why both token counts appear in the logs. If variant B's prompt_version appeared in the HTTP response, it would mean users are seeing the untested new version, which defeats the purpose of shadow mode."
+    },
+    {
+      "id": "c4",
+      "scenario": "You have two flags active at the same time: 'prompt-v2-rollout' and 'model-upgrade-rollout'. Both use 10% rollout. A user with ID 'user-789' is in the treatment group for 'prompt-v2-rollout'. Are they guaranteed to also be in the treatment group for 'model-upgrade-rollout'?",
+      "question": "What determines the independence of bucket assignments across flags?",
+      "options": [
+        "A. Yes, the same user always falls in the treatment group for all flags at the same rollout percentage",
+        "B. No, because each flag includes its name in the hash key: hash(flag_name + ':' + user_id) produces independent buckets per flag",
+        "C. Yes, because MD5 hashing always produces consistent results for the same user",
+        "D. No, because different flags use different random number generators"
+      ],
+      "answer": "B",
+      "explanation": "Including the flag name in the hash key - hash('prompt-v2-rollout:user-789') vs hash('model-upgrade-rollout:user-789') - produces completely different bucket values even for the same user. This means a user's assignment in one flag is independent of their assignment in another. Without the flag name in the key, all flags would assign users to the same buckets, making it impossible to test two changes independently."
+    },
+    {
+      "id": "c5",
+      "scenario": "You promoted your prompt change to 10% canary three days ago. You are trying to decide whether to expand to 25%. Your shadow logs from before canary showed the new prompt was good. But you have no user-level metrics yet from the live 10% canary.",
+      "question": "What metrics should you look at from the canary cohort before expanding to 25%?",
+      "options": [
+        "A. Only token usage - lower token counts mean the new prompt is more efficient",
+        "B. User error rate, support tickets or escalations from the treatment cohort, and your eval suite run against a sample of variant B responses",
+        "C. The model provider latency graphs for variant B requests",
+        "D. Whether variant B users are sending more requests than variant A users"
+      ],
+      "answer": "B",
+      "explanation": "Shadow mode validated output quality on a sample. The canary phase validates behavior on real users at real scale. The right signals are: user error rate (API errors or empty responses), support tickets or complaints from users in the treatment cohort, and your Phase 05 eval metrics run against variant B samples. Latency is also worth checking but is not a gate on its own. 'Looks fine' is not a promotion criterion."
+    },
+    {
+      "id": "c6",
+      "scenario": "After a successful full rollout, the flag config (variant_a, variant_b, rollout_pct=100) is left in the codebase 'just in case' for easy rollback. Six months later a new engineer sees the flag and is not sure if variant A or B is actually active.",
+      "question": "What is the correct practice for handling flags after full rollout?",
+      "options": [
+        "A. Set rollout_pct=100 and leave the flag permanently - this is the safest configuration",
+        "B. Remove the flag from the codebase and make variant B the default directly - dead flags create confusion and maintenance debt",
+        "C. Archive the flag by setting its mode to SHADOW permanently",
+        "D. Document the flag in a README so future engineers know its state"
+      ],
+      "answer": "B",
+      "explanation": "A flag at 100% rollout is not a flag - it is dead code. Leaving it creates exactly the confusion described: new engineers cannot tell what is active without reading the routing logic. The correct practice is to remove the flag, inline variant B as the default, and use the version manifest (Lesson 12) for rollback instead. Track flag removal as a required step in your rollout completion checklist."
+    },
+    {
+      "id": "c7",
+      "scenario": "You want to measure whether the new prompt version increases the rate of users clicking 'thumbs up' on responses. You have user_id on every request. Which rollout mode is designed for this measurement, and what additional instrumentation do you need?",
+      "options": [
+        "A. Shadow mode - run both versions and compare thumbs up rates in the background",
+        "B. A/B mode - log variant assignment per user_id so you can join with the thumbs up event data to compute rate by cohort",
+        "C. Canary mode - route 50% to variant B and count thumbs up overall",
+        "D. You do not need a feature flag for this; just deploy variant B and compare before/after averages"
+      ],
+      "answer": "B",
+      "explanation": "A/B mode is specifically for measuring downstream outcome metrics. You log the variant assignment (flag=X user=Y variant=B) at request time, then join that log with the thumbs up event log in your analytics system. This gives you thumbs-up rate per variant. Shadow mode cannot do this because users only see variant A. Canary without user-level assignment logging cannot isolate which users were in which group for outcome measurement."
+    },
+    {
+      "id": "c8",
+      "scenario": "You run a distribution check by generating 10,000 user IDs and counting how many land in variant B for a 10% flag. The result is 847 out of 10,000 (8.47%). Your colleague says this is a problem with the hash function.",
+      "question": "How do you evaluate whether 8.47% is within acceptable range for a 10% flag?",
+      "options": [
+        "A. It is not acceptable - the hash function must be replaced because the error exceeds 1 percentage point",
+        "B. It is acceptable - with 10,000 samples and a 10% target, statistical variation of up to 1-2 percentage points is expected; run 100,000 samples to confirm it converges near 10%",
+        "C. It is not acceptable - MD5 is a security hash and not suitable for bucketing",
+        "D. It is acceptable as long as the flag is in shadow mode"
+      ],
+      "answer": "B",
+      "explanation": "With 10,000 samples and a 10% target (expected: 1,000 out of 10,000), statistical variation of about 1% is normal. 8.47% (847 samples) is 1.53 percentage points below the target, which is within a reasonable margin for 10,000 samples. Run 100,000 samples to get a more stable estimate. If it consistently converges near 10%, the hash function is fine. The actual threshold for concern is consistent bias across large sample sizes, not a single-run deviation."
+    }
+  ]
+}

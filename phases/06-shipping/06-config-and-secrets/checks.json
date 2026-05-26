@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "06-config-and-secrets",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A Python service starts fine in staging but silently uses the wrong model in production because the MODEL environment variable was not set. The staging value was 'claude-opus-4-5' and the production service defaulted to 'claude-3-5-haiku-20241022'. The issue was discovered two weeks later by a user noticing response quality differences.",
+      "question": "Which design decision would have made this misconfiguration visible immediately at deployment time?",
+      "options": [
+        "A. Add a comment in the code explaining what MODEL controls.",
+        "B. Validate all config at startup using a typed Settings class with fail-fast behavior so the service exits if required values differ from expectations.",
+        "C. Log every request's model name in the response JSON so users can see which model answered.",
+        "D. Pin the model name as a hardcoded constant so environment variables cannot override it."
+      ],
+      "answer": "B",
+      "explanation": "The problem is that the misconfiguration was silent -- the service started and appeared healthy while using the wrong model. Fail-fast startup validation (e.g., validating that MODEL matches an allowed set of values) would have caused the deployment to fail immediately, surfacing the problem before any user traffic was served. Logging after the fact (option C) still allows the wrong model to serve requests. Hardcoding (option D) removes the ability to configure the model at all."
+    },
+    {
+      "id": "c2",
+      "scenario": "You define a Settings class with pydantic-settings. The field is declared as: max_tokens: int = Field(default=1024, ge=1, le=8192). A developer sets the environment variable MAX_TOKENS=unlimited before starting the service.",
+      "question": "What happens when the service starts?",
+      "options": [
+        "A. The service starts and uses max_tokens=0 because the string 'unlimited' cannot be converted to int, so pydantic falls back to the default.",
+        "B. The service raises a ValidationError at startup and exits with a non-zero code, printing a clear error identifying the MAX_TOKENS field.",
+        "C. The service starts with max_tokens='unlimited' as a string and crashes on the first request that calls the API with it.",
+        "D. pydantic-settings ignores environment variables that cannot be coerced to the declared type and uses the default instead."
+      ],
+      "answer": "B",
+      "explanation": "pydantic-settings attempts to coerce environment variable strings to the declared field type. 'unlimited' cannot be coerced to int, so pydantic raises a ValidationError during Settings() instantiation. If you call get_settings() at startup inside a try/except ValidationError block and call sys.exit(1) on failure, the service exits immediately with a clear error message identifying the problem field. The error surfaces at startup, not at the first API call."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your team's .env file for local development contains ANTHROPIC_API_KEY=sk-ant-abc123. A developer accidentally runs git add . and commits the .env file to the repository before anyone notices.",
+      "question": "What is the immediate action to take after discovering this, and what process change prevents it recurring?",
+      "options": [
+        "A. Delete the .env file from the repository and force-push. Then add .env to .gitignore. The key is still valid because GitHub only checks for keys in the current HEAD.",
+        "B. Rotate the API key immediately (assume it is compromised), then add .env to .gitignore and create a .env.example with placeholder values.",
+        "C. Add a note in the README saying developers should not use real keys in .env files.",
+        "D. Move the .env file to a subdirectory that git does not track by default."
+      ],
+      "answer": "B",
+      "explanation": "Any key committed to a git repository should be treated as compromised immediately -- even after deletion from git history, the key may have been seen by any developer who pulled, any CI system that ran, or any GitHub scanning tool. Rotate first, then fix the process. The correct prevention is: add .env to .gitignore before the first commit, commit a .env.example file with placeholder values, and consider a pre-commit hook that scans for patterns matching API key formats."
+    },
+    {
+      "id": "c4",
+      "scenario": "A Settings class is defined with an anthropic_api_key field using Field(...) with no default value. The service is deployed to Kubernetes without the ANTHROPIC_API_KEY environment variable set in the pod spec.",
+      "question": "What is the behavior of the service, assuming fail-fast startup validation is implemented?",
+      "options": [
+        "A. The pod starts, enters the Running state, and crashes only on the first request that uses the API key.",
+        "B. The pod fails at startup with a ValidationError, never enters Running state, and Kubernetes reports CrashLoopBackOff.",
+        "C. pydantic-settings treats the missing field as None and the service starts with api_key=None.",
+        "D. Kubernetes injects a default empty string for any missing environment variable, so the service starts with api_key=''."
+      ],
+      "answer": "B",
+      "explanation": "Field(...) means the field is required with no default. When Settings() is instantiated and ANTHROPIC_API_KEY is not present in the environment, pydantic raises a ValidationError. With fail-fast startup validation (try/except ValidationError + sys.exit(1) before the app starts), the process exits with code 1 before binding any port. Kubernetes sees the container exit immediately and reports CrashLoopBackOff. The ops team sees a clear error in pod logs identifying the missing variable, not a mysterious crash on the first request."
+    },
+    {
+      "id": "c5",
+      "scenario": "You have a .env file with MODEL=claude-opus-4-5. You also set the environment variable MODEL=claude-3-5-haiku-20241022 in your shell before running the service. Your Settings class uses SettingsConfigDict(env_file='.env').",
+      "question": "Which value does settings.model have when the service starts?",
+      "options": [
+        "A. claude-opus-4-5 (the .env file takes precedence over shell environment variables)",
+        "B. claude-3-5-haiku-20241022 (shell environment variables take precedence over the .env file)",
+        "C. The service raises a conflict error because the same field is defined in two places.",
+        "D. The behavior is undefined and depends on which file was loaded first."
+      ],
+      "answer": "B",
+      "explanation": "In pydantic-settings, the resolution order is: actual environment variables (highest priority) > .env file > defaults in code. A shell environment variable set with export or inline on the command line always wins over a value in the .env file. This is by design: the .env file is a convenience for local development, but environment variables are the authoritative source at runtime. This order allows operators to override any .env value without editing files."
+    },
+    {
+      "id": "c6",
+      "scenario": "A team stores the service's model name, retry count, and timeout as hardcoded constants in main.py. The database URL (which contains a password) is read with os.environ.get('DATABASE_URL'). The team argues this is fine because 'the model name never changes' and 'the database URL is already secret.'",
+      "question": "What is the concrete problem with mixing hardcoded constants and raw os.environ.get() calls instead of a unified typed Settings class?",
+      "options": [
+        "A. No problem. This approach is simpler and achieves the same security properties.",
+        "B. Hardcoded constants cannot be overridden for A/B testing or environment-specific tuning without a code change and redeployment; os.environ.get() calls are untyped and unvalidated, so a wrong DATABASE_URL format only fails at connection time.",
+        "C. The problem is performance: os.environ.get() is slower than reading a Python constant.",
+        "D. os.environ.get() is not available in all Python environments and should be replaced with pathlib."
+      ],
+      "answer": "B",
+      "explanation": "Hardcoded constants cannot be changed without a code change and redeployment -- impossible for environment-specific tuning and inconvenient for A/B experiments. Raw os.environ.get() calls are untyped (returns a string or None), unvalidated (a typo in DATABASE_URL only surfaces when the connection fails), and scattered across multiple files (hard to audit what config the service actually uses). A Settings class with typed fields, validation constraints, and a single resolution order solves all three problems."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your AI service is growing and now needs three API keys: one for Anthropic, one for OpenAI (fallback), and one for a vector database. The security team requires that keys must be rotatable without redeploying the service and that all access to keys must be audited.",
+      "question": "Which secret management approach is appropriate at this scale?",
+      "options": [
+        "A. Store all three keys in environment variables. Rotation requires a pod restart, which is acceptable.",
+        "B. Move to AWS Secrets Manager or HashiCorp Vault, which support dynamic secret rotation and provide an audit trail of every read. The service fetches secrets at startup (and optionally refreshes them).",
+        "C. Store the keys in a YAML config file that is mounted as a Kubernetes ConfigMap so the team can edit it without redeploying.",
+        "D. Store the keys in a .env file committed to a private repository. Only give developers with senior engineer title access to clone it."
+      ],
+      "answer": "B",
+      "explanation": "Environment variables require a pod restart to pick up a rotated key -- acceptable for simple setups but not for high-availability services. ConfigMaps are not encrypted and are visible to anyone with cluster access. Private repos are not secret stores. AWS Secrets Manager and HashiCorp Vault provide rotation (new key takes effect without restart), encryption at rest, access policies (only this service can read this key), and an audit trail (who read what and when). These are the requirements the security team stated."
+    }
+  ]
+}

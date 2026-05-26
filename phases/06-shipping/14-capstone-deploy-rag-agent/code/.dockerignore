@@ -1,0 +1,42 @@
+# Environment files - secrets must never be baked into the image
+.env
+.env.*
+*.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Development and test files
+*.test.py
+test_*.py
+tests/
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Documentation (not needed in the image)
+docs/
+
+# Jupyter notebooks
+*.ipynb
+
+# Demo/dev manifests - only include the production manifests.yaml
+demo_manifests.yaml

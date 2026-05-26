@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-docker-image-ai-app",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You are reviewing a Dockerfile. The instruction order is: FROM, RUN apt-get install, COPY . ., RUN pip install -r requirements.txt, CMD. A developer changes one line in main.py and runs docker build.",
+      "question": "What is the performance problem with this layer order, and which layer is incorrectly positioned?",
+      "options": [
+        "A. No problem. Docker is smart enough to detect that only code changed and will skip the pip install.",
+        "B. The COPY . . layer invalidates the cache for the RUN pip install layer, forcing a full reinstall on every code change.",
+        "C. The problem is in the FROM instruction. Using python:3.12 instead of python:3.12-slim causes slow builds.",
+        "D. The RUN apt-get install layer must come after pip install to avoid dependency conflicts."
+      ],
+      "answer": "B",
+      "explanation": "Docker caches layers by their inputs. When COPY . . appears before RUN pip install, any code change invalidates the COPY layer. Because the pip install layer comes after it, Docker also invalidates that layer and reinstalls all packages from scratch. The fix is to COPY requirements.txt first, RUN pip install, then COPY . . so pip install only re-runs when requirements.txt actually changes."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your team wants to run the AI service container in production. The ANTHROPIC_API_KEY must be available inside the container. A junior engineer proposes adding ENV ANTHROPIC_API_KEY=sk-ant-... to the Dockerfile to simplify deployment.",
+      "question": "What is the concrete security risk of this approach?",
+      "options": [
+        "A. No risk. ENV variables in a Dockerfile are encrypted at rest in the image.",
+        "B. The API key will appear in docker history output and in the image manifest, visible to anyone who can pull the image.",
+        "C. The risk is that the key will expire inside the container after 24 hours due to Docker's security policy.",
+        "D. ENV variables are not accessible inside the container at runtime, so the service will fail to start."
+      ],
+      "answer": "B",
+      "explanation": "Values set with ENV in a Dockerfile are stored in the image layer metadata. Running docker history my-image or docker inspect my-image will show them in plain text. If the image is pushed to any registry (public or private), anyone with pull access can read the key. Secrets must be injected at runtime using docker run --env ANTHROPIC_API_KEY=$KEY or an external secret store, never baked into the image."
+    },
+    {
+      "id": "c3",
+      "scenario": "A colleague asks why your Dockerfile uses two FROM statements (multi-stage build). The service runs fine with a single stage.",
+      "question": "What is the primary production benefit of the multi-stage build pattern for an AI service?",
+      "options": [
+        "A. Two FROM statements allow you to use two different base OS distributions in the same container at runtime.",
+        "B. The build stage installs compilers and dev tools to build wheels; the runtime stage copies only the compiled packages, producing a smaller image with fewer installed tools (smaller attack surface).",
+        "C. Multi-stage builds are required by Kubernetes and will not deploy without them.",
+        "D. The second FROM statement resets the working directory, which is required for uvicorn to find main.py."
+      ],
+      "answer": "B",
+      "explanation": "Many Python packages require gcc or other build tools to compile C extensions during pip install. A single-stage build must include those tools in the final image, making it larger and introducing more potential vulnerabilities. In a multi-stage build, the build stage contains gcc and other tools to compile packages; the runtime stage copies only the compiled .so files and .py files into a clean slim image. The build tools never enter the final image."
+    },
+    {
+      "id": "c4",
+      "scenario": "You deploy a container to ECS. The service starts, but ECS marks it as unhealthy and keeps restarting it every 30 seconds. The application logs show no errors after startup.",
+      "question": "What is the most likely root cause, and what change would fix it?",
+      "options": [
+        "A. The container is out of memory. Increase the task memory allocation.",
+        "B. The Dockerfile has no HEALTHCHECK instruction, so ECS cannot determine if the service is ready and assumes it failed.",
+        "C. The /health endpoint is returning 200 too quickly. ECS expects a delay of at least 5 seconds before the first healthy response.",
+        "D. ECS requires the CMD to use exec form [\"uvicorn\", ...] not shell form. Shell form causes the health check to fail."
+      ],
+      "answer": "B",
+      "explanation": "Container orchestrators use the HEALTHCHECK instruction to determine container health. If no HEALTHCHECK is defined, some orchestrators mark the container as unhealthy after a timeout, or never route traffic to it. The fix is to add HEALTHCHECK CMD curl -f http://localhost:8000/health || exit 1 with appropriate --interval, --timeout, and --start-period values. The --start-period gives the app time to finish initializing before health checks begin."
+    },
+    {
+      "id": "c5",
+      "scenario": "A DevOps engineer reviews your Dockerfile and notices the running process is owned by root. Your organization's security policy requires all containerized services to run as a non-root user.",
+      "question": "Which two Dockerfile instructions together implement the non-root user requirement?",
+      "options": [
+        "A. EXPOSE 8000 and CMD [\"--no-root\"] passed to uvicorn",
+        "B. RUN useradd -m -u 1000 appuser followed by USER appuser before the CMD instruction",
+        "C. RUN chmod 755 /app followed by ENV USER=appuser",
+        "D. FROM python:3.12-slim automatically runs as non-root; no additional instruction is needed"
+      ],
+      "answer": "B",
+      "explanation": "RUN useradd -m -u 1000 appuser creates a non-root OS user inside the image. USER appuser switches all subsequent instructions (including CMD) to run as that user. Both instructions are needed: useradd creates the user, USER switches to it. Without USER appuser, the CMD runs as root even if the user exists. python:3.12-slim uses root by default."
+    },
+    {
+      "id": "c6",
+      "scenario": "You run docker build on a project directory that contains a .git folder (450 MB), a .venv folder (1.2 GB), and application code (2 MB). The build starts very slowly and the first log line says 'Sending build context to Docker daemon 1.65GB'.",
+      "question": "What is the cause of this problem and how do you fix it?",
+      "options": [
+        "A. The Docker daemon is running out of disk space. Delete old images with docker system prune.",
+        "B. There is no .dockerignore file, so Docker sends the entire directory including .git and .venv to the build daemon. Add a .dockerignore that excludes these directories.",
+        "C. The FROM instruction must appear first in the Dockerfile for Docker to optimize the build context.",
+        "D. The Dockerfile must use ADD instead of COPY to trigger build context compression."
+      ],
+      "answer": "B",
+      "explanation": "Before executing any Dockerfile instruction, Docker sends the entire build context (the directory path passed to docker build) to the Docker daemon. Without a .dockerignore file, this includes .git, .venv, __pycache__, and every other file in the directory. A .git folder alone can be hundreds of megabytes. The fix is a .dockerignore file at the project root that lists directories to exclude: .git/, .venv/, __pycache__/, .env, etc."
+    },
+    {
+      "id": "c7",
+      "scenario": "You need to pass three configuration values to your running container: ANTHROPIC_API_KEY (secret), LOG_LEVEL=info (non-secret), and MODEL=claude-3-5-haiku-20241022 (non-secret). You want to follow the principle of least exposure.",
+      "question": "What is the correct way to handle these three values across the Dockerfile and docker run command?",
+      "options": [
+        "A. Set all three in ENV instructions in the Dockerfile so the image is self-contained and no flags are needed at docker run.",
+        "B. Set LOG_LEVEL and MODEL in ENV in the Dockerfile. Pass ANTHROPIC_API_KEY at runtime with docker run --env ANTHROPIC_API_KEY=$KEY.",
+        "C. Pass all three at runtime with docker run --env. Never put any value in the Dockerfile.",
+        "D. Store all three in a .env file and use COPY .env . in the Dockerfile so the container can load them automatically."
+      ],
+      "answer": "B",
+      "explanation": "Non-secret config values like LOG_LEVEL and MODEL are safe to set in ENV instructions in the Dockerfile -- they do not expose credentials and baking them in provides sensible defaults. The secret (ANTHROPIC_API_KEY) must never appear in the Dockerfile; it is injected at runtime via --env so it never enters the image layers. Option C is also defensible but loses the convenience of documented defaults. Option D is dangerous: COPY .env . bakes the secret into the image."
+    },
+    {
+      "id": "c8",
+      "scenario": "After shipping, you want to verify that your production Docker image actually meets the non-root, no-secrets, and health check requirements without deploying it.",
+      "question": "Which combination of commands gives you the most direct evidence for all three requirements?",
+      "options": [
+        "A. docker logs, docker stats, docker top",
+        "B. docker history (for secrets), docker exec whoami (for user), docker inspect --format='{{.State.Health.Status}}' (for health after running)",
+        "C. docker scan (for all three requirements at once)",
+        "D. docker manifest inspect (for secrets and user) and docker run --health-check (for health)"
+      ],
+      "answer": "B",
+      "explanation": "docker history shows the layer commands including any ENV instructions -- scan this for secret values. docker exec whoami on a running container shows the actual OS user running the process. docker inspect --format='{{.State.Health.Status}}' shows the health check result after the container has been running long enough for the first check to complete. These three commands directly test each requirement against the actual running artifact."
+    }
+  ]
+}

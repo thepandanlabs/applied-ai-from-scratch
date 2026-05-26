@@ -134,24 +134,24 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 06: Shipping It: Notebook to Production Service [⬚] (~15 hours)
+## Phase 06: Shipping It: Notebook to Production Service [✅] (~15 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | The Demo-to-Production Gap | ⬚ | ~45 min |
-| 02 | Wrapping a Model in FastAPI | ⬚ | ~60 min |
-| 03 | Streaming Responses: SSE, Async, Concurrency | ⬚ | ~60 min |
-| 04 | Input Validation & Safe Output Handling | ⬚ | ~45 min |
-| 05 | Docker Image for an AI App | ⬚ | ~60 min |
-| 06 | Config & Secrets Management | ⬚ | ~45 min |
-| 07 | Rate Limits, Retries, Backoff, Circuit Breakers | ⬚ | ~60 min |
-| 08 | Fallbacks & Model Failover | ⬚ | ~45 min |
-| 09 | Background Jobs & Batch APIs | ⬚ | ~45 min |
-| 10 | A Minimal TypeScript Frontend | ⬚ | ~60 min |
-| 11 | Deploying: Managed + Container Paths | ⬚ | ~60 min |
-| 12 | Versioning Prompts, Models, Configs in Production | ⬚ | ~45 min |
-| 13 | Feature Flags & Progressive Rollout | ⬚ | ~45 min |
-| 14 | Capstone: Deploy a RAG-or-Agent App Publicly | ⬚ | ~90 min |
+| 01 | The Demo-to-Production Gap | ✅ | ~45 min |
+| 02 | Wrapping a Model in FastAPI | ✅ | ~60 min |
+| 03 | Streaming Responses: SSE, Async, Concurrency | ✅ | ~60 min |
+| 04 | Input Validation & Safe Output Handling | ✅ | ~45 min |
+| 05 | Docker Image for an AI App | ✅ | ~60 min |
+| 06 | Config & Secrets Management | ✅ | ~45 min |
+| 07 | Rate Limits, Retries, Backoff, Circuit Breakers | ✅ | ~60 min |
+| 08 | Fallbacks & Model Failover | ✅ | ~45 min |
+| 09 | Background Jobs & Batch APIs | ✅ | ~45 min |
+| 10 | A Minimal TypeScript Frontend | ✅ | ~60 min |
+| 11 | Deploying: Managed + Container Paths | ✅ | ~60 min |
+| 12 | Versioning Prompts, Models, Configs in Production | ✅ | ~45 min |
+| 13 | Feature Flags & Progressive Rollout | ✅ | ~45 min |
+| 14 | Capstone: Deploy a RAG-or-Agent App Publicly | ✅ | ~90 min |
 
 ---
 

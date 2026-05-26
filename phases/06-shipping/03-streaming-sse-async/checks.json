@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "03-streaming-sse-async",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You add a `/stream` endpoint to your FastAPI service using the synchronous `Anthropic` client (not `AsyncAnthropic`). Under light load it works. Under moderate load (10 concurrent streaming requests), response times for new requests increase linearly. At 20 concurrent streams, new requests take 30+ seconds to start.",
+      "question": "What is the root cause?",
+      "options": [
+        "A. The synchronous Anthropic client is not thread-safe and causes data corruption",
+        "B. The synchronous client blocks the asyncio event loop during the API call, preventing other requests from being handled until the current stream completes",
+        "C. SSE does not support concurrent connections and queues requests automatically",
+        "D. FastAPI limits streaming endpoints to 10 concurrent connections by default"
+      ],
+      "answer": "B",
+      "explanation": "The synchronous Anthropic client makes blocking HTTP calls that hold the entire asyncio event loop. While one stream is blocking, the event loop cannot process other requests. AsyncAnthropic suspends at each await point (each token), allowing the event loop to serve other requests between tokens. The fix is to use AsyncAnthropic in async route handlers."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your SSE endpoint yields events correctly but the browser's EventSource receives all tokens at once after a long delay, rather than seeing them arrive individually. The curl client with --no-buffer works correctly.",
+      "question": "What is the most likely cause of the browser receiving batched tokens?",
+      "options": [
+        "A. Browsers buffer SSE events and only display them after 500ms by default",
+        "B. An nginx reverse proxy is buffering the streaming response; add X-Accel-Buffering: no to the response headers and proxy_buffering off to the nginx config",
+        "C. The StreamingResponse media_type should be application/json, not text/event-stream",
+        "D. EventSource in the browser only supports GET requests, not POST"
+      ],
+      "answer": "B",
+      "explanation": "nginx and other reverse proxies buffer responses by default to optimize throughput. For streaming responses, buffering defeats the purpose: all tokens accumulate in the proxy buffer and are sent together when the stream ends. X-Accel-Buffering: no in the response headers tells nginx to disable buffering for this response. Without this, a working SSE endpoint appears to batch its output when accessed through a proxy."
+    },
+    {
+      "id": "c3",
+      "scenario": "A user's stream terminates mid-response. Your client-side JavaScript detects the HTTP connection closing but does not know whether the stream finished normally or an error occurred. Users see truncated responses with no indication of whether the content is complete.",
+      "question": "What is the correct server-side design to enable the client to distinguish a complete stream from a dropped connection?",
+      "options": [
+        "A. Set the HTTP status code to 206 Partial Content for incomplete streams",
+        "B. Emit a final event with a 'done' field (e.g., data: {\"done\": true}) after all tokens, so the client can verify the stream completed normally vs. the connection dropping mid-stream",
+        "C. Use WebSockets instead of SSE, which have built-in close codes",
+        "D. Send a Content-Length header with the expected number of tokens before streaming begins"
+      ],
+      "answer": "B",
+      "explanation": "When an HTTP connection drops, the client just sees the stream end -- it cannot distinguish a clean finish from a network failure. A terminal event (done: true) lets the client check: 'did I receive the done signal?' If yes, the stream completed. If no, the connection dropped mid-stream. The client can then show an error state and offer a retry. Content-Length (D) is not possible because the total length is unknown before streaming begins."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are designing an AI chat application. The frontend needs to: (1) send messages from the user, (2) receive streaming responses from the model, and (3) update the conversation history on the server after each response. A colleague suggests SSE for simplicity. You are considering WebSockets.",
+      "question": "Which protocol is most appropriate, and why?",
+      "options": [
+        "A. SSE, because it handles all three requirements natively",
+        "B. WebSockets, because requirement (1) and (3) involve client-to-server communication that SSE cannot handle -- SSE is unidirectional (server to client only)",
+        "C. SSE, because WebSockets do not support JSON payloads",
+        "D. WebSockets are never appropriate for AI applications because they add too much latency"
+      ],
+      "answer": "B",
+      "explanation": "SSE is strictly server-to-client. Sending a message (requirement 1) and updating history (requirement 3) require the client to send data to the server, which SSE cannot do. For a chat application with bidirectional communication, WebSockets or a hybrid approach (SSE for streaming output + regular POST requests for input) is appropriate. The lesson's SSE recommendation applies specifically to one-way streaming of model output, not interactive chat where the client sends data during the session."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your streaming endpoint's async generator raises an unhandled exception mid-stream (e.g., during the 5th of 20 expected tokens). The HTTP response has already started with a 200 status code.",
+      "question": "What happens to the client, and what is the correct fix?",
+      "options": [
+        "A. FastAPI automatically sends a 500 status code to replace the 200",
+        "B. The connection closes abruptly with no signal; the client sees a truncated stream identical to a dropped connection. Fix: catch exceptions inside the generator and yield an error event before the generator exits",
+        "C. The generator retries from the beginning automatically",
+        "D. The client receives a JSON error body appended to the token stream"
+      ],
+      "answer": "B",
+      "explanation": "Once an HTTP response with 200 has started streaming, the status code cannot be changed. An unhandled exception in the generator simply closes the stream. The client cannot distinguish this from a dropped connection. The correct pattern is: wrap the streaming logic in try/except inside the generator, catch all exceptions, yield a structured error event (data: {\"error\": \"...\"}), then exit the generator cleanly. This lets the client display an error message and distinguish failure from success."
+    },
+    {
+      "id": "c6",
+      "scenario": "You measure time-to-first-token (TTFT) for your /stream endpoint. The average is 0.4 seconds. You measure time-to-last-token for the same prompts on the non-streaming /generate endpoint. The average is 8.2 seconds. A product manager asks why you built streaming if it does not make the model faster.",
+      "question": "How do you explain the value of streaming to the product manager?",
+      "options": [
+        "A. Streaming makes the model produce tokens faster by reducing internal buffering",
+        "B. Streaming does not change total generation time, but reduces perceived wait time from 8.2s (nothing visible) to 0.4s (first content visible), which dramatically reduces user abandonment and perceived performance",
+        "C. Streaming reduces API costs by sending fewer tokens per request",
+        "D. Streaming is required for the service to handle more than one user at a time"
+      ],
+      "answer": "B",
+      "explanation": "The model generates at the same speed regardless of whether you stream. Streaming changes when the client sees the output: with buffering, users wait 8.2 seconds for anything; with streaming, they see the first word in 0.4 seconds and watch the response build. Research on perceived performance shows users rate applications faster when they see immediate feedback even if total time is identical. Abandonment rates drop significantly with visible progress compared to blank waiting periods."
+    },
+    {
+      "id": "c7",
+      "scenario": "You inspect an SSE stream from your endpoint and see events formatted like this: `data: Hello\\ndata: world\\n`. The browser's EventSource is not firing message events.",
+      "question": "What is wrong with the SSE format?",
+      "options": [
+        "A. The data field must be named 'event' not 'data'",
+        "B. Each SSE event must be followed by two newlines (\\n\\n) not one; a single \\n continues the same event rather than terminating it",
+        "C. SSE events must be Base64-encoded before sending",
+        "D. The Content-Type must be application/event-stream not text/event-stream"
+      ],
+      "answer": "B",
+      "explanation": "The SSE specification requires two consecutive newlines (\\n\\n) to terminate an event. A single \\n is treated as a line continuation within the same event. If you yield 'data: Hello\\n', the browser parser waits for the event to complete and does not fire a message event. The correct format is 'data: Hello\\n\\n' -- the extra newline signals event boundary. This is the most common SSE implementation bug."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are load-testing your streaming service. With 1 concurrent user, TTFT averages 380ms. With 50 concurrent streaming users (each requesting a 500-token response), TTFT for new requests averages 390ms. Your colleague expected latency to degrade significantly under load and is surprised it did not.",
+      "question": "Why does asyncio concurrency maintain low TTFT under this streaming load?",
+      "options": [
+        "A. Each concurrent stream runs on a separate CPU core",
+        "B. The service is not actually handling all 50 requests concurrently; they are queued",
+        "C. The async event loop multiplexes all 50 streams on a single thread by suspending at each await (each token), so new requests can start between token emissions without waiting for any stream to finish",
+        "D. FastAPI automatically distributes streaming requests across multiple processes"
+      ],
+      "answer": "C",
+      "explanation": "asyncio cooperative multitasking means each `async for text in stream.text_stream` iteration suspends the coroutine while waiting for the next token, allowing other coroutines to run. With 50 active streams each emitting a token every ~50ms, the event loop schedules thousands of short tasks per second, interleaved. A new request starting mid-stream only needs to wait for the next scheduling slot (microseconds), not for any existing stream to complete. This is why async I/O scales well for I/O-bound workloads like LLM streaming."
+    }
+  ]
+}

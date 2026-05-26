@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "02-wrapping-model-in-fastapi",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A FastAPI service creates a new `anthropic.Anthropic()` client inside the `/generate` route handler on every request. The service handles 50 requests per second. After a week in production, the ops team reports steadily increasing memory usage and higher-than-expected API latency.",
+      "question": "What is the root cause and the correct fix?",
+      "options": [
+        "A. The Pydantic models are too large; reduce the number of response fields",
+        "B. The client is being created per-request, causing connection overhead and memory accumulation; create the client once in the lifespan event and reuse it via app.state",
+        "C. FastAPI's async handlers are not suited for synchronous Anthropic SDK calls; switch to a synchronous Flask app",
+        "D. The /generate endpoint needs a connection pool size parameter passed to each client"
+      ],
+      "answer": "B",
+      "explanation": "The Anthropic client manages an internal HTTP connection pool. Creating it per-request bypasses that pooling, adds connection setup latency on every call, and leaks memory because old clients are not properly cleaned up by the garbage collector. The fix is to create the client once in the lifespan event startup block and store it in app.state for all handlers to share."
+    },
+    {
+      "id": "c2",
+      "scenario": "You send a POST request to `/generate` with this body: `{\"prompt\": \"\", \"max_tokens\": 512}`. You expect a 422 response. Instead you get a 500 Internal Server Error with the message 'Input cannot be empty.'",
+      "question": "What went wrong in the service design?",
+      "options": [
+        "A. The service correctly returns 500 for empty input; that is the expected behavior",
+        "B. The empty check is happening inside the route handler with a manual raise, instead of being a Pydantic Field constraint (min_length=1) that produces 422 automatically",
+        "C. FastAPI does not support 422 responses; all validation errors must be returned as 400",
+        "D. The Anthropic SDK raises a 500 internally when it receives an empty string"
+      ],
+      "answer": "B",
+      "explanation": "FastAPI automatically returns 422 Unprocessable Entity when a request body fails Pydantic field constraints. By using `Field(..., min_length=1)` on the prompt, the validation happens before the route handler is called and the client receives a structured 422 with the exact field error. A manual check inside the handler that raises HTTPException(500) is incorrect because 500 means 'server error' -- an empty input is a client error."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your load balancer calls `/health` every 15 seconds to determine whether to route traffic to your service instance. You have added model calling logic inside `/health` to verify the model endpoint actually works. During an Anthropic API outage, your health check starts returning 503, and the load balancer removes all instances from the pool. Users cannot reach the service at all.",
+      "question": "What is wrong with the health check design?",
+      "options": [
+        "A. The health check should use a different model with lower latency",
+        "B. The health check interval of 15 seconds is too frequent; increase it to 5 minutes",
+        "C. The health check is testing the upstream API dependency, which causes the instance to appear unhealthy when the real service process is running fine; health checks should only verify that the service process itself is alive",
+        "D. The health check should cache the model call result for 60 seconds to reduce load"
+      ],
+      "answer": "C",
+      "explanation": "A shallow health check (returns 200 if the process is running) and a deep health check (tests all dependencies) serve different purposes. The load balancer's liveness check should be shallow: if the process is alive and accepting connections, return 200. Deep checks belong in a separate readiness probe or an external monitoring system. Making the liveness check deep causes the load balancer to remove healthy instances during upstream outages, which is worse than keeping them in the pool and letting them return 502/503 per-request."
+    },
+    {
+      "id": "c4",
+      "scenario": "You deploy a FastAPI service without setting ANTHROPIC_API_KEY in the environment. The service starts successfully, accepts traffic, and every request returns a 500 error with 'AuthenticationError'. The on-call engineer spends 20 minutes investigating before finding the missing variable.",
+      "question": "What change to the startup code would have prevented this deployment from accepting traffic?",
+      "options": [
+        "A. Add a warning log at startup if ANTHROPIC_API_KEY is missing, but continue running",
+        "B. Validate ANTHROPIC_API_KEY in the lifespan startup block and raise EnvironmentError if it is absent, which prevents the service from starting",
+        "C. Check for the key inside each route handler and return 401 Unauthorized if it is missing",
+        "D. Add a /config endpoint that shows which env vars are set"
+      ],
+      "answer": "B",
+      "explanation": "Raising an exception in the lifespan startup block prevents the FastAPI app from completing startup, so the process exits before accepting any traffic. The deployment pipeline (or container orchestrator) sees the failed startup and either rolls back or alerts. This is 'fail fast': better to catch misconfiguration at deploy time than to silently serve errors to users. Options A and C allow the service to run in a broken state, which is harder to diagnose."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your `/extract` endpoint receives a model response like: `Sure! Here is the extracted JSON:\\n\\`\\`\\`json\\n{\"name\": \"Alice\"}\\n\\`\\`\\``. Your code calls `json.loads(raw_response)` directly and gets a JSONDecodeError in production.",
+      "question": "What is the correct handling strategy?",
+      "options": [
+        "A. Switch to a more expensive model that always returns raw JSON",
+        "B. Add retry logic: if JSONDecodeError occurs, call the model again",
+        "C. Strip markdown code fences before parsing, catch JSONDecodeError, and return the raw string with parsed=null instead of raising an exception",
+        "D. Use a system prompt that says 'do not use markdown' and rely on it to fix the problem"
+      ],
+      "answer": "C",
+      "explanation": "Models inconsistently wrap JSON in markdown code blocks regardless of instructions. The robust approach is: (1) strip ``` fences from the response text before parsing, (2) catch json.JSONDecodeError and return raw_json with parsed=null -- the endpoint still returns 200 with the raw text so the caller can decide how to handle it. Retrying (B) is expensive and has the same failure rate. System prompts (D) reduce but do not eliminate the problem. Model capability (A) does not guarantee format compliance."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your service returns a 500 error. The response body is: `{\"detail\": \"Internal server error.\"}`. The logs show the full stack trace with the root cause. A junior engineer on the team asks why users see a generic message instead of the specific error.",
+      "question": "Why is showing users the generic message the correct behavior?",
+      "options": [
+        "A. It is not correct; users should see the full error so they can report it accurately",
+        "B. Exposing raw exception messages leaks internal details (file paths, library versions, API key fragments) that attackers can use; users receive a safe generic message while the full detail is in the internal logs",
+        "C. FastAPI automatically hides error messages; there is no way to show more detail",
+        "D. The generic message reduces customer support tickets because users give up and retry"
+      ],
+      "answer": "B",
+      "explanation": "Raw exception messages frequently contain file paths that reveal deployment structure, library versions that can be matched to known CVEs, and occasionally fragments of configuration values. The correct pattern is: log full details internally (with request ID so the engineer can correlate), return a generic user-safe message externally. The user gets 'Internal server error.' and a support engineer gets the full stack trace in the log aggregator."
+    },
+    {
+      "id": "c7",
+      "scenario": "You have a FastAPI service with a `/generate` and a `/summarize` endpoint, both calling the same Anthropic client stored in app.state. During load testing, you observe that one slow `/summarize` request blocks subsequent `/generate` requests for 15-30 seconds.",
+      "question": "What is the most likely cause of this blocking behavior?",
+      "options": [
+        "A. The Anthropic client is not thread-safe and serializes requests",
+        "B. The route handlers are defined as synchronous `def` instead of `async def`, causing FastAPI to run them in a thread pool that becomes saturated with slow summarize requests",
+        "C. The Pydantic response models are too large and serialization blocks the event loop",
+        "D. app.state is not thread-safe and causes a lock contention issue"
+      ],
+      "answer": "B",
+      "explanation": "FastAPI runs synchronous `def` route handlers in a thread pool executor (not the async event loop). If the thread pool fills up with slow blocking calls, new requests queue. Using `async def` allows FastAPI to run the handler on the async event loop where a single slow I/O call does not block other coroutines -- the event loop can context-switch to other requests while waiting for the Anthropic API response. The Anthropic SDK's synchronous client should be used with async def by running it in an executor, or by using the AsyncAnthropic client."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are designing the response schema for a new `/classify` endpoint. A colleague suggests returning raw text like 'The category is: Finance' instead of a structured JSON response like `{\"category\": \"Finance\", \"confidence\": 0.92}`. They argue raw text is simpler to implement.",
+      "question": "What is the main production risk of returning raw text instead of a structured Pydantic response model?",
+      "options": [
+        "A. Raw text responses cannot be returned from FastAPI endpoints",
+        "B. Every downstream caller has to parse the text themselves, and any change to the model's phrasing silently breaks all integrations without any version mismatch or schema validation error",
+        "C. Raw text uses more bandwidth than JSON for short strings",
+        "D. FastAPI automatically converts all responses to JSON, so raw text is not actually possible"
+      ],
+      "answer": "B",
+      "explanation": "Structured Pydantic response models create a contract between the service and its callers. If the model changes 'The category is: Finance' to 'Category: Finance', every text parser downstream breaks silently. A structured response (`{\"category\": \"Finance\"}`) means callers access `response.category` and the field either exists or does not -- a breaking change is detectable. Pydantic also validates your own response before it leaves the service, catching bugs where you accidentally return the wrong shape."
+    }
+  ]
+}

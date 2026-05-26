@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Frontend - Phase 06 Lesson 10</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 720px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      color: #1a1a1a;
+      background: #fff;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+    }
+
+    textarea {
+      width: 100%;
+      height: 80px;
+      font-size: 1rem;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: vertical;
+    }
+
+    textarea:focus {
+      outline: none;
+      border-color: #0066cc;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      margin: 0.75rem 0;
+    }
+
+    button {
+      padding: 0.45rem 1rem;
+      font-size: 0.95rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      background: #f5f5f5;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover:not(:disabled) {
+      background: #e5e5e5;
+    }
+
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #btn-generate { background: #0066cc; color: #fff; border-color: #0055bb; }
+    #btn-generate:hover:not(:disabled) { background: #0055bb; }
+
+    #btn-stream { background: #007744; color: #fff; border-color: #006633; }
+    #btn-stream:hover:not(:disabled) { background: #006633; }
+
+    #error {
+      color: #c00;
+      font-size: 0.875rem;
+      min-height: 1.2em;
+      margin-bottom: 0.5rem;
+    }
+
+    #output {
+      white-space: pre-wrap;
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 1rem;
+      min-height: 140px;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      color: #222;
+    }
+
+    #output.loading {
+      opacity: 0.6;
+    }
+
+    .hint {
+      font-size: 0.8rem;
+      color: #888;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>AI Frontend</h1>
+  <p class="subtitle">Phase 06 Lesson 10 - vanilla TypeScript + FastAPI</p>
+
+  <label for="prompt">Prompt</label>
+  <textarea
+    id="prompt"
+    placeholder="Enter your prompt here..."
+    autocomplete="off"
+    spellcheck="false"
+  ></textarea>
+
+  <div class="btn-row">
+    <button id="btn-generate">Generate (sync)</button>
+    <button id="btn-stream">Stream (SSE)</button>
+    <button id="btn-clear">Clear</button>
+  </div>
+
+  <div id="error" role="alert" aria-live="polite"></div>
+  <div id="output" aria-live="polite">Output will appear here.</div>
+
+  <p class="hint">
+    "Generate" uses fetch (waits for full response).
+    "Stream" uses EventSource (tokens appear as they arrive).
+    Backend expected at http://localhost:8000.
+  </p>
+
+  <!-- client.js is compiled from client.ts by tsc -->
+  <script src="client.js"></script>
+</body>
+</html>

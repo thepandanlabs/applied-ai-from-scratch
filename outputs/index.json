@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated": "2026-05-26T08:48:05Z",
-  "total": 84,
+  "generated": "2026-05-26T09:07:01Z",
+  "total": 98,
   "artifacts": [
     {
       "phase": 2,
@@ -834,6 +834,160 @@
         "debugging",
         "logging",
         "observability"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "01",
+      "name": "prompt-demo-to-prod-checklist",
+      "file": "phases/06-shipping/01-demo-to-production-gap/outputs/prompt-demo-to-prod-checklist.md",
+      "tags": [
+        "shipping",
+        "production",
+        "checklist"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "02",
+      "name": "skill-fastapi-ai-service",
+      "file": "phases/06-shipping/02-wrapping-model-in-fastapi/outputs/skill-fastapi-ai-service.md",
+      "tags": [
+        "fastapi",
+        "service",
+        "api"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "03",
+      "name": "skill-streaming-sse",
+      "file": "phases/06-shipping/03-streaming-sse-async/outputs/skill-streaming-sse.md",
+      "tags": [
+        "streaming",
+        "sse",
+        "async"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "04",
+      "name": "skill-input-output-safety",
+      "file": "phases/06-shipping/04-input-validation-output-handling/outputs/skill-input-output-safety.md",
+      "tags": [
+        "validation",
+        "security",
+        "safety"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "05",
+      "name": "skill-ai-app-dockerfile",
+      "file": "phases/06-shipping/05-docker-image-ai-app/outputs/skill-ai-app-dockerfile.md",
+      "tags": [
+        "docker",
+        "deployment",
+        "production"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "06",
+      "name": "skill-config-secrets-pattern",
+      "file": "phases/06-shipping/06-config-and-secrets/outputs/skill-config-secrets-pattern.md",
+      "tags": [
+        "config",
+        "secrets",
+        "pydantic-settings"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "07",
+      "name": "skill-resilience-patterns",
+      "file": "phases/06-shipping/07-rate-limits-retries-circuit-breakers/outputs/skill-resilience-patterns.md",
+      "tags": [
+        "resilience",
+        "retry",
+        "circuit-breaker"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "08",
+      "name": "skill-model-fallback-chain",
+      "file": "phases/06-shipping/08-fallbacks-model-failover/outputs/skill-model-fallback-chain.md",
+      "tags": [
+        "fallback",
+        "failover",
+        "reliability"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "09",
+      "name": "skill-background-job-pattern",
+      "file": "phases/06-shipping/09-background-jobs-batch-apis/outputs/skill-background-job-pattern.md",
+      "tags": [
+        "batch",
+        "async",
+        "jobs"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "10",
+      "name": "skill-ai-frontend-template",
+      "file": "phases/06-shipping/10-minimal-typescript-frontend/outputs/skill-ai-frontend-template.md",
+      "tags": [
+        "typescript",
+        "frontend",
+        "sse"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "11",
+      "name": "skill-deployment-decision-guide",
+      "file": "phases/06-shipping/11-deploying-managed-and-container/outputs/skill-deployment-decision-guide.md",
+      "tags": [
+        "deployment",
+        "railway",
+        "docker"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "12",
+      "name": "skill-version-manifest",
+      "file": "phases/06-shipping/12-versioning-prompts-models-configs/outputs/skill-version-manifest.md",
+      "tags": [
+        "versioning",
+        "prompts",
+        "rollback"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "13",
+      "name": "skill-feature-flag-pattern",
+      "file": "phases/06-shipping/13-feature-flags-progressive-rollout/outputs/skill-feature-flag-pattern.md",
+      "tags": [
+        "feature-flags",
+        "rollout",
+        "shadow-mode"
+      ]
+    },
+    {
+      "phase": "06",
+      "lesson": "14",
+      "name": "runbook-production-deploy",
+      "file": "phases/06-shipping/14-capstone-deploy-rag-agent/outputs/runbook-production-deploy.md",
+      "tags": [
+        "capstone",
+        "runbook",
+        "deployment"
       ]
     }
   ]

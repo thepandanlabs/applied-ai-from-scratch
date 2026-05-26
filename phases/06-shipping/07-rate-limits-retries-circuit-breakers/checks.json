@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "07-rate-limits-retries-circuit-breakers",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You have 150 instances of your AI service. The Anthropic API goes down for 30 seconds and returns 503 to all calls. All instances implement retry with a fixed 2-second delay (no jitter). The API recovers after 30 seconds.",
+      "question": "What problem occurs when the API recovers, and how does jitter fix it?",
+      "options": [
+        "A. No problem. A fixed 2-second delay is appropriate and all instances will reconnect smoothly.",
+        "B. All 150 instances wake up simultaneously at t=2s, t=4s, t=6s and send synchronized retry bursts. This thundering herd can immediately overwhelm the recovering API with 150 simultaneous requests per wave. Jitter adds random variation to each delay, spreading 150 instances across a 1-3 second window instead of all firing at the same moment.",
+        "C. The fixed delay causes retries to fail because the API only accepts requests within a 100ms window after recovery.",
+        "D. Jitter is only needed when retry intervals exceed 60 seconds. For 2-second delays, it has no meaningful effect."
+      ],
+      "answer": "B",
+      "explanation": "With a fixed 2-second delay and 150 instances, every retry wave sends exactly 150 simultaneous requests. A recovering API that could handle 50 requests per second is immediately overwhelmed and may fail again. With jitter (e.g., delay = 2s + uniform(0, 1s)), instances wake up spread across 2-3 seconds. The API sees a trickle of ~50 requests per second instead of 150 at once, and recovers successfully. This is the core argument for jitter in distributed systems."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your service receives a 429 response from the Anthropic API with the header Retry-After: 8. Your backoff formula computes a 3-second delay for the current attempt.",
+      "question": "How long should your service wait before retrying?",
+      "options": [
+        "A. 3 seconds, because the backoff formula is more conservative than the Retry-After header.",
+        "B. 8 seconds, because the Retry-After header is the API's explicit instruction about when it will accept requests again.",
+        "C. 11 seconds (3 + 8), to be safe by combining both values.",
+        "D. 0 seconds. Retry-After headers are advisory and can be ignored if your service needs low latency."
+      ],
+      "answer": "B",
+      "explanation": "The Retry-After header is the API's authoritative signal: 'do not send another request until this many seconds have elapsed.' Waiting less than this (e.g., 3 seconds from backoff) wastes an attempt and counts another failure against your quota. Waiting more is safe but unnecessary. Ignoring the header and retrying early is a violation of the API contract and may result in the key being rate-limited more aggressively or banned."
+    },
+    {
+      "id": "c3",
+      "scenario": "A circuit breaker has failure_threshold=5 and recovery_timeout=60. After the 5th consecutive failure, it transitions to OPEN. A user makes a request 10 seconds later.",
+      "question": "What happens to that request, and why is this behavior beneficial?",
+      "options": [
+        "A. The circuit attempts the API call and waits for a response, just as it would in CLOSED state.",
+        "B. The request is rejected immediately with CircuitOpenError without calling the API. This is beneficial because it returns a fast error to the user in microseconds instead of making them wait for a 5-second timeout on a broken API.",
+        "C. The circuit transitions to HALF_OPEN and allows the request through as a probe, since 10 seconds have passed.",
+        "D. The circuit waits 50 more seconds (60 - 10 = 50) and then processes the request."
+      ],
+      "answer": "B",
+      "explanation": "The circuit transitions to HALF_OPEN only after recovery_timeout=60 seconds have elapsed since the last failure. At 10 seconds, the circuit is still OPEN and rejects the request immediately with CircuitOpenError. The benefit: without a circuit breaker, every user request waits for a full timeout (e.g., 5 seconds) before failing. With an open circuit, the rejection happens in microseconds. If 100 users are requesting simultaneously, they all get fast errors instead of all waiting 5 seconds, which would exhaust your service's thread pool."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your service receives a 400 Bad Request error from the API. The error message indicates the prompt is too long for the model's context window. Your retry logic is configured to retry all errors up to 4 times.",
+      "question": "What is the correct behavior for a 400 error, and why?",
+      "options": [
+        "A. Retry all 4 times, because the prompt might fit within the context window on a subsequent attempt.",
+        "B. Do not retry. A 400 error is a client error -- the request itself is malformed. Retrying the identical request will always return 400. Retrying wastes time and quota.",
+        "C. Retry once with a longer delay, then give up. The API might accept the request on a second attempt if its context tracking resets.",
+        "D. Retry with a smaller max_tokens value to reduce the request size."
+      ],
+      "answer": "B",
+      "explanation": "HTTP 4xx errors (except 429) indicate client errors: the problem is in the request itself, not in the server. A 400 Bad Request will always return 400 for the same payload. Retrying consumes quota, adds latency, and never succeeds. The correct behavior is to fail immediately and return the error to the caller so they can fix the request. Retryable errors are those caused by transient server conditions (5xx) or rate limits (429) -- conditions that may resolve without changing the request."
+    },
+    {
+      "id": "c5",
+      "scenario": "You implement retry logic for your AI service using a while loop with max_attempts=10 and a 5-second backoff. The API is down for 2 hours. During that time, 50 users make requests to your service.",
+      "question": "What happens to those 50 users' requests during the 2-hour outage?",
+      "options": [
+        "A. The requests queue up and complete successfully when the API recovers.",
+        "B. Each request ties up a thread for up to 50 seconds (10 attempts * 5 seconds each). With 50 concurrent requests, 50 threads are blocked. The service's thread pool is exhausted and new incoming requests are rejected.",
+        "C. The service automatically reduces max_attempts during high load to protect its thread pool.",
+        "D. After the first failed request, the service automatically pauses all retries until the API recovers."
+      ],
+      "answer": "B",
+      "explanation": "This is the failure mode that circuit breakers prevent. Without a circuit breaker, every incoming request during the outage enters the retry loop and occupies a thread for up to max_attempts * delay = 50 seconds. With 50 concurrent users, 50 threads are blocked. Most web frameworks have thread pools of 10-100 threads. The service becomes unresponsive to new requests before the API even recovers. A circuit breaker in OPEN state rejects requests immediately (microseconds), keeping threads free and the service responsive to health checks and other endpoints."
+    },
+    {
+      "id": "c6",
+      "scenario": "A circuit breaker transitions from OPEN to HALF_OPEN after 60 seconds. In HALF_OPEN state, a probe request succeeds. The next 3 requests all fail with 503.",
+      "question": "What state is the circuit in after those 3 failures in HALF_OPEN?",
+      "options": [
+        "A. CLOSED. The one successful probe proved the API recovered, and the subsequent failures are treated as new transient errors.",
+        "B. OPEN. The first failure in HALF_OPEN returns the circuit to OPEN immediately, resetting the recovery timeout.",
+        "C. HALF_OPEN. The circuit stays in HALF_OPEN until failure_threshold failures accumulate.",
+        "D. A new DEGRADED state that allows 50% of requests through."
+      ],
+      "answer": "B",
+      "explanation": "The HALF_OPEN state is a single-probe state. One successful call closes the circuit. One failed call immediately returns it to OPEN. This is by design: the probe succeeded, then 3 more requests failed, meaning the API is not reliably recovered. The circuit must open again to protect the service. If the transition to CLOSED required multiple successes, a partially-recovered API might cause many callers to send traffic before the circuit re-opens, causing another cascade. The single-probe model is conservative but safe."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are using the tenacity library with @retry(stop=stop_after_attempt(4), wait=wait_exponential_jitter(initial=1, max=60)). Your colleague suggests this is sufficient for production resilience and no circuit breaker is needed.",
+      "question": "What specific failure scenario does the circuit breaker handle that tenacity alone cannot?",
+      "options": [
+        "A. tenacity cannot handle 429 errors. Only a circuit breaker can parse Retry-After headers.",
+        "B. When the API is down for minutes, tenacity will exhaust its 4 attempts per request and raise an exception. But each new incoming user request starts a fresh set of 4 attempts, each waiting up to 60 seconds. A circuit breaker stops all calls immediately after N failures, preventing new requests from entering the retry loop at all.",
+        "C. tenacity only works with synchronous code. Circuit breakers handle async code.",
+        "D. tenacity does not support jitter. The circuit breaker's backoff formula includes jitter by default."
+      ],
+      "answer": "B",
+      "explanation": "tenacity handles the retry logic for a single call. But it knows nothing about the overall health of the dependency. When the API is broken, each new request starts a fresh retry loop -- 4 attempts, sleeping 1+2+4 seconds each time. A circuit breaker maintains shared state across all requests. After 5 failures, it opens and all subsequent requests fail immediately without sleeping. This is the critical difference: tenacity protects the call, the circuit breaker protects the service. You need both."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your team deploys a new version of the service that accidentally sends malformed requests to the API (a bug in the prompt formatting code). The API returns 400 for every request. Your circuit breaker has failure_threshold=5.",
+      "question": "Will the circuit breaker open in this scenario, and is that the correct behavior?",
+      "options": [
+        "A. Yes, the circuit will open after 5 failures. This is correct because it stops the service from sending broken requests.",
+        "B. No, the circuit should not open for 400 errors because 400 is a client error that the client caused, not an API health issue. Opening the circuit would mask a bug that needs to be fixed.",
+        "C. The circuit will open and then immediately close when the probe succeeds, creating a loop.",
+        "D. 400 errors are not counted by circuit breakers because they are defined as client errors, not server errors."
+      ],
+      "answer": "B",
+      "explanation": "A circuit breaker is designed to protect against dependency failures, not to mask client-side bugs. If the circuit opens for 400 errors, the service will appear to be in a 'fast-fail' state, but the underlying bug (malformed requests) still needs to be fixed. Worse, when the circuit re-closes and sends the same broken requests, they will still fail with 400. The correct design is to not count non-retryable 4xx errors toward the circuit breaker's failure threshold. Fix 400 errors by fixing the code, not by opening the circuit."
+    }
+  ]
+}

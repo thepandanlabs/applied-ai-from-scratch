@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "14-capstone-deploy-rag-agent",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You build and run the Docker image. The service crashes immediately with 'RuntimeError: No active manifest found.' Your local environment was working fine before containerization.",
+      "question": "What is the root cause and how do you fix it?",
+      "options": [
+        "A. The Dockerfile is missing the COPY instruction for manifests.yaml; add it and rebuild",
+        "B. The ANTHROPIC_API_KEY is not set in the Docker environment",
+        "C. The FastAPI lifespan hook does not work inside Docker containers",
+        "D. manifests.yaml must be mounted as a Docker volume, not copied into the image"
+      ],
+      "answer": "A",
+      "explanation": "The lifespan hook loads manifests.yaml at startup and fails fast if the file is not present. When you run locally, the file exists in your working directory. Inside the Docker image, it only exists if you explicitly COPY it. Adding COPY manifests.yaml . to the Dockerfile and rebuilding the image solves this. This is the most common local-to-Docker integration gap: files present locally but absent from the container."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your RAG service is running in production. An incident starts. Your first instinct is to look at the Anthropic status page, then check the model provider's release notes to see if anything changed.",
+      "question": "What should you check FIRST according to the runbook, and why?",
+      "options": [
+        "A. The Anthropic status page - provider incidents are the most common cause",
+        "B. GET /health - it returns the active manifest, circuit breaker state, and store size in one call, giving you the fastest initial diagnosis",
+        "C. The git log - to see if any code changed recently",
+        "D. The startup logs from the original deploy - to compare with current behavior"
+      ],
+      "answer": "B",
+      "explanation": "The /health endpoint is designed to answer the first three incident questions in one call: what manifest is active (did something change?), is the circuit breaker open (is the primary model failing?), and how large is the store (was an ingest corrupted?). Checking the provider status page first delays diagnosis by 1-2 minutes in cases where the issue is a config change, a bad manifest deploy, or a circuit breaker stuck open."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are deploying the capstone service with multiple uvicorn workers (--workers 4) to handle more traffic. After ingesting several documents, queries return empty context even though you can confirm the ingest accepted the documents.",
+      "question": "What is causing the empty context and how should the architecture be changed?",
+      "options": [
+        "A. The RAG pipeline has a bug that empties the store after ingest",
+        "B. Multiple uvicorn workers each maintain their own in-memory store dict; ingest may go to worker 1 while query goes to worker 3 which has an empty store",
+        "C. The background task for embedding is timing out before completion",
+        "D. The vector embeddings are stored as lists instead of numpy arrays, causing retrieval to fail"
+      ],
+      "answer": "B",
+      "explanation": "The in-memory store is a Python dict on the app state. With multiple workers, each worker process has its own independent copy of that dict. Ingest requests are load-balanced across workers, so document A lands in worker 1's store while document B lands in worker 2's store. A query hitting worker 3 finds an empty store. The fix is to use a shared external store (pgvector, Qdrant, Redis) that all workers connect to. Single worker mode (--workers 1) avoids this but limits throughput."
+    },
+    {
+      "id": "c4",
+      "scenario": "You test the streaming endpoint with curl -N /chat/stream. Instead of seeing tokens arrive one by one, you get the entire response at once after a 3-second wait.",
+      "question": "What is the most likely cause of the streaming buffering?",
+      "options": [
+        "A. The anthropic SDK does not support streaming with FastAPI",
+        "B. The platform's reverse proxy (nginx, Cloudflare, or Railway's edge) is buffering the response; fix with X-Accel-Buffering: no header and check that gzip compression is disabled for the SSE endpoint",
+        "C. The StreamingResponse media type must be 'application/json' not 'text/event-stream'",
+        "D. Streaming requires a WebSocket connection, not HTTP"
+      ],
+      "answer": "B",
+      "explanation": "Most cloud platforms run an nginx or similar reverse proxy in front of your service. By default, these proxies buffer the full response before forwarding it to the client - this is efficient for normal requests but destroys the point of streaming. The X-Accel-Buffering: no header instructs nginx to disable buffering for this endpoint. Gzip compression also causes buffering because the compressor waits to accumulate enough data before outputting. The service code already includes these headers; the issue is usually a platform-level setting."
+    },
+    {
+      "id": "c5",
+      "scenario": "The circuit breaker opens after 5 consecutive API errors. You fix the underlying issue (an invalid API key was rotated). After 60 seconds the circuit moves to half-open, but requests are still returning fallback responses because the circuit opens again after the first half-open request fails.",
+      "question": "What is happening and how should circuit breaker recovery be designed to handle this?",
+      "options": [
+        "A. The circuit breaker timeout should be increased to 5 minutes to allow full recovery",
+        "B. In half-open state, a single test request should be sent to verify the primary is healthy before routing normal traffic; if it fails, the circuit re-opens; if it succeeds, the circuit closes",
+        "C. The fallback model should be disabled so the circuit breaker has no alternative",
+        "D. The circuit breaker should reset to closed after the timeout regardless of whether test requests succeed"
+      ],
+      "answer": "B",
+      "explanation": "The standard circuit breaker recovery pattern: after the timeout, enter half-open state and allow exactly one test request through. If that test succeeds, close the circuit (record_success). If it fails, re-open the circuit and start the timeout again. This prevents a sudden rush of requests hitting a recovering system. The capstone's CircuitBreaker class handles this via is_open() transitioning to half-open after the timeout, then record_success() or record_failure() updating the state based on the test request outcome."
+    },
+    {
+      "id": "c6",
+      "scenario": "After a full rollout of a new prompt version, you leave the feature flag in the code set to 100% canary. Six months later you are debugging a latency issue and cannot tell whether the slower responses are from variant A or variant B prompt since the code still has both defined.",
+      "question": "What should have been done after the full rollout?",
+      "options": [
+        "A. Set the flag to shadow mode at 100% so both prompts are always run for comparison",
+        "B. Remove the flag from the code, inline variant B as the default system prompt, and delete variant A",
+        "C. Set rollout_pct to 0 to disable the flag without removing the code",
+        "D. Archive the flag by renaming it with a '-deprecated' suffix"
+      ],
+      "answer": "B",
+      "explanation": "A flag at 100% canary is dead code: every user gets variant B, variant A is never used, and the routing logic is pure overhead. Leaving it creates exactly the confusion described: future engineers cannot tell what is actually routing traffic without reading the flag logic. The correct lifecycle ends with removing the flag, making variant B the default, and deleting variant A code. The version manifest handles rollback if needed - that is what it is for."
+    },
+    {
+      "id": "c7",
+      "scenario": "You need to deploy a config change: increase max_tokens from 512 to 1024. Your colleague says 'just set the MAX_TOKENS env var and restart, no need to touch manifests.yaml since it is just a config tweak.'",
+      "question": "What is the risk of not updating manifests.yaml for this change?",
+      "options": [
+        "A. The new max_tokens value will not take effect without updating the manifest",
+        "B. The config_hash in the active manifest will no longer match the actual running config, breaking the incident diagnostic chain: health check reports config_hash A, but the service is actually running config B",
+        "C. Railway will reject the deploy because manifests.yaml and env vars are out of sync",
+        "D. There is no risk; manifests.yaml only needs to be updated for prompt or model changes"
+      ],
+      "answer": "B",
+      "explanation": "The config_hash in the manifest is a fingerprint of what config values were deployed together. If you change MAX_TOKENS in the env var without registering a new manifest, the health endpoint still reports the old config_hash. During an incident, an engineer checks the manifest, computes the hash of what they think is running, and finds it does not match - they cannot tell if the discrepancy is the source of the problem or just a stale manifest. Every change that affects model behavior should produce a new manifest entry."
+    },
+    {
+      "id": "c8",
+      "scenario": "You deploy to Railway and set ANTHROPIC_API_KEY in the Railway variables dashboard. The service starts successfully locally but the Railway deploy logs show 'ValidationError: anthropic_api_key: field required'.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. Pydantic Settings does not support Railway environment variables",
+        "B. The variable name in Railway must match the Pydantic field name exactly (case-sensitive); check that it is ANTHROPIC_API_KEY not anthropic_api_key or ANTHROPIC-API-KEY",
+        "C. The .env file in the Docker image is overriding the Railway environment variable",
+        "D. Railway injects variables at the OS level but Pydantic Settings reads from the Python environment, which is different"
+      ],
+      "answer": "B",
+      "explanation": "Pydantic Settings reads environment variables by uppercasing the field name by default: `anthropic_api_key` becomes `ANTHROPIC_API_KEY`. The variable must be set with that exact name in Railway. Common mistakes: using `anthropic-api-key` (hyphen instead of underscore), `Anthropic_API_Key` (wrong casing), or `ANTHROPIC_KEY` (truncated). The .env file fallback only applies if the env var is absent from the OS environment, and a .env file should not exist in the Docker image anyway (.dockerignore excludes it)."
+    }
+  ]
+}

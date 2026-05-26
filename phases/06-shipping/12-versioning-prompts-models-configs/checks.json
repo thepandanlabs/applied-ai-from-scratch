@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "12-versioning-prompts-models-configs",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your AI service starts returning longer, more verbose responses on Monday. You check git: no code changed over the weekend. You check your config file: unchanged. Your colleague mentions they updated the prompt template on Friday.",
+      "question": "What does this scenario illustrate about versioning AI services?",
+      "options": [
+        "A. Git is sufficient for versioning AI services if everyone commits their changes",
+        "B. The prompt template is a separate moving part that needs its own version record tied to each deployment",
+        "C. The model provider made a silent update to the model endpoint",
+        "D. Config files should be stored in the database, not on disk"
+      ],
+      "answer": "B",
+      "explanation": "The prompt template is one of three moving parts (prompt, model, config) that code versioning alone does not capture when it changes outside the main commit flow. A version manifest ties all three together so you can trace exactly what combination was active during any time window."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are registering a new manifest before deploying. Your config dict contains temperature, max_tokens, retries, and system_prompt. You want to detect if the config changed between deployments.",
+      "question": "What is the correct way to compute the config_hash so it is stable and reproducible?",
+      "options": [
+        "A. Hash the config dict using Python's built-in hash() function",
+        "B. Use SHA-256 on the JSON string with keys sorted alphabetically",
+        "C. Use the file modification timestamp of the config file",
+        "D. Use a random UUID generated at registration time"
+      ],
+      "answer": "B",
+      "explanation": "Python's built-in hash() is not stable across processes. File modification timestamps change when files are copied or restored. Random UUIDs do not let you detect if the config content changed. SHA-256 on sorted JSON is deterministic: the same config dict always produces the same hash, regardless of key insertion order or server."
+    },
+    {
+      "id": "c3",
+      "scenario": "A new engineer tries to register a manifest with model_id set to 'claude-haiku-latest'. The ManifestRegistry raises a ValueError.",
+      "question": "Why does the registry reject this and what should the engineer use instead?",
+      "options": [
+        "A. The model ID format is wrong; it needs a version suffix like '-v1'",
+        "B. Model aliases like 'claude-haiku-latest' can be silently updated by the provider, causing behavior changes you cannot trace; use the full pinned ID like 'claude-3-5-haiku-20241022'",
+        "C. The manifest already has a model with 'haiku' in the name; only one per registry is allowed",
+        "D. The registry only accepts OpenAI model IDs"
+      ],
+      "answer": "B",
+      "explanation": "Aliases are pointers that the provider updates without announcement. Pinned IDs are immutable: 'claude-3-5-haiku-20241022' always refers to exactly one model snapshot. When you need to upgrade, you make a deliberate choice, register a new manifest, and the change is visible in the registry history."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your service is having an incident. Users report that responses changed 6 hours ago. You have startup logs from the last 24 hours. The service uses the manifest lifespan pattern.",
+      "question": "What is the fastest way to determine what model and prompt version were active 6 hours ago?",
+      "options": [
+        "A. Check git blame on the config file for the last edit timestamp",
+        "B. Ask the model provider which model version was serving traffic at that time",
+        "C. Search the startup logs for '=== SERVICE STARTUP ===' entries before the incident started and read the manifest_id, model_id, and prompt_version",
+        "D. Check the database for the last API response before the incident"
+      ],
+      "answer": "C",
+      "explanation": "The manifest lifespan pattern logs the full manifest at every startup. Searching startup logs for the deploy that was active 6 hours ago gives you the exact manifest_id, model_id, prompt_version, and config_hash in seconds. This is the core value of logging the manifest at startup - it makes every deployment self-describing in the logs."
+    },
+    {
+      "id": "c5",
+      "scenario": "You want to roll back to manifest v1.0.0 after a bad deploy. You call rollback(registry, 'v1.0.0') successfully. You then check the service and it is still exhibiting the bad behavior.",
+      "question": "What is the most likely reason rollback did not fix the issue?",
+      "options": [
+        "A. The rollback function has a bug that writes the wrong manifest ID",
+        "B. The registry YAML file is read-only and the write failed silently",
+        "C. rollback() only changes which manifest is marked as current in the file - the running service must restart to load the new active manifest",
+        "D. The service cached the previous manifest in memory and must be rebuilt from source"
+      ],
+      "answer": "C",
+      "explanation": "The manifest registry is read at startup via the FastAPI lifespan. Changing the 'current' field in the YAML file does not affect the in-memory state of a running service. The service must restart to re-read the registry and load the rolled-back manifest. This is documented in the rollback procedure: always restart after calling rollback."
+    },
+    {
+      "id": "c6",
+      "scenario": "Two deployments both have config_hash = 'a4f9c2b1' but different prompt versions (v1.0 and v1.2). A colleague claims the config hash being equal means both deployments behaved identically.",
+      "question": "Is the colleague correct, and what does config_hash equality actually tell you?",
+      "options": [
+        "A. Yes, equal config hashes mean identical behavior because all three components match",
+        "B. No, config_hash only covers the service config dict (temperature, max_tokens, etc.). A different prompt_version means different prompts were used, which can significantly change model output",
+        "C. Yes, but only if the model_id is also the same between the two deployments",
+        "D. No, config_hash equality means the hash function collided and the configs are different"
+      ],
+      "answer": "B",
+      "explanation": "The version manifest has three independent components: prompt_version, model_id, and config_hash. Equal config_hash means only the service config dict is the same. Different prompt versions means different instructions went to the model, which directly changes output. You need all three components to match to claim the deployments were behaviorally equivalent."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your CI/CD pipeline deploys the service automatically when a PR merges to main. You want every deploy to be traceable without engineers manually creating manifests.",
+      "question": "What information should the CI pipeline inject into the manifest automatically?",
+      "options": [
+        "A. The manifest_id should be the git commit SHA, deployed_by should be the CI system name, and deployed_at should be the pipeline start time",
+        "B. The manifest_id should be a UUID generated by the CI system",
+        "C. The CI pipeline should not create manifests; only human engineers should do so to ensure accuracy",
+        "D. The CI pipeline should store the manifest in the database instead of a YAML file"
+      ],
+      "answer": "A",
+      "explanation": "Git commit SHA as manifest_id creates a direct link between the manifest and the exact code state at deploy time. CI system name as deployed_by shows it was automated. Pipeline start time as deployed_at gives accurate timing. Together these make every automated deploy fully traceable back to the commit that triggered it."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your team argues about whether to store the full config dict in the manifest or just the hash. The manifest file is git-tracked and must be readable at a glance.",
+      "question": "What is the best argument for storing only the hash rather than the full config?",
+      "options": [
+        "A. The hash is more secure because it hides the config values from potential attackers",
+        "B. Storing the full config would double the file size unnecessarily",
+        "C. The hash keeps the manifest compact and diffable. When you need to inspect what changed, you look up the config file by its hash. The manifest is the index; the config file is the source of truth",
+        "D. Hashes are required by the manifest spec and full configs are not supported"
+      ],
+      "answer": "C",
+      "explanation": "A manifest with full config dicts becomes hard to read as deployments accumulate. The hash gives you 'did the config change?' cheaply via a one-line diff. When you need to see what the config contained, you find the config file that produces that hash. Separation of concerns: the manifest tracks what was deployed together, the config file contains the values."
+    }
+  ]
+}

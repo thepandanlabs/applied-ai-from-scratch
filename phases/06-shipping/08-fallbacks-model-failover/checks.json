@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "08-fallbacks-model-failover",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your AI chatbot calls Claude with a 10-second timeout. Claude is responding, but each response takes 35 seconds because the API is under load. Users are waiting 35 seconds and then the request times out with an error.",
+      "question": "Which fallback trigger applies here, and what tier should handle this request instead?",
+      "options": [
+        "A. Error-based failover: Claude returned a 503 error, so the secondary model should try.",
+        "B. Timeout-based failover: Claude exceeded the 10-second timeout, so the secondary model should try. The failure is slowness, not an error code.",
+        "C. No fallback is needed. The timeout means the request was cancelled; the user should retry manually.",
+        "D. Cache-based fallover: the slow response should be replaced by a cached response from a previous request."
+      ],
+      "answer": "B",
+      "explanation": "The primary model is reachable but too slow -- it is not returning an error code. Timeout-based failover handles exactly this case: if the primary has not responded within the configured timeout, treat it as a failure and try the next tier. The secondary model (GPT-4o-mini in this configuration) may be faster or on a separate capacity pool. Timeout-based failover is distinct from error-based failover because the problem is latency, not availability."
+    },
+    {
+      "id": "c2",
+      "scenario": "Both the primary (Claude) and secondary (GPT-4o-mini) models fail with 503 errors. A user asks the same question they asked 3 minutes ago. The cache TTL is 5 minutes.",
+      "question": "What does the fallback chain return, and is this the correct behavior?",
+      "options": [
+        "A. A 503 error to the caller, because both model tiers failed and the service should be transparent about unavailability.",
+        "B. The cached response from 3 minutes ago, with tier='cache'. This is correct: the user gets a response that was accurate 3 minutes ago, which is better than an error.",
+        "C. A new request is sent to both models simultaneously to reduce the chance of both failing.",
+        "D. The degradation message, because cached responses may be stale and should not be served."
+      ],
+      "answer": "B",
+      "explanation": "The cache tier exists precisely for this scenario. A response from 3 minutes ago is within the 5-minute TTL and is served as tier='cache'. For many use cases (factual questions, general knowledge, stable content), a 3-minute-old response is perfectly valid. The user gets an answer instead of an error. The degradation message is the last resort only when there is no cached entry for this specific prompt."
+    },
+    {
+      "id": "c3",
+      "scenario": "A developer proposes setting the primary model timeout to 60 seconds 'to give Claude enough time to respond on complex prompts.' Your fallback chain currently has a 10-second primary timeout.",
+      "question": "What is the user-facing impact of a 60-second primary timeout compared to a 10-second timeout?",
+      "options": [
+        "A. No impact. Timeouts only affect infrastructure costs, not user experience.",
+        "B. With a 60-second timeout, users wait up to 60 seconds before the fallback chain tries the secondary model. On a slow primary, users experience 60-second hangs before getting any response. A 10-second timeout means users wait at most 10 seconds before the faster secondary may answer.",
+        "C. A longer timeout improves response quality because the model has more time to think.",
+        "D. A 60-second timeout reduces API costs because fewer fallback calls are made to the secondary provider."
+      ],
+      "answer": "B",
+      "explanation": "The timeout controls how long users wait before the chain tries the next tier. A 60-second primary timeout means a slow API causes 60-second response times for every affected user, even if the secondary would have answered in 3 seconds. For interactive use cases, timeouts should be set based on what users will tolerate (typically 8-15 seconds for a chatbot), not based on what the API can theoretically deliver for complex prompts. Use streaming for complex prompts to show progress, not longer timeouts."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your fallback chain stats after one week show: primary=94%, fallback=5%, cache=0.8%, degraded=0.2%. The on-call team considers this acceptable because 'users only see errors 0.2% of the time.'",
+      "question": "What does a 5% fallback rate actually indicate, and why is it worth investigating even though degraded rate is low?",
+      "options": [
+        "A. Nothing unusual. 5% fallback is within normal operating range for AI services.",
+        "B. The primary model is failing or timing out 5% of the time. This means 1 in 20 requests is being served by the secondary model instead of the intended primary. Users may notice quality differences, and the team is paying for secondary provider capacity that should be exceptional, not routine.",
+        "C. The 5% fallback rate means the cache is working correctly and saving 5% of requests from hitting the primary.",
+        "D. A 5% fallback rate is expected and intentional -- it means the load balancer is distributing traffic between providers."
+      ],
+      "answer": "B",
+      "explanation": "The fallback chain is designed for exceptional circumstances, not routine traffic splitting. A 5% fallback rate means the primary is degraded: maybe it is consistently slow, hitting rate limits, or returning errors. The 0.2% degraded rate is the visible user impact, but the 5% fallback rate means the primary has a problem. Investigate: is the primary rate-limited? Timing out on some request types? Having intermittent 5xx errors? Treat fallback rate above ~1-2% as an alert-worthy signal, not just background noise."
+    },
+    {
+      "id": "c5",
+      "scenario": "The primary model (Claude) returns a 400 Bad Request error on every request. The error message says the system prompt exceeds the model's context limit. Your fallback chain is configured to fall back to GPT-4o-mini on any error.",
+      "question": "What is the problem with falling back to GPT-4o-mini in this scenario?",
+      "options": [
+        "A. No problem. GPT-4o-mini may have a larger context limit and the request may succeed.",
+        "B. A 400 error means the request itself is malformed (the system prompt is too long). The same request will also fail on GPT-4o-mini with a similar error. Falling back wastes time and API quota without fixing the root problem.",
+        "C. The fallback should work because GPT-4o-mini uses a different tokenizer and the prompt may be within its limit.",
+        "D. The fallback chain should retry the primary model three times before trying the secondary."
+      ],
+      "answer": "B",
+      "explanation": "A 400 Bad Request is a client error -- the problem is in the request, not the server. If the system prompt is too long for Claude, it is likely also too long for GPT-4o-mini, or the request will fail for a different but related reason. Falling back on 4xx errors masks the real problem and wastes secondary provider quota. The correct behavior is to not fall back on 400/401/403 errors: fix the request or the application code. Only fall back on server-side failures (5xx) and timeouts."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your team decides the cache TTL should be 24 hours to maximize cache hit rate and reduce model costs. The AI service answers questions about current stock prices.",
+      "question": "Why is a 24-hour cache TTL inappropriate for this use case, and what TTL would be more appropriate?",
+      "options": [
+        "A. A 24-hour TTL is fine. Stock prices are public information and accuracy is not critical for most users.",
+        "B. Stock prices change every second during market hours. A 24-hour cached response to 'What is AAPL's current price?' will be wildly inaccurate. For real-time financial data, the cache TTL should be 0 (disabled) or at most a few seconds.",
+        "C. The problem with 24 hours is that it is longer than the model's training data cutoff, causing hallucinations.",
+        "D. Cache TTL only affects latency, not accuracy. A 24-hour TTL does not cause incorrect responses."
+      ],
+      "answer": "B",
+      "explanation": "Cache TTL must be calibrated to how quickly the underlying data changes. Stock prices change every second: a cached response from 24 hours ago is not 'stale' -- it is wrong. The cache tier should only be used for queries where the answer is stable over the TTL period: general knowledge, static documentation, factual definitions. For dynamic data (prices, news, live status), disable the cache (TTL=0) or use a very short TTL (seconds). Using a long TTL on dynamic data trades cost savings for incorrect answers, which is a much worse outcome."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your fallback chain logs show that 0.3% of requests reach the degraded tier (static message). A product manager says 'the degradation message is too generic -- users don't know what to do.' They want to return an HTTP 500 instead so the frontend can show a better error UI.",
+      "question": "What is the argument for keeping the degradation message as a 200 response versus returning a 500 error?",
+      "options": [
+        "A. Returning 500 is always better because it is semantically correct -- the service failed.",
+        "B. A 200 response with a degradation message keeps the service 'up' from the perspective of health checks and SLO calculations. More importantly, it allows the client to display a human-readable message without custom error handling. A 500 requires the frontend to have error UI; a 200 with tier='degraded' allows graceful in-line messaging.",
+        "C. The degradation message should be a 503 Service Unavailable, not a 200 or 500.",
+        "D. Both approaches are equivalent. The status code does not affect user experience."
+      ],
+      "answer": "B",
+      "explanation": "This is a design tradeoff, but 200 with tier='degraded' has several advantages: health checks still pass (the service is responding), SLO dashboards don't see a spike in 5xx errors, and frontends can display the message inline without a separate error handling code path. The tier field in the response tells the frontend exactly what happened. If the frontend needs to show a modal or error state, it can check tier='degraded' in the response body. A 503 is also defensible (semantically correct), but 500 implies an unexpected crash -- a degradation message is intentional behavior, not a crash."
+    }
+  ]
+}

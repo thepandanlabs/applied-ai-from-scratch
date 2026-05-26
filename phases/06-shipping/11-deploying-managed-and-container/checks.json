@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "11-deploying-managed-and-container",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your AI service serves 500 requests/day for an internal tool used by 20 analysts. Your CTO asks you to deploy it. You have a working Dockerfile.",
+      "question": "Which deployment path gives you the fastest working URL with the lowest operational burden?",
+      "options": [
+        "A. AWS ECS/Fargate with an ALB and auto-scaling group.",
+        "B. Railway or Render: push your Dockerfile, get an HTTPS URL in 15 minutes.",
+        "C. GCP Kubernetes Engine for maximum scalability.",
+        "D. A raw EC2 instance where you install Docker and run the container yourself."
+      ],
+      "answer": "B",
+      "explanation": "At 500 requests/day and 20 users, the bottleneck is time to deploy, not infrastructure sophistication. Managed platforms build your Docker image, handle TLS, restart crashed containers, and give you logs, all in one command. ECS, GKE, and raw EC2 require substantial setup that delivers no additional value at this scale. The lesson's key insight is: optimize for speed to working URL, not infrastructure purity."
+    },
+    {
+      "id": "c2",
+      "scenario": "You deploy your FastAPI service to Railway. The deployment shows as 'failed' in the dashboard. You run 'railway logs' and see: 'unhealthy: GET /health returned 404.'",
+      "question": "What is the root cause and how do you fix it?",
+      "options": [
+        "A. Railway does not support FastAPI. Switch to Flask.",
+        "B. Your FastAPI app does not have a GET /health endpoint. Add one that returns HTTP 200.",
+        "C. The Dockerfile EXPOSE directive is missing. Add EXPOSE 8000.",
+        "D. Railway requires a render.yaml file. Add it to your project root."
+      ],
+      "answer": "B",
+      "explanation": "Managed platforms poll a health check endpoint to verify the container started correctly. If the endpoint returns 404 (not found), the platform marks the deployment as unhealthy and may roll back or refuse traffic. The fix is to add a GET /health route to your FastAPI app that returns HTTP 200. The health check should be fast and should not call external services."
+    },
+    {
+      "id": "c3",
+      "scenario": "A new engineer on your team is writing the Dockerfile for your AI service. They add this line: ENV ANTHROPIC_API_KEY=sk-ant-prod-abc123",
+      "question": "What is wrong with this approach?",
+      "options": [
+        "A. ENV only works in docker-compose.yml, not Dockerfile.",
+        "B. The API key is baked into the Docker image, which may be pushed to a registry and exposed.",
+        "C. The ENV instruction requires the variable to be exported separately.",
+        "D. Nothing. Baking secrets into images is standard practice for production deployments."
+      ],
+      "answer": "B",
+      "explanation": "API keys in Dockerfile ENV instructions are stored in every image layer and visible to anyone with read access to the image registry. They also appear in docker history output. If the image is pushed to a public registry or accidentally shared, the key is compromised. Secrets must be injected at runtime via the platform's environment variable mechanism (Railway Variables, Render Secrets, AWS Secrets Manager), never baked into the image."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your AI service currently runs on Railway at 2,000 requests/day. Your company signs a contract that requires all customer data to stay within a private AWS VPC. No data can flow through third-party infrastructure.",
+      "question": "What does this requirement mean for your deployment?",
+      "options": [
+        "A. Nothing. Railway encrypts all traffic so it is compliant.",
+        "B. You must migrate to AWS ECS or another service that runs inside your own VPC.",
+        "C. Add a VPN tunnel between Railway and your AWS VPC.",
+        "D. Use Railway's enterprise tier, which provides VPC isolation."
+      ],
+      "answer": "B",
+      "explanation": "The compliance requirement is that customer data must not flow through third-party infrastructure. Railway, Render, and Fly.io are third-party platforms. Even with encryption, the data transits their infrastructure, which likely violates the contract. The correct response is to migrate to AWS ECS, GCP Cloud Run, or another service that runs inside your own VPC. This is the scenario where moving from managed to container platforms is justified."
+    },
+    {
+      "id": "c5",
+      "scenario": "You deploy to Render and notice that the service takes 8 seconds to respond to the first request every morning. After that, responses are fast (1-2 seconds).",
+      "question": "What is causing this and how do you fix it?",
+      "options": [
+        "A. The Anthropic API has a cold start problem. Use a different model.",
+        "B. Render (and Railway) scale to zero when idle. The first request wakes the container. Disable scale-to-zero or use a cron ping to keep it warm.",
+        "C. Your FastAPI app takes 8 seconds to load. Optimize your import statements.",
+        "D. The health check is running during the first request. Move it to a separate thread."
+      ],
+      "answer": "B",
+      "explanation": "Most managed platforms on free or low-cost tiers spin down containers after 15-30 minutes of inactivity (scale to zero). The next request has to wait for the container to start and the app to initialize before serving. Solutions: upgrade to a paid tier that keeps the service running, use a cron job to ping /health every 10 minutes, or move to Fly.io (which does not scale to zero). For production services, scale-to-zero is usually unacceptable."
+    },
+    {
+      "id": "c6",
+      "scenario": "After deploying, a user reports that the /generate endpoint returns a 500 error. You need to find the Python traceback to understand what went wrong.",
+      "question": "How do you access the error logs on Railway?",
+      "options": [
+        "A. SSH into the Railway container and check /var/log/app.log.",
+        "B. Run 'railway logs' in your terminal, or use the Logs tab in the Railway dashboard.",
+        "C. Set LOG_LEVEL=DEBUG in your Dockerfile and redeploy.",
+        "D. Add a /logs endpoint to your FastAPI app that returns the last 100 log lines."
+      ],
+      "answer": "B",
+      "explanation": "Railway streams container stdout and stderr to a central log store accessible via 'railway logs' CLI or the Logs tab in the project dashboard. FastAPI and uvicorn write access logs and exception tracebacks to stdout by default, so they appear in Railway logs without any additional configuration. You cannot SSH into managed platform containers. Adding a /logs endpoint would expose sensitive information."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are choosing between Railway and AWS ECS for a new AI microservice. The service will handle 500 requests/day, has no compliance requirements, and needs to be live within the week. Your team has no AWS experience.",
+      "question": "Which platform is correct and why?",
+      "options": [
+        "A. AWS ECS, because all serious companies use AWS.",
+        "B. Railway, because it matches the constraints: low volume, no compliance, fast deadline, no AWS expertise needed.",
+        "C. AWS ECS, because you will need it when traffic grows.",
+        "D. Neither. Build the service on a raw VM to avoid platform lock-in."
+      ],
+      "answer": "B",
+      "explanation": "Every deployment decision should be made against the actual constraints. Here: 500 req/day (Railway handles 10x this easily), no compliance requirement (removes the VPC requirement), one-week deadline (ECS takes 2-4 days to set up correctly with no prior experience), and no AWS expertise (ECS has a steep learning curve). Railway matches all four constraints. Optimizing for 'what if traffic grows' is premature; migrate when the constraint actually exists."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your Dockerfile has CMD ['uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '8000']. Railway says the service is running but you cannot connect to it. The Railway dashboard shows the service was assigned port 4732.",
+      "question": "What is wrong and how do you fix it?",
+      "options": [
+        "A. Railway does not support uvicorn. Use gunicorn instead.",
+        "B. The hard-coded port 8000 in CMD does not match the PORT env var Railway sets. Use CMD ['sh', '-c', 'uvicorn main:app --host 0.0.0.0 --port $PORT'] to read the port at runtime.",
+        "C. The --host 0.0.0.0 flag is insecure. Railway requires --host 127.0.0.1.",
+        "D. Add EXPOSE 4732 to your Dockerfile to match the assigned port."
+      ],
+      "answer": "B",
+      "explanation": "Managed platforms assign a dynamic PORT environment variable and route external traffic to it. If your app hard-codes port 8000 but the platform assigns port 4732, the platform's proxy cannot reach your app. The fix is to read the PORT env var at startup. Using 'sh -c' allows shell expansion of $PORT. Alternatively, read it in Python: port = int(os.environ.get('PORT', 8000)). EXPOSE in Dockerfile is documentation only; it does not affect which port the app actually listens on."
+    }
+  ]
+}

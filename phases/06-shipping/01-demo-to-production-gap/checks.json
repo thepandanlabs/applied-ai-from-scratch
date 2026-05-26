@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "01-demo-to-production-gap",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You deploy an AI feature to staging. Within an hour, the on-call engineer pages you: the service is returning 500 errors for roughly 10% of requests. The logs show 'AttributeError: NoneType has no attribute strip'. No other context is available.",
+      "question": "Which of the 8 production gaps does this error most directly indicate?",
+      "options": [
+        "A. GAP 3 (Network resilience) -- a transient API timeout is calling .strip() on the response",
+        "B. GAP 1 (Input validation) -- user input is None and the code calls .strip() without a type check",
+        "C. GAP 5 (Output parsing) -- the model returned None and the parser called .strip() on it",
+        "D. GAP 4 (Concurrency) -- two threads are racing and one receives None from the shared state"
+      ],
+      "answer": "B",
+      "explanation": "AttributeError on .strip() with NoneType almost always means a user sent None (or a form field was missing) and the code assumed a string. GAP 1 requires a type check before calling any string method. GAP 5 would produce a different error type. Network errors raise APITimeoutError, not AttributeError."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your FastAPI service works perfectly in development. You deploy to a new cloud environment. Every request immediately returns a 500 error. The logs show 'AuthenticationError: No API key provided'. The environment was provisioned two weeks ago.",
+      "question": "Which fix would prevent this failure from occurring in future deployments?",
+      "options": [
+        "A. Wrap the API client creation in a try/except block inside each request handler",
+        "B. Validate ANTHROPIC_API_KEY at process startup with a clear error message, failing fast before the service accepts any traffic",
+        "C. Add a fallback that uses a different model when the primary key is missing",
+        "D. Log a warning when the API key is missing but continue serving requests"
+      ],
+      "answer": "B",
+      "explanation": "GAP 2 requires failing fast at startup when required config is missing. If the service crashes at startup with 'ANTHROPIC_API_KEY is not set', the deployment pipeline catches it before traffic reaches the service. Option A hides the misconfiguration and makes every user request fail silently. Options C and D both serve traffic in a broken state."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your AI chatbot uses a module-level list to store conversation history: `history = []`. It works fine in local testing with one user. After deploying, users report their chat history contains messages from other users' conversations.",
+      "question": "What is the root cause and the correct fix?",
+      "options": [
+        "A. Root cause: the list is too large; fix: limit it to 20 messages",
+        "B. Root cause: the list is module-level shared state; fix: make conversation history per-request or per-session, not global",
+        "C. Root cause: the model is reading previous users' data; fix: add a system prompt telling it to ignore prior context",
+        "D. Root cause: the logging is exposing history to wrong users; fix: disable logging"
+      ],
+      "answer": "B",
+      "explanation": "A module-level list is shared across all simultaneous requests in a Python web server. GAP 4 requires no shared mutable state per-request. Conversation history must be stored per-session (in a request context, a cache keyed by session ID, or a database). The fix is architectural, not a size limit or prompt change."
+    },
+    {
+      "id": "c4",
+      "scenario": "You ask the model to return a JSON object: `{\"sentiment\": \"positive\", \"score\": 0.9}`. In testing, it works. In production, roughly 30% of responses fail with JSONDecodeError. Logging the raw response shows output like: `Sure! Here is the JSON:\\n\\`\\`\\`json\\n{\"sentiment\": \"positive\", \"score\": 0.9}\\n\\`\\`\\``",
+      "question": "What is the correct production fix for this output parsing gap?",
+      "options": [
+        "A. Switch to a more capable model that always returns raw JSON",
+        "B. Add retry logic: if JSONDecodeError occurs, call the model again up to 3 times",
+        "C. Strip markdown code fences from the response before calling json.loads(), and handle JSONDecodeError with a structured fallback",
+        "D. Ask the model to 'please only return JSON with no extra text' in the system prompt"
+      ],
+      "answer": "C",
+      "explanation": "Models inconsistently wrap JSON in markdown code blocks even when instructed not to. The correct fix is defensive parsing: strip ` ```json ... ``` ` fences before parsing, and catch JSONDecodeError to return a structured error instead of crashing. Retrying (B) is expensive and has the same failure rate. A system prompt instruction (D) reduces but does not eliminate the problem. Model capability (A) does not guarantee consistent formatting."
+    },
+    {
+      "id": "c5",
+      "scenario": "An unhandled APIStatusError with status 500 propagates to your FastAPI route handler. The framework returns the full Python traceback as the HTTP response body, including your file paths and library versions.",
+      "question": "Which two gaps does this single failure expose simultaneously?",
+      "options": [
+        "A. GAP 3 (Network resilience) and GAP 5 (Output parsing)",
+        "B. GAP 6 (Error containment) and GAP 7 (Observability)",
+        "C. GAP 1 (Input validation) and GAP 8 (Graceful degradation)",
+        "D. GAP 2 (Configuration) and GAP 4 (Concurrency)"
+      ],
+      "answer": "B",
+      "explanation": "Exposing a raw traceback to the user is GAP 6 (error containment) -- the exception was not caught and sanitized. The fact that a developer looking at this failure has no structured log with request ID, input context, or error type is GAP 7 (observability). Proper handling requires: (1) catch the exception, log it internally with full context, and (2) return a safe user-facing error response."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your AI summarization service goes down because the Anthropic API has an incident. Your users see a blank page. The API incident lasts 25 minutes. Your support queue fills with tickets.",
+      "question": "Which production pattern would have given users the best experience during those 25 minutes?",
+      "options": [
+        "A. GAP 3 fix: retry the API call up to 10 times before returning an error",
+        "B. GAP 8 fix: return a cached previous summary or a static 'summarization temporarily unavailable' message instead of a blank page",
+        "C. GAP 7 fix: log the outage to structured logs so you can reconstruct what happened afterward",
+        "D. GAP 2 fix: validate at startup that the API key is valid by making a test call"
+      ],
+      "answer": "B",
+      "explanation": "When the upstream API is down for 25 minutes, retries (A) just delay the failure and waste resources. Logging (C) helps you triage afterward but does not help users during the outage. Startup validation (D) does not detect runtime API outages. Only GAP 8 (graceful degradation) improves the user experience during an outage: a fallback response, a cached result, or a clear 'temporarily unavailable' message is always better than a blank page."
+    },
+    {
+      "id": "c7",
+      "scenario": "A production incident occurs at 2am. The on-call engineer has access to logs but finds only: `INFO: request received` and `ERROR: something went wrong`. There is no request ID, no model name, no input size, no error type, and no stack trace.",
+      "question": "Which logging fields are the minimum required to make this incident triageable without reproducing it?",
+      "options": [
+        "A. Timestamp and HTTP status code only",
+        "B. Request ID, model name, input character count, error type, and full stack trace at ERROR level",
+        "C. The full user input text, so the engineer can re-run the exact query",
+        "D. The model's raw response text, so the engineer can see what the model returned"
+      ],
+      "answer": "B",
+      "explanation": "GAP 7 requires enough context to triage without reproducing. Request ID links log lines across a request lifecycle. Model name identifies which model was in use when the error happened (important during rollouts). Input character count identifies whether the failure correlates with input size. Error type and stack trace tell you what broke. Full user input (C) is usually a privacy violation. Raw model response (D) is useful but secondary, and storing it may also be a privacy concern."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are reviewing a colleague's AI feature before merging. Their code has: a `try/except` that catches all exceptions and returns a generic error message, a 30-second timeout on the API client, and structured logging on every request. But `os.environ['ANTHROPIC_API_KEY']` is accessed inside the request handler on every call, with no startup validation.",
+      "question": "Which production gap remains open, and what is the specific risk?",
+      "options": [
+        "A. GAP 5 is open: the output is not validated for JSON format",
+        "B. GAP 3 is open: there is no retry on transient errors",
+        "C. GAP 2 is open: if the key is missing or rotated, every request fails with an unhandled KeyError at runtime instead of a clear startup error",
+        "D. GAP 4 is open: os.environ access is not thread-safe"
+      ],
+      "answer": "C",
+      "explanation": "Reading os.environ inside the request handler means a missing key causes a KeyError on every request rather than a clear startup failure. GAP 2 requires validating required env vars at process startup so the deployment pipeline catches misconfiguration before any user traffic hits the service. os.environ reads are thread-safe (D is incorrect). The code has explicit timeout (GAP 3 addressed) and exception handling (GAP 6 addressed). GAP 5 would only be an issue if the code parsed model output as structured data."
+    }
+  ]
+}

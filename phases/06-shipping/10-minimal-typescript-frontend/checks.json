@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "10-minimal-typescript-frontend",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You wire up a 'Stream' button to a fetch() POST call to your /stream endpoint. When users click it, nothing appears in the output div until the entire response is complete, then all the text appears at once.",
+      "question": "What is the root cause and the correct fix?",
+      "options": [
+        "A. The server is buffering the response. Add 'X-Accel-Buffering: no' to the response headers.",
+        "B. fetch() waits for the full response body before resolving. Switch to EventSource for SSE endpoints.",
+        "C. The DOM update is blocked by a CSS animation. Remove the transition property from #output.",
+        "D. FastAPI SSE requires WebSockets. Switch the endpoint to use WebSocket protocol."
+      ],
+      "answer": "B",
+      "explanation": "fetch() is request-response: it buffers the entire body and resolves the Promise only when the server closes the connection. For SSE endpoints where you want tokens to appear as they arrive, you need EventSource. EventSource maintains a persistent GET connection and fires an 'onmessage' event for each 'data:' line the server sends, enabling real-time DOM updates."
+    },
+    {
+      "id": "c2",
+      "scenario": "You switch from fetch() to EventSource for streaming. Your prompt text is long and contains special characters. You build the URL like this: const url = API_BASE + '/stream?prompt=' + prompt;",
+      "question": "What bug does this code have?",
+      "options": [
+        "A. EventSource does not support query parameters. The prompt must be sent in a POST body.",
+        "B. The prompt is not URL-encoded. Special characters and spaces will break the query string.",
+        "C. The API_BASE should be a relative path, not an absolute URL.",
+        "D. Query parameters are not supported in HTTPS. This will only work in HTTP."
+      ],
+      "answer": "B",
+      "explanation": "Any string used as a URL query parameter must be percent-encoded using encodeURIComponent(). Without encoding, spaces become '+' or break the URL, '&' splits the parameter, and '#' truncates it. The correct code is: const url = `${API_BASE}/stream?prompt=${encodeURIComponent(prompt)}`;"
+    },
+    {
+      "id": "c3",
+      "scenario": "Your frontend is served from http://localhost:3000 and makes fetch() calls to http://localhost:8000. The browser console shows: 'Access to fetch at localhost:8000 from origin localhost:3000 has been blocked by CORS policy.'",
+      "question": "Where does the fix go and what does it look like?",
+      "options": [
+        "A. In the client TypeScript: add a 'mode: no-cors' option to every fetch() call.",
+        "B. In the FastAPI backend: add CORSMiddleware with allow_origins including http://localhost:3000.",
+        "C. In the browser: disable CORS checking in the browser security settings.",
+        "D. In the HTML: add a <meta name='cors' content='allow'> tag."
+      ],
+      "answer": "B",
+      "explanation": "CORS is enforced by the browser based on the server's response headers. The fix is always on the server. Adding FastAPI's CORSMiddleware with the correct allow_origins causes the server to return the required 'Access-Control-Allow-Origin' headers. The 'no-cors' fetch mode does not give you access to the response body, so it is not a real fix. Browser security settings cannot be changed by end users in production."
+    },
+    {
+      "id": "c4",
+      "scenario": "You need to add a streaming endpoint that requires a large JSON body (user_id, conversation_history, system_prompt). EventSource does not support POST requests.",
+      "question": "What is the correct approach?",
+      "options": [
+        "A. Pass all parameters as query parameters in the EventSource URL.",
+        "B. Use fetch() with response.body.getReader() to read the response body as a stream.",
+        "C. Switch the endpoint to WebSocket, which supports both sending and receiving data.",
+        "D. Base64-encode the JSON body and pass it as a single query parameter."
+      ],
+      "answer": "B",
+      "explanation": "When you need POST streaming, use the Fetch Streams API: fetch the endpoint with method POST, then call response.body.getReader() to read chunks as they arrive. This gives you POST body support and streaming without switching to WebSocket. The fetch Streams API is supported in all modern browsers. WebSocket is a different protocol better suited to bidirectional real-time communication."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your EventSource streaming works, but after the stream ends, the browser reconnects automatically and the endpoint is called again. The output div fills with duplicate content.",
+      "question": "What is causing this and how do you fix it?",
+      "options": [
+        "A. EventSource auto-reconnects when the server closes the connection. Call source.close() when you receive the [DONE] sentinel.",
+        "B. The server is sending too many events. Add a delay between tokens.",
+        "C. The onmessage handler is being registered multiple times. Move it inside the EventSource constructor.",
+        "D. EventSource should only be used with WebSocket upgrades. Switch to WebSocket."
+      ],
+      "answer": "A",
+      "explanation": "EventSource automatically reconnects when the server closes the connection (this is a feature for reliability). If you do not call source.close() when the stream ends, the browser reconnects and the endpoint fires again. The fix is to call source.close() in the onmessage handler when data === '[DONE]'. After close(), no further onmessage or onerror events fire."
+    },
+    {
+      "id": "c6",
+      "scenario": "You have a TypeScript file with this code: const el = document.getElementById('output'); el.textContent = 'hello'; TypeScript reports a compile error: 'Object is possibly null.'",
+      "question": "What is the correct fix that maintains strict type safety?",
+      "options": [
+        "A. Change tsconfig to disable strictNullChecks.",
+        "B. Cast with 'as HTMLDivElement' after getElementById: const el = document.getElementById('output') as HTMLDivElement;",
+        "C. Use optional chaining: el?.textContent = 'hello';",
+        "D. Add a null check: if (el !== null) { el.textContent = 'hello'; }"
+      ],
+      "answer": "B",
+      "explanation": "When you know an element exists (because you wrote the HTML), casting with 'as HTMLDivElement' is the correct TypeScript pattern. It tells the compiler 'I know this element exists and its type.' The cast also gives you proper type inference for HTMLDivElement properties. Optional chaining on the left side of an assignment is a syntax error. Disabling strictNullChecks removes a valuable safety net. Both B and D are technically valid, but B is the idiomatic pattern used throughout the codebase."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your TypeScript frontend is working locally. You want to deploy it alongside your FastAPI service so users only need one URL. You have a 'frontend/' directory with index.html and client.js.",
+      "question": "What is the simplest way to serve both from FastAPI?",
+      "options": [
+        "A. Run a separate nginx server on port 80 that proxies /api to FastAPI and serves /frontend statically.",
+        "B. Add app.mount('/ui', StaticFiles(directory='frontend', html=True), name='ui') at the end of your FastAPI app.",
+        "C. Copy index.html into the FastAPI templates directory and use Jinja2 to render it.",
+        "D. Use subprocess to start python -m http.server from inside the FastAPI startup event."
+      ],
+      "answer": "B",
+      "explanation": "FastAPI's StaticFiles mount serves files from a directory at a given path prefix. Adding it after all API routes ensures API routes take precedence. The html=True option serves index.html when the directory root is requested. This is the simplest single-process, single-port deployment for a small AI service. Nginx is more appropriate for production at scale, but adds operational complexity."
+    },
+    {
+      "id": "c8",
+      "scenario": "A junior engineer on your team proposes adding React to the frontend because 'state management will be easier once we add more features.' The current frontend has 3 interactive elements: a textarea, two buttons, and one output div.",
+      "question": "What is the correct response?",
+      "options": [
+        "A. Agree immediately. React's component model always improves maintainability.",
+        "B. Agree only if the team already knows React. Learning cost is the main factor.",
+        "C. Evaluate the actual state complexity. 3 DOM elements is not enough complexity to justify a framework. Add React when you have 5+ components with shared state.",
+        "D. Reject permanently. Frameworks should never be used in AI services."
+      ],
+      "answer": "C",
+      "explanation": "The decision to add a framework should be driven by actual complexity, not anticipated complexity. With 3 DOM elements and no shared state, vanilla TypeScript is maintainable and debuggable without abstraction layers. Add React (or any framework) when you have multiple components that share state, need routing, or require a component library. Anticipatory complexity ('once we add more features') is the most common reason teams over-engineer frontends."
+    }
+  ]
+}
