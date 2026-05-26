@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "14-capstone-mcp-ecosystem",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You deploy an Engineering Operations ecosystem with 3 MCP servers. The SRE team asks: 'If the incidents-server goes down, do code and metrics tools stop working too?'",
+      "question": "What is the correct answer, and what makes it true?",
+      "options": [
+        "A. Yes -- all servers share a process and one failure brings down the ecosystem",
+        "B. No -- the gateway marks incidents-server unhealthy, removes its tools, and continues routing code:: and metrics:: calls normally",
+        "C. No -- but clients must manually remove incidents:: tools from their config after a failure",
+        "D. It depends on whether the gateway uses process isolation or thread isolation"
+      ],
+      "answer": "B",
+      "explanation": "The gateway's health check mechanism is what makes partial degradation possible. When incidents-server fails its health check, the gateway marks it unhealthy, removes its tools from tools/list, and returns 'server_unavailable' for any call to incidents::*. The code and metrics servers are unaffected. Clients automatically see a reduced tool set without needing to reconfigure."
+    },
+    {
+      "id": "c2",
+      "scenario": "An agent calls `incidents::draft_postmortem` but gets 'error: unknown_tool'. You check the gateway's tools/list and see `incidents::list_incidents`, `incidents::get_incident`, and `incidents::add_note`, but no `incidents::draft_postmortem`.",
+      "question": "What is the most likely explanation?",
+      "options": [
+        "A. The gateway strips prompts from tools/list because prompts use a different MCP method",
+        "B. draft_postmortem was not registered in the incidents-server's tool schema list in the gateway config",
+        "C. The incidents-server is down so its prompts are unavailable",
+        "D. Prompts can only be called via resources/read, not tools/call"
+      ],
+      "answer": "B",
+      "explanation": "In MCP, prompts are exposed via prompts/list and prompts/get, not via tools/list. However, in this gateway's simplified architecture, all capabilities are routed through tool calls. The agent called 'draft_postmortem' as a tool, but it was not registered in the tool_schemas list for the incidents-server in the gateway config. The fix: add a 'draft_postmortem' tool to the incidents-server's schema, or use MCP's native prompts protocol."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are rotating the auth token for the metrics-server. The current token is still valid. You update the METRICS_SERVER_TOKEN env var with the new token and reload the gateway. You then revoke the old token.",
+      "question": "Why is the order 'update -> reload -> verify -> revoke' important?",
+      "options": [
+        "A. The gateway caches tokens and needs to reload before using the new one",
+        "B. Revoking before reloading creates a window where the gateway holds an invalid token and metrics calls fail",
+        "C. The metrics server only accepts one active token at a time",
+        "D. The env var update does not take effect until the gateway process restarts"
+      ],
+      "answer": "B",
+      "explanation": "Zero-downtime rotation requires token overlap. If you revoke the old token before the gateway reloads with the new one, there is a gap where the gateway holds an invalid token and every metrics:: call fails with auth_failed. By updating and reloading first, then verifying, then revoking, you ensure there is no gap. The old token remains valid until you are certain the new one is working."
+    },
+    {
+      "id": "c4",
+      "scenario": "An agent investigation session calls: metrics::get_metric, incidents::list_incidents, incidents::get_incident, code::search_codebase, and code::get_file -- five tool calls across all three servers in one session.",
+      "question": "How many connections does the agent maintain to complete this session?",
+      "options": [
+        "A. Five -- one per tool call",
+        "B. Three -- one per server",
+        "C. One -- the agent connects to the gateway only",
+        "D. Zero -- tool calls are stateless and do not require persistent connections"
+      ],
+      "answer": "C",
+      "explanation": "This is the core value of the gateway pattern. The agent has one connection: to the gateway. It calls five tools across three servers, but all five calls go through the same gateway connection. The gateway maintains its own connections to the upstream servers. The agent has no knowledge of how many servers exist or where they are."
+    },
+    {
+      "id": "c5",
+      "scenario": "During the ecosystem tests, `test_routing_correctness` fails. The test log shows: 'Expected [incidents], got [code, incidents]'. The call was: gateway.call_tool('incidents::list_incidents', {}).",
+      "question": "What does this failure indicate?",
+      "options": [
+        "A. The incidents-server is calling the code-server internally",
+        "B. The gateway routed the call to both code and incidents servers instead of just incidents",
+        "C. The test's call logging code has a bug -- it recorded a previous call in the log",
+        "D. The namespace split is broken and 'incidents' is being interpreted as two namespaces"
+      ],
+      "answer": "C",
+      "explanation": "The test log shows [code, incidents] for a call that should produce only [incidents]. The code entry is a leftover from the previous test that was not cleared before this assertion. The fix is to add call_log.clear() before the incidents test. This is a test code bug, not a routing bug. The actual routing is correct (incidents was called), but the state was not reset between assertions."
+    },
+    {
+      "id": "c6",
+      "scenario": "You add a 4th server to the ecosystem: a deployment-pipeline server. You add it to gateway.yaml, set the token in .env, and reload. A colleague's AI assistant immediately starts asking about deployments -- without you telling anyone.",
+      "question": "Why did this happen, and is it the intended behavior?",
+      "options": [
+        "A. Unintended: Claude cached the old tool list and is hallucinating new tools",
+        "B. Intended: the gateway's unified tools/list propagated the new tools to all clients on their next tools/list call",
+        "C. Unintended: the deployment server is accessible without auth because you did not set up access controls",
+        "D. Intended: Claude subscribes to gateway change events via the MCP notifications protocol"
+      ],
+      "answer": "B",
+      "explanation": "This is exactly the intended behavior of the gateway pattern. When a client calls tools/list, it gets the current state of all healthy servers. Adding a server to the gateway config and reloading means the next tools/list call by any client will include the new server's tools. No individual client needs to be reconfigured. This is why the gateway pattern scales: one config change, all clients updated automatically."
+    },
+    {
+      "id": "c7",
+      "scenario": "An agent is tasked with: 'Find the incident related to auth latency and add a note that Redis eviction may be the root cause.' The agent calls incidents::get_incident with INC-2024, then calls incidents::add_note with the note. Both calls succeed. Later you check the incident and the note is not there.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. The incidents-server's SQLite database was reset between calls",
+        "B. add_note requires a specific author field that the agent did not provide",
+        "C. The gateway uses in-memory mock state that is not persisted across server restarts",
+        "D. The note was added to the wrong incident ID"
+      ],
+      "answer": "C",
+      "explanation": "In this demo implementation, the incidents-server's SQLite database is an in-memory store. Notes are written successfully during the session, but the database is not persisted to disk. When the server restarts, all notes are lost. In production, this would be a real database (PostgreSQL, PagerDuty API, etc.) with durable writes. The demo makes this trade-off explicit so you know what to replace when moving to production."
+    },
+    {
+      "id": "c8",
+      "scenario": "You run the cross-server reasoning eval on the ecosystem after a change. The score drops from 0.9 to 0.4. The change was: renaming 'api_error_rate' to 'error_rate_api' in the metrics-server to match a new naming convention.",
+      "question": "Why did the eval score drop so dramatically?",
+      "options": [
+        "A. The model cannot handle underscore-heavy metric names",
+        "B. The model's tool calls to metrics::get_metric('api_error_rate') now return 'metric_not_found', breaking the investigation chain",
+        "C. The eval uses fuzzy string matching and the name change confuses the scorer",
+        "D. The rename caused the metrics-server to fail its health check"
+      ],
+      "answer": "B",
+      "explanation": "The eval tasks Claude with investigating an API error spike. To do this correctly, Claude calls metrics::get_metric with the name 'api_error_rate'. After the rename, this call returns 'metric_not_found'. Claude cannot get the metric data it needs and produces an incomplete or incorrect investigation. This is why metric and tool name changes are breaking changes that require: (1) a version bump in the server, (2) a deprecation period with the old name still supported, and (3) eval re-runs before and after to confirm the change does not regress agent behavior."
+    }
+  ]
+}

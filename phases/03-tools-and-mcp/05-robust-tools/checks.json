@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-robust-tools",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "An agent calls a `send_invoice` tool. The HTTP response times out after 8 seconds, but the invoice was emailed at second 5. The agent retries the same call.",
+      "question": "Which property would have prevented the customer from receiving two invoices?",
+      "options": [
+        "A. Input validation, because validating the email address prevents duplicate sends",
+        "B. Idempotency, because the second call would return the cached result without firing the email again",
+        "C. A shorter timeout, because if the timeout were 4 seconds the call would have failed before the email sent",
+        "D. Exponential backoff, because waiting longer between retries reduces the chance of a duplicate"
+      ],
+      "answer": "B",
+      "explanation": "Idempotency means the same call returns the same result without repeating the side effect. A local cache keyed on the call signature returns the stored result on retry, skipping the actual send. Validation only catches bad inputs, a shorter timeout would cause more failures, and backoff only changes timing."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are implementing `validate()` for a `create_subscription` tool. The tool requires a `plan_id` (string), a `billing_cycle` (either 'monthly' or 'annual'), and an `amount_cents` (integer greater than 0).",
+      "question": "The LLM passes `{'plan_id': 'pro', 'billing_cycle': 'weekly', 'amount_cents': 999}`. What should `validate()` return?",
+      "options": [
+        "A. An empty list, because all three fields are present",
+        "B. A list with one error: billing_cycle 'weekly' is not supported",
+        "C. A list with two errors: billing_cycle is invalid and amount_cents should be a float",
+        "D. A raised ValueError so the agent loop catches the exception"
+      ],
+      "answer": "B",
+      "explanation": "All three fields are present and amount_cents is a valid positive integer. Only billing_cycle is invalid ('weekly' is not in ['monthly', 'annual']). Validate returns a list of error strings, not exceptions. The LLM reads the error and corrects the argument."
+    },
+    {
+      "id": "c3",
+      "scenario": "A `RobustTool` subclass has a timeout of 5 seconds. The first call times out. The idempotency cache is checked before every call.",
+      "question": "What should happen when the agent retries the same call after the timeout?",
+      "options": [
+        "A. The cache returns the timed-out result with idempotent_replay: true",
+        "B. The cache has no entry (timeout was not cached), so the real call fires again",
+        "C. The retry is blocked until the first call's thread completes",
+        "D. The tool returns a validation error because the previous call failed"
+      ],
+      "answer": "B",
+      "explanation": "Only successful results are stored in the idempotency cache. A timed-out call leaves no cache entry. On retry, the cache misses and the real call fires again. This is correct: the first call may not have completed, so retrying is safe and necessary."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are choosing a timeout value for a tool that calls a third-party payment API. Your observability data shows P50 latency is 200ms, P95 is 1.8s, and P99 is 6.2s.",
+      "question": "Which timeout value is most appropriate for a production agent?",
+      "options": [
+        "A. 200ms (P50), because most calls complete quickly and slow calls should fail fast",
+        "B. 1s, because it is a round number between P50 and P95",
+        "C. 2-3s (above P95), because setting it below P95 causes retries on healthy calls",
+        "D. 60s, because payment APIs can always be slow and you want to give them time"
+      ],
+      "answer": "C",
+      "explanation": "Set timeout above P95 so that normal healthy calls complete successfully. Setting it at P50 means 50% of calls time out and retry, amplifying load. Setting it at P99 or above is too conservative and delays failure detection. 2-3s covers P95 (1.8s) with a small buffer."
+    },
+    {
+      "id": "c5",
+      "scenario": "A developer adds tenacity retry logic to a tool that lacks an idempotency cache. The tool calls an external API that accepts an idempotency key header. The developer does not pass the key on retries.",
+      "question": "What is the failure mode?",
+      "options": [
+        "A. Tenacity will never retry because it cannot detect API failures",
+        "B. The external API will reject the second call because retries are forbidden",
+        "C. If the first call succeeded but the response was lost, the retry fires a second API call without the idempotency key, causing a duplicate operation",
+        "D. Tenacity exponential backoff will prevent the duplicate by waiting long enough for the backend to deduplicate"
+      ],
+      "answer": "C",
+      "explanation": "When the first call's response is lost in transit, tenacity sees an error and retries. Without an idempotency key, the backend treats the retry as a new request and executes it again. Backoff only adds delay; it does not prevent a second execution. The idempotency key (either at the tool layer or passed to the API) is the fix."
+    },
+    {
+      "id": "c6",
+      "scenario": "An agent calls a `delete_record` tool twice with identical arguments in the same session. The tool uses a RobustTool idempotency cache. The first call succeeds and deletes the record. The second call hits the cache.",
+      "question": "What should the second call return, and why?",
+      "options": [
+        "A. An error, because the record no longer exists and the cache should re-verify",
+        "B. The cached success result with idempotent_replay: true, because the operation was already applied",
+        "C. A fresh API call result, because delete operations should never be cached",
+        "D. A validation error, because deleting the same record twice is semantically invalid"
+      ],
+      "answer": "B",
+      "explanation": "Idempotency means the cached result is returned on replay. The semantic contract is: this call with these args already completed successfully. Returning the cached result is correct. The caller (agent) asked for the same operation and should receive the same outcome. Re-verifying or re-calling could cause errors if the resource no longer exists."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are reviewing a tool's validate() method. It checks that `amount_cents` is present and positive, then immediately calls the payment API before returning. If the API returns a 400 error, it raises an exception.",
+      "question": "What is the key problem with this implementation?",
+      "options": [
+        "A. validate() should call the API to confirm the customer exists before allowing the charge",
+        "B. Raising an exception from validate() is correct; the agent loop will catch it",
+        "C. validate() calls the external API, which means an invalid-looking input still creates a network request and may produce a cryptic error message rather than a clear validation error",
+        "D. The validation is too strict; positive amounts should also allow zero for free items"
+      ],
+      "answer": "C",
+      "explanation": "Validation should be purely local and cheap. Calling the external API inside validate() defeats its purpose: it creates network traffic for bad inputs, may produce unclear error messages from the remote system, and bypasses the idempotency and timeout machinery. Validate locally, then call externally in _execute()."
+    },
+    {
+      "id": "c8",
+      "scenario": "You want to add a `verbose: bool` parameter to a tool for debug logging. The tool's idempotency key is computed from all input args.",
+      "question": "What problem does including `verbose` in the idempotency key create?",
+      "options": [
+        "A. No problem; all parameters must be included to ensure correctness",
+        "B. The key is different when verbose=True vs verbose=False for the same operation, so the cache misses and the real call fires twice even though the result is identical",
+        "C. Including a boolean makes the hash unstable across Python versions",
+        "D. The tool becomes non-idempotent because the verbose output changes the result"
+      ],
+      "answer": "B",
+      "explanation": "Idempotency keys should only include args that affect the operation's outcome. verbose only affects logging, not the result. Including it means a call with verbose=False and a retry with verbose=True (or vice versa) produce different keys, cache misses, and duplicate operations. Exclude cosmetic/observability args from the key."
+    }
+  ]
+}

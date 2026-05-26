@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "01-function-calling-fundamentals",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A customer support bot is deployed with a tool called `get_order_status(order_id)`. A user asks 'What's the status of order ORD-5591?' The bot responds: 'Your order ORD-5591 is currently out for delivery.' But the actual order hasn't shipped yet. The tool was defined in the schema but the dispatch code never wired it to a real function.",
+      "question": "Why did the bot give a wrong answer despite having a tool schema defined?",
+      "options": [
+        "A. The tool schema description was too vague, so the LLM chose not to call it",
+        "B. The LLM executed the function itself and returned a hallucinated result because no real function was wired to the schema",
+        "C. The schema was correct, but the LLM generated a JSON tool_use block pointing to a function that was never dispatched, so the LLM answered from its prior knowledge instead",
+        "D. The LLM called the function, but the wrong order ID was passed in the input"
+      ],
+      "answer": "C",
+      "explanation": "The LLM never executes code. It outputs a tool_use block with the function name and arguments. If your dispatch layer never sent the tool_result back to the LLM, the LLM either answered from its training data or hallucinated. The schema alone is not enough; the dispatch loop must complete both round-trips."
+    },
+    {
+      "id": "c2",
+      "scenario": "An engineer is debugging a function-calling integration. The first API call succeeds and returns a tool_use block. The engineer builds the tool_result message and sends a second API call, but the API returns a 400 error: 'messages: roles must alternate between user and assistant.' The messages list at that point is: [{role: user}, {role: user, content: [tool_result]}].",
+      "question": "What is missing from the messages list?",
+      "options": [
+        "A. A system prompt at the start of the messages list",
+        "B. The assistant's response containing the tool_use block, which must be inserted between the user message and the tool_result",
+        "C. The tool_result must be in its own separate API call, not combined with previous messages",
+        "D. The tool_result content must be plain text, not a JSON string"
+      ],
+      "answer": "B",
+      "explanation": "The Anthropic API requires alternating roles. After the user's initial message, the assistant's response (including the tool_use content block) must be appended to the messages list before you add the tool_result as a new user turn. Without the assistant turn in between, you get two consecutive user turns, which is invalid."
+    },
+    {
+      "id": "c3",
+      "scenario": "You have a tool `search_products(query, max_results, include_out_of_stock)`. The LLM keeps calling it as `search_products(q='shoes', n=10)` even though the schema uses `query` and `max_results`. Users see errors because your dispatch layer raises a TypeError on unexpected keyword arguments.",
+      "question": "What is the most direct cause of the LLM using wrong parameter names?",
+      "options": [
+        "A. The model being used is not capable of respecting tool schemas",
+        "B. The parameter names in the input_schema properties do not match what you describe in the tool description, causing the LLM to infer its own names",
+        "C. The parameter names in the tool schema itself use 'query' and 'max_results', but the description or examples somewhere in the schema or system prompt use 'q' and 'n', confusing the LLM",
+        "D. The LLM always generates abbreviated parameter names for efficiency"
+      ],
+      "answer": "C",
+      "explanation": "The LLM reads both the schema property names and all natural-language descriptions when deciding how to fill in arguments. If the description, examples, or system prompt uses 'q' as shorthand while the schema says 'query', the LLM may use the shorthand it inferred from context. Consistency between schema names and all descriptions is critical."
+    },
+    {
+      "id": "c4",
+      "scenario": "A research assistant app needs the LLM to answer: 'What is the current price of AAPL stock?' You have two choices: (A) include today's stock prices for 500 tickers in the system prompt as a JSON blob, or (B) give the LLM a `get_stock_price(ticker)` tool that fetches prices on demand.",
+      "question": "Beyond just 'option B is better,' what are the two most important production reasons to prefer the tool approach?",
+      "options": [
+        "A. Tools are faster because the LLM doesn't have to read the entire JSON blob; and tools let you add rate limiting and caching at the dispatch layer",
+        "B. Tools are cheaper per token; and tools prevent the LLM from reading sensitive data it shouldn't see",
+        "C. The JSON blob in the system prompt would be stale as soon as market prices change, and the tool approach lets you control exactly what data the LLM receives without exposing your entire database schema",
+        "D. Tools require fewer LLM API calls; and tools are the only way to handle authentication"
+      ],
+      "answer": "C",
+      "explanation": "The two key production arguments: freshness (data in context is frozen at request time; tools fetch live data) and control (you expose exactly the fields you choose, with validation and auth in the dispatch layer, rather than dumping raw data into context). The token cost argument (A) is real but secondary."
+    },
+    {
+      "id": "c5",
+      "scenario": "You define two tools: `lookup_customer(customer_id)` and `get_order(order_id)`. A user asks: 'What did customer C-44 order last?' The LLM calls `get_order` with input `{order_id: 'C-44'}` instead of first calling `lookup_customer`. The dispatch returns a not-found error.",
+      "question": "Which change would most directly fix the LLM's tool selection?",
+      "options": [
+        "A. Add more tools to give the LLM more options",
+        "B. Rewrite the `get_order` description to say 'Use order IDs only, not customer IDs. To find orders for a customer, call lookup_customer first.'",
+        "C. Change the `order_id` parameter type to an integer to prevent the LLM from passing string IDs",
+        "D. Combine both tools into a single `lookup_customer_and_orders(customer_id)` tool"
+      ],
+      "answer": "B",
+      "explanation": "Tool descriptions are the LLM's decision-making signal. A description that explains what NOT to pass (a customer ID) and what to call first (lookup_customer) directly guides the LLM toward the correct sequence. Type constraints help with validation but don't resolve ambiguity about which tool to call first."
+    },
+    {
+      "id": "c6",
+      "scenario": "You measure that your tool-augmented chatbot takes an average of 3.2 seconds per response. A plain chatbot with the same prompt but no tools takes 1.4 seconds. Your SLA requires responses under 2 seconds.",
+      "question": "What is the primary cause of the added latency, and what is one architectural approach to reduce it?",
+      "options": [
+        "A. Tool schemas make the prompt longer, increasing LLM processing time; fix by shortening descriptions",
+        "B. Each tool-augmented answer requires two LLM API calls (one to get the tool request, one to get the final answer); reduce latency by caching tool results for frequently asked queries",
+        "C. The dispatch layer adds overhead; fix by calling functions asynchronously",
+        "D. The tool_result JSON adds tokens to the second call; fix by compressing the JSON before sending it"
+      ],
+      "answer": "B",
+      "explanation": "The fundamental cost is two sequential LLM calls. For 'what is my balance?' the answer rarely changes in the same session, so caching the balance response for 30-60 seconds eliminates the second round-trip for repeat queries. Other approaches (async dispatch, compressed results) help but don't remove the two-call structure."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your team uses Pydantic models to auto-generate tool schemas. A new engineer adds a field `cust_id: str` to the `GetCustomerInput` model instead of `customer_id: str`. The schema is regenerated and deployed. The next day, support tickets spike: the LLM keeps passing `customer_id` in its calls, not `cust_id`, causing dispatch failures.",
+      "question": "What does this incident reveal about the tradeoff between raw dict schemas and Pydantic-generated schemas?",
+      "options": [
+        "A. Pydantic schemas are less reliable than raw dicts because Pydantic adds extra fields the LLM cannot understand",
+        "B. Pydantic automates schema generation but does not protect against bad naming choices; the field name in the model becomes the parameter name the LLM must use, so naming discipline is still required",
+        "C. Raw dict schemas would have prevented this because they require manual review of every parameter name",
+        "D. The LLM ignores Pydantic-generated schemas because they include JSON Schema keywords like 'title' that confuse it"
+      ],
+      "answer": "B",
+      "explanation": "Pydantic solves the sync problem (schema always matches the model) but does not solve the naming problem. The field name in the Pydantic model becomes the parameter name in the JSON schema. If the LLM has been trained or prompted to use 'customer_id' as a natural name and your schema now says 'cust_id', the LLM will pass the wrong key. Good naming conventions are still the engineer's responsibility."
+    },
+    {
+      "id": "c8",
+      "scenario": "An agent has three tools: `query_database`, `send_email`, and `create_ticket`. In testing you notice the LLM sometimes calls `send_email` when the user only asked about database records, because the email tool description says 'Use when information needs to be communicated to a user.'",
+      "question": "Which rewrite of the send_email description would most reduce incorrect calls?",
+      "options": [
+        "A. 'Sends an email to a user. Use this tool only when the user explicitly asks to send, draft, or compose an email message.'",
+        "B. 'Sends an email. Do not call this tool unless absolutely necessary.'",
+        "C. 'Communications tool for outbound messages to users.'",
+        "D. 'Use this tool for all user-facing responses that contain important information.'"
+      ],
+      "answer": "A",
+      "explanation": "A good tool description states both the affirmative case (when to call it) and the constraint (only when explicitly asked). Option A is specific: it requires the user to have explicitly requested an email action. Option B uses vague negative instructions ('unless absolutely necessary') that don't give the LLM a clear decision boundary. Options C and D are too broad."
+    }
+  ]
+}

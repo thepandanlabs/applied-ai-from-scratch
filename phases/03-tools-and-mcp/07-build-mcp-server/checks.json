@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "07-build-mcp-server",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your MCP server's search_products tool builds its SQL query like this: cursor.execute(f\"SELECT * FROM products WHERE name LIKE '%{query}%'\")",
+      "question": "What is the security risk, and how should it be fixed?",
+      "options": [
+        "A. No risk; LIKE queries are read-only so injection cannot modify data",
+        "B. SQL injection: a crafted query string can bypass the LIKE clause and return arbitrary data or execute additional statements. Fix: use parameterized queries with ? placeholders",
+        "C. Performance risk only; the fix is to add an index on the name column",
+        "D. The query will fail because f-strings cannot be used inside execute() calls"
+      ],
+      "answer": "B",
+      "explanation": "String interpolation into SQL allows an attacker to inject SQL syntax. For example, query=\"' OR 1=1--\" turns the query into WHERE name LIKE '%' OR 1=1--%' which returns all rows. Even in a read-only context, this can leak all data. Fix: cursor.execute('SELECT * FROM products WHERE name LIKE ?', (f'%{query}%',))"
+    },
+    {
+      "id": "c2",
+      "scenario": "You are adding a 'download_report' capability to an MCP server. The capability returns a static pre-generated PDF report by report ID. The reports are regenerated nightly.",
+      "question": "Which MCP primitive fits best?",
+      "options": [
+        "A. Tool, because it requires an ID parameter",
+        "B. Resource, because the report is stable, addressable by ID, and read-only",
+        "C. Prompt, because the report content is used as context for the LLM",
+        "D. Sampling, because generating the report requires LLM inference"
+      ],
+      "answer": "B",
+      "explanation": "Resources are for stable, addressable, read-only data. A report with a known ID that is regenerated nightly (stable enough to cache) is a textbook Resource: expose it as report://reports/{id}. The host can pre-fetch it, cache it, and list it. A Tool would also work technically, but a Resource gives the host semantic signal that it is safe to pre-fetch and not a mutating action."
+    },
+    {
+      "id": "c3",
+      "scenario": "A developer's MCP server works perfectly when tested with 'mcp dev'. After adding it to claude_desktop_config.json and restarting Claude Desktop, the server fails to connect. The developer added a print('Server starting...') statement at the top of main.py.",
+      "question": "What is most likely causing the connection failure?",
+      "options": [
+        "A. claude_desktop_config.json has the wrong command path",
+        "B. print() statements write to stdout, which Claude Desktop reads as JSON-RPC messages, causing parse failures before the handshake begins",
+        "C. Claude Desktop does not support Python servers, only TypeScript",
+        "D. The server must use HTTP transport, not stdio, for Claude Desktop"
+      ],
+      "answer": "B",
+      "explanation": "The stdio transport uses stdout exclusively for JSON-RPC messages. Any output to stdout before the first valid JSON-RPC message causes the host to fail parsing and abort the connection. Always use sys.stderr (Python) or process.stderr (Node) for all logging. 'mcp dev' may be more tolerant of this; Claude Desktop is not."
+    },
+    {
+      "id": "c4",
+      "scenario": "Three AI applications need to query your product database: a chatbot, an internal copilot, and a customer portal. Currently each has its own DB connection and SQL. You consider two options: (A) build an MCP server, or (B) keep function calling in each application.",
+      "question": "What is the key operational advantage of option A?",
+      "options": [
+        "A. MCP servers are faster than direct database connections",
+        "B. A schema change or security fix in the database query logic only needs to be made in one place",
+        "C. MCP servers automatically scale to handle more requests",
+        "D. Option B is always preferable because direct connections have less latency"
+      ],
+      "answer": "B",
+      "explanation": "The main operational advantage is centralization. With one MCP server, a schema change (e.g. a column rename), a SQL injection fix, or a new query optimization is written once and all three AI applications benefit immediately. With three separate codebases, the same change must be made three times, tested three times, and deployed three times."
+    },
+    {
+      "id": "c5",
+      "scenario": "A colleague says: 'I'll just expose our entire REST API as a single MCP tool called api_proxy with parameters for method, path, and body. That way I only need to write one tool.' The API has 40 endpoints.",
+      "question": "What are two concrete problems with this approach?",
+      "options": [
+        "A. JSON-RPC cannot forward HTTP methods; the tool will fail at runtime",
+        "B. The LLM must guess endpoint paths and parameter shapes rather than using typed schemas, and the host cannot distinguish safe read operations from mutations",
+        "C. A single tool can handle at most 10 parameters; 40 endpoints will exceed the limit",
+        "D. FastMCP does not support tools with 'method' as a parameter name"
+      ],
+      "answer": "B",
+      "explanation": "Two problems: (1) The LLM has no typed schema for each endpoint - it must guess paths and parameter structures, leading to hallucinated calls. (2) The host cannot tell which operations are read-only vs. mutating, so it cannot pre-fetch as resources or warn users about side effects. Proper MCP primitives (tools for mutations, resources for reads) give the host and LLM the semantic information they need."
+    },
+    {
+      "id": "c6",
+      "scenario": "You have a Python MCP server running locally. You want to connect it to Claude Desktop. The server file is at /home/alice/projects/catalog/server.py. Python is at /usr/bin/python3.",
+      "question": "Which claude_desktop_config.json entry is correct?",
+      "options": [
+        "A. {\"command\": \"server.py\", \"args\": []}",
+        "B. {\"command\": \"python3\", \"args\": [\"/home/alice/projects/catalog/server.py\"]}",
+        "C. {\"command\": \"mcp\", \"args\": [\"run\", \"server.py\"]}",
+        "D. {\"command\": \"curl\", \"args\": [\"http://localhost:8000/mcp\"]}"
+      ],
+      "answer": "B",
+      "explanation": "Claude Desktop spawns the server as a subprocess. The command field is the executable (python3 or python) and args contains the script path. Use the absolute path to the script. Option A omits the interpreter. Option C uses the mcp dev command which is for development only. Option D would require an HTTP server setup."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are building an MCP server in TypeScript. You add a console.log('Processing request...') statement inside a tool handler to debug a slow response.",
+      "question": "What is the correct way to add debug logging in a Node.js MCP server?",
+      "options": [
+        "A. console.log() is fine; only output before server.connect() breaks stdio",
+        "B. Use process.stderr.write() or console.error() instead of console.log(), because console.log writes to stdout which is reserved for JSON-RPC",
+        "C. Add a logging: true flag to the McpServer constructor to enable built-in logging",
+        "D. Use a file logger that writes to /tmp/mcp-debug.log"
+      ],
+      "answer": "B",
+      "explanation": "console.log() in Node.js writes to stdout. In an MCP stdio server, stdout is the JSON-RPC channel. Any non-JSON-RPC output on stdout corrupts the message stream and breaks the connection. Use process.stderr.write() or console.error() for all logging; these write to stderr which the host does not read as protocol messages."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your product_summary prompt handler receives product_id='P999' which does not exist in the database. Your current code calls get_product(product_id) and passes the result directly to a template without checking for None.",
+      "question": "What should the prompt handler return when the product is not found?",
+      "options": [
+        "A. Raise a KeyError so the MCP framework returns a protocol error to the host",
+        "B. Return a messages array with a user message explaining the product was not found, so the LLM can inform the user gracefully",
+        "C. Return an empty messages array so the LLM skips the prompt",
+        "D. Return None; the FastMCP framework will handle missing returns automatically"
+      ],
+      "answer": "B",
+      "explanation": "Prompt handlers should always return a valid messages array. If the product does not exist, return a message explaining this so the LLM can respond gracefully to the user. Raising an exception causes an unhandled protocol error. An empty array may cause unexpected behavior. None will cause a runtime error in most MCP SDK versions."
+    }
+  ]
+}

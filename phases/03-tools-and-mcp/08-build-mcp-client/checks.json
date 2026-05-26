@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "08-build-mcp-client",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "An agent is deployed with the following tool schemas hardcoded: search_products, get_product. The MCP server adds a new tool: create_product. The agent code is not changed.",
+      "question": "What happens when the agent is asked to create a new product?",
+      "options": [
+        "A. The agent automatically picks up the new tool because it connects to the same server",
+        "B. The agent cannot use create_product because it was not in the tool schemas passed to Claude at deployment time",
+        "C. Claude will infer the tool schema from the server's capabilities",
+        "D. The MCP client throws an error when the server offers a tool the client doesn't know about"
+      ],
+      "answer": "B",
+      "explanation": "With hardcoded schemas, the agent only passes the schemas it knows about to Claude. Claude can only use tools that appear in the tools list it receives. Even though the MCP server now exposes create_product, the agent never calls tools/list again to discover it, so Claude never knows it exists. This is exactly why dynamic discovery via tools/list matters."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are converting MCP tool definitions to Anthropic tool schemas. An MCP tool has: name='search_products', description='Search...', inputSchema={type:object, properties:{query:{type:string}}, required:['query']}",
+      "question": "What is the only change needed to convert this to an Anthropic tool schema?",
+      "options": [
+        "A. Rename 'description' to 'tool_description' and add a 'version' field",
+        "B. Rename 'inputSchema' to 'input_schema'; all other fields remain identical",
+        "C. Convert the entire schema to a flat list of parameter names",
+        "D. Add an 'anthropic_version' field and change 'object' to 'dict'"
+      ],
+      "answer": "B",
+      "explanation": "The only structural difference between MCP and Anthropic tool schemas is the key name: MCP uses 'inputSchema' (camelCase) and Anthropic uses 'input_schema' (snake_case). The schema contents - type, properties, required - are identical JSON Schema and do not need modification."
+    },
+    {
+      "id": "c3",
+      "scenario": "An MCP client calls session.call_tool('search_products', {'query': 'keyboard'}) and receives a result object. result.isError is True.",
+      "question": "What should the client do with this result?",
+      "options": [
+        "A. Raise an exception to abort the agent loop",
+        "B. Return the error content as a string in the tool_result message so the LLM can handle it gracefully",
+        "C. Retry the tool call automatically up to 3 times",
+        "D. Return an empty string so the LLM moves on without seeing the error"
+      ],
+      "answer": "B",
+      "explanation": "Tool errors should be returned to the LLM in the tool_result message so it can reason about them and respond to the user appropriately. Raising an exception crashes the agent. Returning empty string hides the error from the LLM which cannot then explain what went wrong. Automatic retries are a separate concern and should not be the first response to a tool error."
+    },
+    {
+      "id": "c4",
+      "scenario": "You connect an MCP client to two servers: a product catalog (3 tools) and an inventory system (2 tools). Both servers have a tool named 'search'. Your agent loop receives a tool_use block with name='search'.",
+      "question": "What problem arises, and how does namespacing solve it?",
+      "options": [
+        "A. No problem; MCP servers handle routing automatically based on tool content",
+        "B. The client cannot determine which server to route the call to. Namespacing prefixes tool names (e.g. catalog__search, inventory__search) so the client knows the target server",
+        "C. The MCP protocol prevents two servers from having tools with the same name",
+        "D. Claude will always pick the first server's tool when names conflict"
+      ],
+      "answer": "B",
+      "explanation": "With two tools named 'search', the client cannot determine which server should handle the call. Namespacing solves this by prefixing the server identifier: catalog__search and inventory__search. The client splits on '__' to get the server name, then routes the call to the correct session. The original tool name (after the prefix) is passed to call_tool."
+    },
+    {
+      "id": "c5",
+      "scenario": "An agent loop does not have a turn limit. The LLM is stuck in a pattern where it calls a tool, gets a result, calls the same tool again with slightly different args, and repeats.",
+      "question": "What is the correct mitigation in the client code?",
+      "options": [
+        "A. Add a system prompt telling the LLM not to repeat tool calls",
+        "B. Add a turn counter and break the loop after a maximum number of iterations (e.g. 10)",
+        "C. Cache tool results so the LLM sees the same result and stops retrying",
+        "D. Use a different model that handles tool loops better"
+      ],
+      "answer": "B",
+      "explanation": "A turn counter is the standard defensive pattern against infinite agent loops. Set a reasonable maximum (10-20 for most tasks) and return a partial result or error when it is exceeded. System prompt instructions can help but are not a reliable circuit breaker. Tool result caching changes behavior in unintended ways. The loop guard should be in the client code, not dependent on model behavior."
+    },
+    {
+      "id": "c6",
+      "scenario": "You time the MCP discovery process (session.initialize() + session.list_tools()) and find it takes 800ms for a local stdio server. The server script starts with: db = postgresql.connect(os.environ['DATABASE_URL']) at the module level.",
+      "question": "Why is discovery slow, and what is the fix?",
+      "options": [
+        "A. stdio transport is inherently slow; switch to HTTP transport to fix it",
+        "B. The PostgreSQL connection happens at module import time, before the server handles the initialize request. Move DB connection to lazy initialization inside the first tool call.",
+        "C. list_tools() is O(n) in the number of tools; reduce the number of tools to speed it up",
+        "D. MCP discovery always takes 800ms; this is expected for production servers"
+      ],
+      "answer": "B",
+      "explanation": "Module-level code (including DB connections) runs when the Python process starts, before the MCP server handles any requests. If the PostgreSQL connection takes 700ms, every discovery call waits for it. Fix: use lazy initialization - connect the DB on the first tool call that needs it, not at import time. Discovery (initialize + list_tools) should complete in under 50ms for a local server."
+    },
+    {
+      "id": "c7",
+      "scenario": "A developer builds an MCP client. In the agent loop, when stop_reason is 'tool_use', they process tool calls and add tool_result messages. They forget to add the assistant message first.",
+      "question": "What error will the Anthropic API return?",
+      "options": [
+        "A. No error; the API infers the assistant message from context",
+        "B. A validation error: tool_result messages must follow an assistant message containing the corresponding tool_use blocks",
+        "C. A rate limit error because tool results add too many tokens",
+        "D. A timeout because the API waits for the missing assistant message"
+      ],
+      "answer": "B",
+      "explanation": "The Anthropic messages API requires that tool_result messages immediately follow the assistant message containing the tool_use blocks. The API validates this structure and returns a validation error if tool_result appears without a preceding assistant message containing the corresponding tool_use block with the matching tool_use_id."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your production agent connects to an MCP server via stdio transport. The server is a long-running process shared by many agent instances. A new tool is added to the server. Some agent instances pick up the new tool; others do not.",
+      "question": "What is the most likely explanation?",
+      "options": [
+        "A. MCP servers randomly return different tool lists to different clients",
+        "B. Some agent instances have a cached tool list from a previous session.list_tools() call and have not re-discovered since the new tool was added",
+        "C. The new tool is only available to agents that used the server first",
+        "D. stdio transport does not support dynamic tool updates"
+      ],
+      "answer": "B",
+      "explanation": "If agent instances cache the tool list from their initial list_tools() call and never refresh, instances started before the new tool was added will not see it. Instances that connect after the addition will see it. The fix: implement a tools/list refresh on the notifications/tools/list_changed event, or re-discover on each new conversation start. A long-running agent that holds a persistent connection needs the notification handler."
+    }
+  ]
+}

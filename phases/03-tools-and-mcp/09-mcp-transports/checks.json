@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "09-mcp-transports",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team built an MCP server with stdio transport and it works perfectly with Claude Desktop on every developer's laptop. The ops team wants to run one shared instance on a VM so all developers can use the same server.",
+      "question": "Why does moving the server to a remote VM break the stdio transport?",
+      "options": [
+        "A. The MCP protocol is not supported over TCP/IP networks.",
+        "B. stdio requires the client to fork the server as a local subprocess; it cannot connect to a process on another machine.",
+        "C. Claude Desktop does not support MCP servers running on Linux VMs.",
+        "D. The server needs to be recompiled with network support enabled."
+      ],
+      "answer": "B",
+      "explanation": "stdio transport works by having the client call subprocess.Popen on the server binary. The client pipes its stdin/stdout to the subprocess's stdin/stdout. There is no network involved. The moment the server is on a different machine, the client cannot fork it, so stdio is not usable."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are deploying an MCP server that will be used only by one internal team. The server needs to be on a shared host, but all tool calls are fast (under 2 seconds) and only one person uses it at a time.",
+      "question": "Which transport is the simplest correct choice for this scenario?",
+      "options": [
+        "A. stdio, because it is the most reliable.",
+        "B. Streamable HTTP, because it is always the safest choice.",
+        "C. HTTP SSE, because the server is remote and requirements are simple.",
+        "D. No transport works for single-user remote deployments."
+      ],
+      "answer": "C",
+      "explanation": "HTTP SSE is sufficient here: the server is remote (rules out stdio), there is only one sequential user and no need for bidirectional streaming (rules out the added complexity of Streamable HTTP). SSE is the right tool for simple remote deployments."
+    },
+    {
+      "id": "c3",
+      "scenario": "An MCP server runs a data export tool that takes 45-60 seconds to complete. Using HTTP SSE transport, users report that the client disconnects with a timeout error before the tool finishes.",
+      "question": "What does switching to Streamable HTTP fix in this situation?",
+      "options": [
+        "A. It makes the data export tool run faster by using parallel processing.",
+        "B. It allows the server to push progress updates during the 45-60 second window, preventing inactivity timeouts.",
+        "C. It automatically retries the tool call if it times out.",
+        "D. It increases the maximum allowed tool execution time to 5 minutes."
+      ],
+      "answer": "B",
+      "explanation": "Streamable HTTP supports bidirectional streaming, which lets the server push incremental progress events back to the client during a long-running operation. The client sees activity and does not time out from apparent inactivity. The tool still takes 45-60 seconds; Streamable HTTP does not change the execution time."
+    },
+    {
+      "id": "c4",
+      "scenario": "A developer configures their stdio MCP server and adds a helpful debug line: `print(f'Received call: {tool_name}')` at the top of every tool handler. After adding this, Claude Desktop stops seeing the server's tool responses.",
+      "question": "What went wrong and how do you fix it?",
+      "options": [
+        "A. The print statements crash the server. Use logging instead.",
+        "B. Print to stdout corrupts the MCP protocol stream. Route debug output to stderr: print(..., file=sys.stderr).",
+        "C. Claude Desktop blocks servers that produce extra output for security reasons.",
+        "D. The print statements cause a race condition in the stdio pipe."
+      ],
+      "answer": "B",
+      "explanation": "In stdio transport, stdout is the protocol channel. Every byte written to stdout is interpreted as an MCP JSON-RPC message. Plain text print statements corrupt the message framing, so the client cannot parse the responses. All debug output must go to stderr."
+    },
+    {
+      "id": "c5",
+      "scenario": "You deploy a Streamable HTTP MCP server with event_store=None (in-memory session store). During a rolling deploy, the old server process is killed and a new one starts. Users connecting shortly after report that their sessions are gone.",
+      "question": "Why does a rolling deploy break existing sessions and what is the fix?",
+      "options": [
+        "A. Streamable HTTP does not support rolling deploys. Use a blue/green deploy strategy.",
+        "B. In-memory session state is lost when the process restarts. Use a Redis-backed event store so sessions survive across process restarts.",
+        "C. The clients need to reconnect with a new session ID after any server restart.",
+        "D. Session persistence requires the client to store the session on disk."
+      ],
+      "answer": "B",
+      "explanation": "event_store=None stores sessions in the server process's memory. When the process dies in a rolling deploy, all session state is lost. Swap in a Redis-backed event store so session state is external to the process and survives restarts. Clients can then reconnect with their existing session ID."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your MCP server is deployed behind an nginx reverse proxy. SSE connections work for about 60 seconds and then silently drop. Tool calls that take less than 60 seconds succeed. Tool calls that take longer fail.",
+      "question": "What nginx configuration change fixes this?",
+      "options": [
+        "A. Increase the worker_processes count so more connections can be handled.",
+        "B. Enable the ssl_session_cache directive to keep connections warm.",
+        "C. Set proxy_read_timeout to a value larger than the longest expected tool execution time.",
+        "D. Switch from nginx to Apache, which handles SSE connections better."
+      ],
+      "answer": "C",
+      "explanation": "nginx closes proxy connections that have no data for proxy_read_timeout seconds (default 60s). SSE connections must stay open while a tool runs. Setting proxy_read_timeout to 120 or 300 seconds (or higher) stops nginx from closing the connection before the tool finishes."
+    },
+    {
+      "id": "c7",
+      "scenario": "A team wants to use stdio transport for their Claude Desktop plugin AND make the same server available as a remote HTTP endpoint for a CI/CD pipeline. They want one codebase.",
+      "question": "How should they structure the server to support both transports from one codebase?",
+      "options": [
+        "A. This is not possible. Each transport requires separate server code.",
+        "B. Register all tools on a shared FastMCP instance, then select the transport at startup via an argument or environment variable.",
+        "C. Use stdio for Claude Desktop and rewrite the tools as a REST API for CI/CD.",
+        "D. Wrap the stdio server in a subprocess manager that exposes HTTP on top."
+      ],
+      "answer": "B",
+      "explanation": "The MCP SDK separates tool registration from transport configuration. You define tools once on a FastMCP instance, then call mcp.run(transport='stdio') or mcp.run(transport='sse') based on how the server is started. The tool logic is identical; only the entry point changes."
+    }
+  ]
+}

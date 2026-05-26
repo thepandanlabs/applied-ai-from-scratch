@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "04-structured-tool-outputs",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A billing agent calls `get_invoice(invoice_id='INV-9001')`. The invoice doesn't exist. The dispatch layer doesn't catch the exception, and the tool_result content is: `KeyError: 'INV-9001'`. The LLM's response to the user is: 'Your invoice INV-9001 has a balance of $0.00.' The customer opens a support ticket.",
+      "question": "What is the root cause of the hallucinated answer, and which fix most directly prevents it?",
+      "options": [
+        "A. The LLM hallucinated because it lacks real-time data; the fix is to add more data to the system prompt",
+        "B. The KeyError traceback gives the LLM no useful signal about what went wrong or what to do next; wrapping the function with safe_execute returns a structured error with a hint the LLM can reason from instead",
+        "C. The tool schema is missing an error field; adding one tells the LLM to look for errors",
+        "D. The LLM should be prompted to always say 'I don't know' when it receives an error"
+      ],
+      "answer": "B",
+      "explanation": "The LLM reads tool_result content the way a human reads an API response. A raw KeyError gives it no structured signal: no success/fail flag, no human-readable message, no hint. The LLM fills the gap with its prior knowledge (hallucination). safe_execute catches the exception and returns {success: false, error: 'Invoice not found', hint: 'Try list_invoices...'}, which gives the LLM something to act on."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your tool returns this on failure: `{\"success\": false, \"error\": \"Service error\", \"hint\": null}`. In production logs, you observe that after receiving this result, the LLM almost always tells the user 'I'm sorry, I couldn't complete that request' and stops. Recovery rate is 4%.",
+      "question": "What is wrong with this ToolResult and how do you fix it?",
+      "options": [
+        "A. The error message is too vague; replace 'Service error' with the full exception traceback for better LLM reasoning",
+        "B. The hint field is null; the LLM has no path forward. Add a specific, actionable hint like 'Retry the call, or try list_invoices(customer_id=...) to find the resource another way'",
+        "C. The success field is not needed; remove it and the LLM will infer failure from the error field",
+        "D. Return success=true with error details inside the data field so the LLM doesn't stop processing"
+      ],
+      "answer": "B",
+      "explanation": "The hint field is what turns a dead end into a recoverable failure. Without a hint, the LLM has no next action to take, so it gives up. A null hint is acceptable only when there is truly no recovery path. For most errors, you can specify: retry, try a related tool, try with different parameters, or ask the user for clarification. The 4% recovery rate is the direct cost of null hints."
+    },
+    {
+      "id": "c3",
+      "scenario": "A developer adds a new tool `get_user_profile(user_id)`. They don't use safe_execute. The function raises `psycopg2.OperationalError: SSL connection has been closed unexpectedly` when the database is unavailable. This traceback appears in the tool_result content.",
+      "question": "Beyond the hallucination risk, what other problem does exposing this traceback create?",
+      "options": [
+        "A. The traceback uses too many tokens, making the LLM response slower",
+        "B. The traceback exposes internal infrastructure details (psycopg2, SSL, database connection) that should never leave the service layer, creating a security and information leakage risk",
+        "C. Tracebacks are formatted incorrectly for JSON and may cause parsing errors",
+        "D. The LLM cannot process tracebacks longer than 100 characters"
+      ],
+      "answer": "B",
+      "explanation": "A raw traceback exposes: the database driver (psycopg2), the connection method (SSL), and the nature of the failure (connection closed). If this tool is called from a customer-facing agent, this information can reach users who can infer infrastructure details. safe_execute catches all exceptions and returns a sanitized message ('get_user_profile timed out') that tells the LLM enough to reason but leaks nothing about the internal implementation."
+    },
+    {
+      "id": "c4",
+      "scenario": "You have three exception types: NotFoundError, ValidationError, ServiceTimeoutError. A developer adds a fourth scenario: the user's account is suspended and the function should tell the LLM to call `check_account_status()` before retrying. They ask whether to add a fourth exception type or use a different pattern.",
+      "question": "What is the best way to handle this new failure mode?",
+      "options": [
+        "A. Raise a generic Exception with a message about the suspended account; safe_execute's catch-all will handle it",
+        "B. Add a new AccountSuspendedError exception type with a specific hint that references check_account_status(), and add a handler for it in safe_execute",
+        "C. Return ToolResult.ok() with a message in the data field explaining the suspension",
+        "D. Add an 'account_suspended' boolean to the existing ToolResult schema"
+      ],
+      "answer": "B",
+      "explanation": "Adding a named exception type is the right pattern when a failure mode has a specific, known recovery path. The exception type signals the failure domain; the ToolResult hint provides the actionable next step. The generic catch-all is for truly unexpected errors where no specific hint is possible. AccountSuspendedError deserves its own type because it maps to a specific recovery tool (check_account_status) and should never be silently caught by the generic handler."
+    },
+    {
+      "id": "c5",
+      "scenario": "You're reviewing a pull request. A developer has implemented safe_execute but their catch-all except block re-raises the exception after logging it: `except Exception as e: logger.exception(e); raise`. The tool_result content will contain the raw exception.",
+      "question": "What is the correct implementation, and why does re-raising break the contract?",
+      "options": [
+        "A. Re-raising is correct: the exception should propagate to the dispatch layer which has its own handler",
+        "B. Re-raising breaks the contract because safe_execute's purpose is to be the last line of defense. The exception will propagate out and either crash the dispatch loop or produce a raw error string in the tool_result",
+        "C. Re-raising is acceptable if the exception is logged first; the dispatch layer will format it correctly",
+        "D. The fix is to move the logger.exception call outside of safe_execute"
+      ],
+      "answer": "B",
+      "explanation": "safe_execute is the trust boundary between your implementation and the LLM. Its invariant is: no raw exception escapes. Re-raising breaks this invariant. After re-raise, the exception propagates to whoever called safe_execute. If the dispatch loop doesn't have its own catch-all (which it shouldn't need), the exception becomes an unhandled error or gets serialized as a raw traceback string. The correct pattern: log internally, then return ToolResult.fail() with a sanitized message. Never re-raise inside safe_execute."
+    },
+    {
+      "id": "c6",
+      "scenario": "You build an eval to test LLM recovery behavior. You send the LLM a tool_result with success=false for `get_invoice`, and you test two hint variants: (A) 'The invoice was not found.' and (B) 'Invoice INV-0000 not found. Call list_recent_invoices(customer_id=\"C-884\") to find valid invoice IDs for this customer.' You measure recovery rate (LLM makes a follow-up call that successfully retrieves data).",
+      "question": "What recovery rates would you expect, and what principle does this illustrate?",
+      "options": [
+        "A. Both should have ~80% recovery because the LLM can infer recovery steps from a well-designed tool schema",
+        "B. Hint A should have ~20-30% recovery (LLM may give up or guess); Hint B should have ~70-85% recovery (specific tool name and arguments give the LLM a direct path forward)",
+        "C. Both should have ~0% recovery because the LLM cannot make tool calls autonomously",
+        "D. Hint A should perform better because it is shorter and uses less context"
+      ],
+      "answer": "B",
+      "explanation": "The hint is an instruction to the LLM, not just a description. A vague hint ('not found') gives the LLM no decision signal; it may guess, ask the user, or give up. A specific hint that names the recovery tool with example arguments converts the failure into a nearly scripted next action. This illustrates the core principle: the hint field is the most important part of the ToolResult on failure, not the error field."
+    },
+    {
+      "id": "c7",
+      "scenario": "A team is debating whether to use success: bool in the ToolResult or rely on the presence of an 'error' key to signal failure. The argument against success: bool is 'it's redundant; just check if error is null.'",
+      "question": "What is the argument FOR including an explicit success: bool field?",
+      "options": [
+        "A. success: bool makes the JSON smaller because error can be omitted on success",
+        "B. The LLM reads the tool_result as text. An explicit 'success: false' is unambiguous to the LLM even before it parses the full JSON; it removes any ambiguity about whether the result is valid data or an error signal",
+        "C. success: bool is required by the Anthropic API schema for tool_result content",
+        "D. Checking for null error fields requires the LLM to do conditional logic; success: bool is simpler"
+      ],
+      "answer": "B",
+      "explanation": "An explicit success field creates a clear, unambiguous signal at the start of the response. A tool that returns {error: null, data: {}} and one that returns {data: {}} are indistinguishable without success. More importantly, the LLM reads tool_result as text and reasons about its content. 'success: false' at the top of the JSON is a clear, immediate signal that sets the LLM's interpretation of the rest of the fields, before it even reads the error or hint."
+    },
+    {
+      "id": "c8",
+      "scenario": "An agent in production is calling `search_inventory(query='widget')`. The function raises `requests.exceptions.ConnectionError: HTTPSConnectionPool(host='inventory.internal', port=443): Max retries exceeded`. This reaches the LLM as the raw exception string. Three months later, the team migrates from requests to httpx. The internal error messages change, and the LLM starts behaving differently on connectivity errors.",
+      "question": "What does this illustrate about the relationship between implementation details and tool output contracts?",
+      "options": [
+        "A. The team should update the LLM's system prompt every time the implementation library changes",
+        "B. When raw exceptions leak to the LLM, the LLM's reasoning becomes coupled to internal implementation details. A library migration silently breaks LLM behavior. safe_execute + typed exceptions decouple the LLM-facing contract from the implementation, so internal changes don't affect LLM behavior.",
+        "C. This is unavoidable; the LLM must see some internal details to reason correctly about errors",
+        "D. The fix is to use a try/except in the LLM's prompt to filter out exception messages"
+      ],
+      "answer": "B",
+      "explanation": "This is the dependency inversion problem applied to LLM interfaces. When tool output is a raw exception, the LLM's behavior is coupled to your implementation library (requests, psycopg2, boto3). A library migration changes the error message format and the LLM adapts to the new format, or fails to. With safe_execute and typed exceptions, the LLM-facing output is always {success: false, error: 'search_inventory timed out', hint: 'Retry...'}. The implementation can change freely without affecting the LLM's reasoning."
+    }
+  ]
+}

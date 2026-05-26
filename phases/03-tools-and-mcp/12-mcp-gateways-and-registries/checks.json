@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "12-mcp-gateways-and-registries",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your company has 6 AI apps and 5 MCP servers. The auth token for the data warehouse rotates every 90 days. Without a gateway, how many config files need to be updated on each rotation?",
+      "question": "What does a gateway reduce this update count to?",
+      "options": [
+        "A. 6 -- one per app",
+        "B. 5 -- one per server",
+        "C. 1 -- the gateway config only",
+        "D. 30 -- each app references each server"
+      ],
+      "answer": "C",
+      "explanation": "A gateway holds all upstream credentials centrally. When a token rotates, only the gateway config changes. All 6 apps authenticate to the gateway, which handles upstream auth on their behalf."
+    },
+    {
+      "id": "c2",
+      "scenario": "A client calls tools/call with the tool name 'get_contact' (no namespace prefix). The gateway receives this request.",
+      "question": "What is the correct gateway behavior?",
+      "options": [
+        "A. Forward to the first registered server as a default",
+        "B. Return a structured error explaining the expected namespace::tool_name format",
+        "C. Search all servers for a matching tool name and route to the first match",
+        "D. Return an HTTP 404 with no body"
+      ],
+      "answer": "B",
+      "explanation": "Missing namespace prefix is an invalid request. The gateway should return a structured error message explaining the expected format and listing available namespaces. Guessing which server to route to creates unpredictable behavior."
+    },
+    {
+      "id": "c3",
+      "scenario": "The CRM server fails its health check and the gateway marks it unavailable. A client calls tools/list.",
+      "question": "What should the gateway return?",
+      "options": [
+        "A. An empty list -- no tools are available when any server is down",
+        "B. All tools including crm:: tools, but each marked with a health_status field",
+        "C. Only tools from healthy servers, with crm:: tools omitted",
+        "D. An error response indicating the gateway is partially degraded"
+      ],
+      "answer": "C",
+      "explanation": "Exposing tools from unavailable servers leads to clients discovering tools they cannot call, creating confusing failures. The correct pattern is to omit unhealthy servers' tools from the list. Clients see a smaller tool set but every tool they see actually works."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are designing a registry entry for a new internal metrics server. The server exposes tools like get_metric and list_metrics.",
+      "question": "Which field in the registry entry is most critical for the gateway's routing logic?",
+      "options": [
+        "A. version -- so the gateway knows which API version to call",
+        "B. namespace -- the prefix the gateway uses to identify and route tool calls",
+        "C. owner -- so the gateway knows who to contact during an outage",
+        "D. description -- so the gateway can explain tools to clients"
+      ],
+      "answer": "B",
+      "explanation": "The namespace field is what the gateway uses to route tool calls. Every tool from this server will be prefixed as 'metrics::tool_name'. The namespace must be unique across the gateway config and stable -- changing it breaks all clients using that prefix."
+    },
+    {
+      "id": "c5",
+      "scenario": "You have a gateway routing calls to 3 servers: crm, warehouse, and tickets. A developer wants to add a 4th server for infrastructure metrics. No apps need to be updated.",
+      "question": "What is the minimal change required to make the new server's tools available?",
+      "options": [
+        "A. Update all app configs to add the new server's URL",
+        "B. Add a new server entry to the gateway config and reload the gateway",
+        "C. Add the new server to both the gateway config and each app's dependency list",
+        "D. Deploy a second gateway that handles only infrastructure tools"
+      ],
+      "answer": "B",
+      "explanation": "This is the core value of the gateway pattern. Adding a new server requires one config change (add the server block to gateway.yaml) and one gateway reload. No app configs change. All authorized clients immediately see the new server's tools in tools/list."
+    },
+    {
+      "id": "c6",
+      "scenario": "Two MCP servers both want to use the namespace 'data': one for the data warehouse, one for a data lake. You are designing the gateway config.",
+      "question": "What is the correct resolution?",
+      "options": [
+        "A. Allow both -- the gateway merges tools from both servers under the 'data' namespace",
+        "B. Assign different namespaces: 'warehouse' and 'data-lake' to make them unique",
+        "C. Reject both and require them to use numeric namespaces like 'data1' and 'data2'",
+        "D. Use 'data' for the primary server and 'data_secondary' for the secondary"
+      ],
+      "answer": "B",
+      "explanation": "Namespace collisions cause routing ambiguity. The gateway cannot determine which server to route 'data::run_query' to if two servers share the 'data' namespace. Choose namespaces that reflect the specific system: 'warehouse' and 'data-lake' are unambiguous."
+    },
+    {
+      "id": "c7",
+      "scenario": "A client authenticates to the gateway using its API key. The gateway routes a call to the CRM server using the CRM's bearer token. Six months later, the client's API key is compromised and revoked.",
+      "question": "What is the correct action for the CRM server's bearer token?",
+      "options": [
+        "A. Also rotate it immediately -- a compromised client key means the CRM token is exposed",
+        "B. No action needed -- the client key and the CRM token are independent credentials",
+        "C. Downgrade the CRM token to read-only access until the incident is resolved",
+        "D. Rotate all upstream tokens as a precaution since the gateway was compromised"
+      ],
+      "answer": "B",
+      "explanation": "The gateway maintains auth separation by design. The client authenticates to the gateway only -- it never sees upstream server tokens. A compromised client API key means the client can no longer access the gateway, but the CRM token was never exposed to the client."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your gateway's tools/list returns 47 tools across 6 servers. An AI agent is given all 47 tools in its context window.",
+      "question": "What is the main operational concern with this approach at scale?",
+      "options": [
+        "A. The agent cannot distinguish which server owns each tool",
+        "B. 47 tool schemas consume significant context tokens, and models degrade with too many tools",
+        "C. The gateway will become a bottleneck when routing 47 concurrent tool calls",
+        "D. Tool names with namespace prefixes are longer and harder for the model to select correctly"
+      ],
+      "answer": "B",
+      "explanation": "Context window cost and model degradation with large tool counts is a real operational concern. At 47 tools, each with a JSON schema, tool definitions alone can consume thousands of tokens. More importantly, model accuracy in tool selection drops with very large tool sets. Mitigations include task-scoped tool subsets, dynamic tool loading by intent, and tool search capabilities."
+    }
+  ]
+}

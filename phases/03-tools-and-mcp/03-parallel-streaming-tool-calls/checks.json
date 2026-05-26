@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "03-parallel-streaming-tool-calls",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "An agent analyzes support tickets. For each ticket, it calls `classify_intent`, `lookup_customer_history`, and `check_known_issues`. All three calls are independent: none uses the output of another. The current dispatch loop calls them sequentially: 0.4s + 0.8s + 0.6s = 1.8s per ticket. The team processes 500 tickets/day and is hitting latency limits.",
+      "question": "What is the expected execution time per ticket after switching to parallel tool calls, and why?",
+      "options": [
+        "A. 0.4s, because parallel execution runs all tools at the speed of the fastest one",
+        "B. 0.9s, because parallel execution averages the times across all tools",
+        "C. ~0.8s, because parallel execution completes when the slowest tool finishes, and `lookup_customer_history` at 0.8s is the bottleneck",
+        "D. 1.8s, because the LLM still processes each tool result sequentially even if they run in parallel"
+      ],
+      "answer": "C",
+      "explanation": "Parallel execution of independent tools completes when the slowest tool finishes: max(0.4, 0.8, 0.6) = 0.8s. The LLM doesn't process results one at a time; all tool_results are sent back in a single user message after all tools complete. This is a 2.25x speedup over sequential (1.8s / 0.8s)."
+    },
+    {
+      "id": "c2",
+      "scenario": "You implement parallel tool execution with asyncio.gather. In production logs, you see that all three tool calls start at the same timestamp but the batch completes at 4.2 seconds. The configured timeout is 5 seconds. One tool (`get_external_data`) is consistently taking 3.8-4.1 seconds. The other two tools complete in under 1 second.",
+      "question": "What is the correct response to this pattern?",
+      "options": [
+        "A. Increase the timeout to 10 seconds so the slow tool never times out",
+        "B. Move `get_external_data` out of the parallel batch and make it optional: call it only when the user explicitly requests that data type",
+        "C. Replace asyncio.gather with ThreadPoolExecutor, which handles slow tools better",
+        "D. Add a retry loop inside `get_external_data` to make it return faster"
+      ],
+      "answer": "B",
+      "explanation": "When one tool dominates the parallel batch latency, the benefit of parallelism is mostly lost. The right question is: does every user query need this data? If `get_external_data` is only relevant for 20% of queries, calling it unconditionally penalizes the 80%. Make it optional and call it only when the user's request implies a need for it. This reduces p95 latency significantly."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your parallel dispatch loop uses asyncio.gather to run 4 tools. One tool raises an unhandled exception. asyncio.gather propagates the first exception immediately and cancels the remaining tasks. The LLM receives no tool_results at all.",
+      "question": "How do you fix this so one failed tool doesn't prevent the other three results from reaching the LLM?",
+      "options": [
+        "A. Use asyncio.gather(return_exceptions=True) and check each result for exceptions before serializing",
+        "B. Wrap each tool call in a try/except that catches all exceptions and returns a structured error dict, then gather normally",
+        "C. Run tools with asyncio.create_task and use a separate exception handler per task",
+        "D. Both A and B are correct approaches; B is more readable while A is more concise"
+      ],
+      "answer": "D",
+      "explanation": "Both approaches work. Option B (try/except per coroutine) is more readable: the exception handling is colocated with the tool call, and the return type is always a tool_result dict. Option A (return_exceptions=True) requires post-processing to check for exceptions. In production, option B is preferred because it guarantees a structured output type from every execution path, which makes the rest of the dispatch loop simpler."
+    },
+    {
+      "id": "c4",
+      "scenario": "A team is building a research agent. They ask: 'Should we always request all available tools in every turn, or only the ones the user's message implies?' They're considering adding a system prompt instruction: 'Always call all data sources in parallel for every user question.'",
+      "question": "What is the problem with always calling all tools regardless of user intent?",
+      "options": [
+        "A. The LLM cannot handle more than 3 tools in a single response",
+        "B. Calling unnecessary tools adds latency (waiting for results you don't need) and wastes API quota on data sources that aren't relevant to the query",
+        "C. Parallel execution is only supported for 2 tools; 3+ tools must be sequential",
+        "D. The tool schemas become ambiguous when all tools are available simultaneously"
+      ],
+      "answer": "B",
+      "explanation": "Unconditional tool calling defeats the purpose of parallel execution. If a user asks a simple factual question, calling all 5 data sources in parallel still waits for the slowest one, adds tool result tokens to the context, and burns API quota. The LLM should only request tools whose results are necessary to answer the specific question. Good tool descriptions (Rule 5 from Lesson 02) guide the LLM to select only relevant tools."
+    },
+    {
+      "id": "c5",
+      "scenario": "You're adding streaming to your agent. You use client.messages.stream() and handle InputJsonEvent to accumulate tool input JSON. During testing, you notice that sometimes a ContentBlockStop event fires before the accumulated JSON is complete (it's partial and fails json.loads).",
+      "question": "What is the safest way to handle this?",
+      "options": [
+        "A. Increase the buffer size for InputJsonEvent accumulation",
+        "B. Only parse the accumulated JSON after the stream fully completes (get_final_message), using streaming only for display purposes and not for early dispatch",
+        "C. Retry json.loads up to 3 times with a small sleep between attempts",
+        "D. Use a streaming JSON parser that handles partial JSON inputs"
+      ],
+      "answer": "B",
+      "explanation": "Streaming delivery of tool inputs is inherently incremental and can be split across multiple events at arbitrary byte boundaries. For correctness, the safest approach is to use stream.get_final_message() for the actual tool dispatch, and use the streaming events only for UX purposes (showing the user that a tool call is in progress). Option D (streaming JSON parser) is technically correct but adds complexity for minimal benefit."
+    },
+    {
+      "id": "c6",
+      "scenario": "You have a synchronous Flask application. You want to add parallel tool execution without rewriting the app as async. An engineer suggests wrapping the entire dispatch loop in asyncio.run(). Another suggests using ThreadPoolExecutor.",
+      "question": "Which approach is correct, and why?",
+      "options": [
+        "A. asyncio.run() wrapping: it converts the sync app to async without a rewrite",
+        "B. ThreadPoolExecutor: it achieves thread-based parallelism without requiring async/await syntax, which is the right fit for a sync codebase",
+        "C. Neither: Flask is single-threaded and cannot run parallel tasks",
+        "D. asyncio.run() wrapping is faster; ThreadPoolExecutor creates OS thread overhead"
+      ],
+      "answer": "B",
+      "explanation": "ThreadPoolExecutor is the right fit for synchronous codebases. It runs each tool call in a separate thread, achieves true parallelism for I/O-bound operations (network calls), and requires no async/await syntax. asyncio.run() in a sync context can work but it creates an event loop inside a blocking call, which is fragile in production and mixes paradigms. If the codebase is sync, stay sync with ThreadPoolExecutor."
+    },
+    {
+      "id": "c7",
+      "scenario": "You add timing logs to your parallel executor and see: tool_a starts at t=0.00s, ends at t=0.82s; tool_b starts at t=0.82s, ends at t=1.61s; tool_c starts at t=1.61s, ends at t=2.43s. The tools should be running in parallel.",
+      "question": "What does this timing pattern indicate, and how do you fix it?",
+      "options": [
+        "A. The tools are running in parallel but happen to have perfectly sequential timing by coincidence",
+        "B. The tools are executing sequentially: each starts after the previous one ends. The parallel dispatch loop is not working as intended.",
+        "C. The network has high jitter causing tools to queue even in a thread pool",
+        "D. The timeout is too low and causing tools to be retried sequentially"
+      ],
+      "answer": "B",
+      "explanation": "Sequential start times (each tool starts exactly when the previous ends) is the signature of sequential execution, not parallel. In true parallel execution, all tools would start at approximately t=0.00s and end at different times based on their individual latencies. Common causes: the executor is being created inside the tool call loop (new executor per call, each with 1 worker), or the tool functions are being awaited one at a time instead of gathered."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your agent sends all 3 tool_results back in 3 separate user messages (one per tool). The second API call to the LLM uses this message structure: [..., assistant (tool_use_1), user (tool_result_1), user (tool_result_2), user (tool_result_3)].",
+      "question": "What will happen and why?",
+      "options": [
+        "A. The LLM will process each tool_result in order and combine them in the final answer",
+        "B. The API will reject the request with a validation error because roles must alternate and two consecutive user messages are not allowed",
+        "C. Only the last tool_result will be used; the first two will be ignored",
+        "D. The LLM will make additional tool calls to re-request the data that arrived in later messages"
+      ],
+      "answer": "B",
+      "explanation": "The Anthropic API requires strict role alternation: user, assistant, user, assistant... Two consecutive user messages are not valid. All tool_results from a parallel execution batch must be combined into a single user message as a list of tool_result content blocks. This is one of the key differences between parallel and sequential dispatch: parallel requires collecting all results first, then sending them in one user turn."
+    }
+  ]
+}

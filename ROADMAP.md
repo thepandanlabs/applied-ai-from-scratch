@@ -69,24 +69,24 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 03: Tools, Function Calling & MCP [⬚] (~14 hours)
+## Phase 03: Tools, Function Calling & MCP [✅] (~14 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | Function Calling Fundamentals | ⬚ | ~45 min |
-| 02 | Tool Schema Design: the Agent-Computer Interface | ⬚ | ~60 min |
-| 03 | Parallel & Streaming Tool Calls | ⬚ | ~45 min |
-| 04 | Structured Tool Outputs & Error Handling | ⬚ | ~45 min |
-| 05 | Robust Tools: Idempotency, Timeouts, Validation | ⬚ | ~60 min |
-| 06 | MCP Fundamentals: Tools, Resources, Prompts, Sampling | ⬚ | ~60 min |
-| 07 | Build an MCP Server: Python + TypeScript | ⬚ | ~75 min |
-| 08 | Build an MCP Client | ⬚ | ~60 min |
-| 09 | MCP Transports: stdio, HTTP, Streamable | ⬚ | ~45 min |
-| 10 | MCP Resources & Prompts | ⬚ | ~45 min |
-| 11 | MCP Security: Tool Poisoning, OAuth 2.1, Prod Auth | ⬚ | ~60 min |
-| 12 | MCP Gateways & Registries | ⬚ | ~45 min |
-| 13 | Integrating Real Systems: DBs, SaaS APIs, Internal Tools | ⬚ | ~75 min |
-| 14 | Capstone: MCP Tool Ecosystem for a Domain | ⬚ | ~90 min |
+| 01 | Function Calling Fundamentals | ✅ | ~45 min |
+| 02 | Tool Schema Design: the Agent-Computer Interface | ✅ | ~60 min |
+| 03 | Parallel & Streaming Tool Calls | ✅ | ~45 min |
+| 04 | Structured Tool Outputs & Error Handling | ✅ | ~45 min |
+| 05 | Robust Tools: Idempotency, Timeouts, Validation | ✅ | ~60 min |
+| 06 | MCP Fundamentals: Tools, Resources, Prompts, Sampling | ✅ | ~60 min |
+| 07 | Build an MCP Server: Python + TypeScript | ✅ | ~75 min |
+| 08 | Build an MCP Client | ✅ | ~60 min |
+| 09 | MCP Transports: stdio, HTTP, Streamable | ✅ | ~45 min |
+| 10 | MCP Resources & Prompts | ✅ | ~45 min |
+| 11 | MCP Security: Tool Poisoning, OAuth 2.1, Prod Auth | ✅ | ~60 min |
+| 12 | MCP Gateways & Registries | ✅ | ~45 min |
+| 13 | Integrating Real Systems: DBs, SaaS APIs, Internal Tools | ✅ | ~75 min |
+| 14 | Capstone: MCP Tool Ecosystem for a Domain | ✅ | ~90 min |
 
 ---
 

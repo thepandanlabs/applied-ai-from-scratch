@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "10-mcp-resources-and-prompts",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your MCP server has a tool called get_database_schema() that returns the schema as a string. The AI client calls this tool at the start of every conversation. The schema never changes between deploys.",
+      "question": "What is the most significant cost of implementing this as a tool instead of a resource?",
+      "options": [
+        "A. Tools are slower than resources because they run in a separate thread.",
+        "B. Each schema retrieval requires an LLM API call to decide to invoke the tool, adding latency and cost for data the client could read directly.",
+        "C. Tools cannot return string data; they must return structured JSON.",
+        "D. The schema content will be truncated by the tool output size limit."
+      ],
+      "answer": "B",
+      "explanation": "A tool requires the LLM to decide to call it, which means an LLM API call just to fetch static data. A resource lets the client read the data directly without involving the LLM. For data that never changes and is always needed, the resource path eliminates at least one LLM round-trip per conversation."
+    },
+    {
+      "id": "c2",
+      "scenario": "You register a resource with URI template 'product://{product_id}'. A client calls session.read_resource('product://p999') for an ID that does not exist in the database.",
+      "question": "What should the resource handler return, and why?",
+      "options": [
+        "A. Raise a KeyError exception so the client knows the ID is invalid.",
+        "B. Return an empty string so the client receives no content for missing products.",
+        "C. Return a descriptive 'not found' message string so the LLM can reason about the absence.",
+        "D. Return None to signal the resource does not exist."
+      ],
+      "answer": "C",
+      "explanation": "Resources return content to be injected into LLM context. An empty string or None is silently injected with no signal that the resource was missing. A clear message like 'Product p999 not found.' lets the LLM reason about the absence and respond appropriately. Exceptions crash the server connection."
+    },
+    {
+      "id": "c3",
+      "scenario": "A team defines an MCP prompt template that summarizes customer support tickets. They want the prompt to include today's open ticket count for context. They fetch the ticket count once when the module loads and embed it in the template string at module import time.",
+      "question": "What goes wrong with this approach in production?",
+      "options": [
+        "A. Module-level fetches fail because the database is not connected at import time.",
+        "B. The ticket count is captured once at startup and never updated, so every rendered prompt shows the count from when the server last restarted.",
+        "C. Prompt arguments cannot be used alongside module-level data in the same template.",
+        "D. The template string becomes too large for the MCP protocol to transmit."
+      ],
+      "answer": "B",
+      "explanation": "Data fetched at module import time is fixed for the lifetime of the process. The prompt will always show the ticket count from startup, not the current count. Dynamic data must be fetched inside the prompt function body so it is retrieved fresh each time the prompt is rendered."
+    },
+    {
+      "id": "c4",
+      "scenario": "Three teams use the same MCP server. Each team has copy-pasted a 'summarize incident' prompt into their own client. Over six months, all three copies have diverged with different formats and different output requirements.",
+      "question": "How does defining the prompt on the MCP server instead solve the divergence problem?",
+      "options": [
+        "A. MCP prompts enforce a schema that prevents teams from modifying the prompt.",
+        "B. The prompt template lives on the server. All clients render the same template. Updating the server updates all clients simultaneously with no client redeploy.",
+        "C. MCP prompts are version-controlled by the protocol, so teams always see the latest version.",
+        "D. Server-side prompts cannot be copy-pasted, which forces teams to use the canonical version."
+      ],
+      "answer": "B",
+      "explanation": "When the prompt is defined on the MCP server, clients call get_prompt() at render time and receive the current server-side template. Changing the server template immediately affects all clients on their next call. Copy-pasted prompts in client code require each client to be updated separately."
+    },
+    {
+      "id": "c5",
+      "scenario": "You have product data that changes every few minutes as inventory is updated. You are deciding whether to expose this as a resource or a tool.",
+      "question": "Which is more appropriate and why?",
+      "options": [
+        "A. Resource, because resources are faster than tools.",
+        "B. Tool, because the LLM can pass parameters to filter the data and get only what it needs.",
+        "C. Resource, because resources are designed for frequently changing data.",
+        "D. Either works equally well for frequently changing data."
+      ],
+      "answer": "B",
+      "explanation": "Resources are most appropriate for read-only data that is stable enough for the client to cache or include wholesale. Frequently changing data with parameters (filter by category, sort by stock, etc.) is a better fit for a tool, where the LLM can request exactly what it needs at the moment it needs it. Resources also do not inherently signal staleness to the client."
+    },
+    {
+      "id": "c6",
+      "scenario": "A developer registers resources with URIs docs://schema, docs://changelog, and product://{id}. When they call list_resources() from a client, they see only docs://schema and docs://changelog. The product URI template is missing.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. URI templates are not included in list_resources() because the full list of possible URIs is infinite.",
+        "B. The product resource handler raised an exception during registration.",
+        "C. URI templates must be registered separately using list_resource_templates() not list_resources().",
+        "D. The product URI scheme is not recognized by the MCP protocol."
+      ],
+      "answer": "C",
+      "explanation": "The MCP spec separates static resources from resource templates. Static resources appear in list_resources(). URI template resources appear in list_resource_templates(). The client must call both to discover all available resources. This is not a bug; it reflects that templates represent a class of URIs, not a single URI."
+    },
+    {
+      "id": "c7",
+      "scenario": "You build an MCP server for a legal team. It has tools for searching case law, resources for jurisdiction guides, and a prompt for drafting contract clauses. A paralegal asks: 'Why does the AI sometimes use old jurisdiction information?' They use Claude Desktop, which loads resource content at session start.",
+      "question": "What is the root cause and the right fix?",
+      "options": [
+        "A. The resource data is wrong. Update the jurisdiction guides.",
+        "B. Claude Desktop cached the resource content at session start. Stale resources require either manual session restart or a resource subscription mechanism to push updates to the client.",
+        "C. Resources should not be used for legal data; use tools instead.",
+        "D. The LLM is ignoring the resource content and generating from training data."
+      ],
+      "answer": "B",
+      "explanation": "When a client reads a resource once at session start and caches it, updates to the server-side resource are invisible until the client re-reads it. For data that changes and where staleness is harmful, implement resource subscriptions (the client subscribes to change notifications) or use a tool that always fetches fresh data. Document the caching behavior to the client team."
+    }
+  ]
+}

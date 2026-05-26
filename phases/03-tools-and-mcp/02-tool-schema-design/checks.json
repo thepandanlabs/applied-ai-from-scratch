@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "02-tool-schema-design",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "An agent has a tool named `handle_customer_request` with a description: 'Handles customer requests.' It accepts a `request_type` parameter (string, no enum) with options like 'refund', 'lookup', 'cancel', 'update_address'. The LLM calls it with `request_type: 'process_return'` which maps to your internal 'refund' type but isn't in your validation list.",
+      "question": "Which two schema design rules are violated here, and which fix has the highest impact?",
+      "options": [
+        "A. Rules 1 and 4: the tool does too many things (one tool, one purpose) and the string field needs an enum. Splitting into separate tools has the highest impact because each tool gets a clear, specific description.",
+        "B. Rules 2 and 5: parameter names are ambiguous and descriptions lack examples. Add examples to the description.",
+        "C. Rules 3 and 4: request_type should be optional with a default, and an enum should be added. Making request_type optional is the highest-impact fix.",
+        "D. Rules 1 and 5: the tool name is vague and descriptions lack examples. Renaming the tool has the highest impact."
+      ],
+      "answer": "A",
+      "explanation": "Rule 1 (one tool, one purpose): a tool that handles refunds, lookups, cancellations, and address updates is four tools in one. The LLM cannot reason clearly about when to call it. Rule 4 (enum constraints): 'request_type' accepts only a fixed set of values but has no enum, so the LLM generates natural-language variants like 'process_return'. Splitting into separate tools is the highest-impact fix because each tool then has an unambiguous description and purpose."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your tool schema for `get_user` has a required parameter `uid` (string) with description 'user id'. In production logs you see the LLM passing `user_id`, `userId`, and `id` interchangeably. Calls fail because your dispatch layer does a strict key lookup for `uid`.",
+      "question": "What is the root cause, and what is the correct fix?",
+      "options": [
+        "A. The LLM is choosing random parameter names; fix by adding a strict JSON schema validator in the dispatch layer",
+        "B. 'uid' is an abbreviation that the LLM doesn't recognize as a convention; rename the parameter to 'user_id' which matches natural language and common API conventions",
+        "C. The description 'user id' should say 'uid: the user id field'; adding the parameter name to the description helps",
+        "D. Add all three variants (uid, user_id, userId) as accepted parameter names in the dispatch layer"
+      ],
+      "answer": "B",
+      "explanation": "Rule 2: parameter names must match natural language. 'uid' is an internal abbreviation. The LLM maps the user's words ('user', 'account', 'customer') to parameter names using its language understanding. 'user_id' is the natural form that matches API conventions and the LLM's training. Renaming is always better than writing adapter code to accept multiple variants."
+    },
+    {
+      "id": "c3",
+      "scenario": "A tool has `sort_order: string` with description 'The sort direction.' without an enum. In 1,000 production calls, the LLM passes: 'ascending' (312 times), 'asc' (289 times), 'descending' (198 times), 'desc' (144 times), 'newest' (57 times). Your backend only accepts 'asc' and 'desc'.",
+      "question": "What does this distribution tell you about schema design, and what is the correct fix?",
+      "options": [
+        "A. The LLM is unpredictable and cannot reliably use string parameters; replace with a boolean `ascending: bool`",
+        "B. The LLM generates natural-language variants when no enum constrains the values; add `enum: ['asc', 'desc']` and update the description to show 'asc' and 'desc' as the exact expected values",
+        "C. Add a normalization function in the dispatch layer that maps all variants to 'asc' or 'desc'",
+        "D. The description should list all accepted variants so the LLM knows which ones work"
+      ],
+      "answer": "B",
+      "explanation": "Without an enum, the LLM uses whatever natural-language form seems appropriate. The distribution shows it's internally consistent (it picks one form per session) but the form varies. The enum constraint makes the contract explicit: only 'asc' and 'desc' are valid. The LLM respects enum constraints reliably. Option C (normalization in dispatch) treats a schema problem as a code problem and creates a hidden mapping that future engineers won't expect."
+    },
+    {
+      "id": "c4",
+      "scenario": "A `create_ticket` tool has these required fields: `title`, `description`, `priority`, `assignee_id`, `team_id`, `due_date`, `tags`. In your logs, 60% of tool calls fail validation because the LLM omits `assignee_id` or `due_date` in most user requests.",
+      "question": "What schema design rule is violated, and what is the fix?",
+      "options": [
+        "A. Rule 5: descriptions are missing; add descriptions so the LLM knows what to put in each field",
+        "B. Rule 3: fields the LLM cannot infer from the user's message should be optional with documented defaults, not required",
+        "C. Rule 1: this tool is too complex; split it into create_ticket_basic and create_ticket_full",
+        "D. Rule 4: priority and tags need enum constraints to reduce validation failures"
+      ],
+      "answer": "B",
+      "explanation": "Rule 3: only include required fields that the tool cannot function without. `assignee_id` and `due_date` are not present in most 'create a ticket for X' requests. Making them optional with defaults (assignee defaults to null = unassigned, due_date defaults to null = no deadline) allows the tool to succeed when the user doesn't provide them, while still accepting them when they do."
+    },
+    {
+      "id": "c5",
+      "scenario": "You add a `validate_tool_call` function to your dispatch layer. In testing, it catches a call where `max_results` is passed as the string '10' instead of the integer 10. Your search API would have silently accepted the string and returned no results (its internal cast fails silently).",
+      "question": "What does this reveal about the value of the validator, and at what layer should validation happen?",
+      "options": [
+        "A. The validator is unnecessary because JSON types are always correct when parsed from the LLM's output",
+        "B. The validator catches type coercion failures that would otherwise cause silent wrong behavior; validation should happen at the dispatch layer before the function is called, not at the API layer",
+        "C. The fix is to make the search API handle both strings and integers; the schema should not enforce strict types",
+        "D. The LLM should be prompted to always use integer literals; prompt engineering removes the need for validation"
+      ],
+      "answer": "B",
+      "explanation": "Silent failures (wrong type accepted, wrong result returned, no error raised) are more dangerous than loud failures. The validator at the dispatch layer catches the error before execution and returns a structured error that the LLM can reason about. Relying on the downstream API to catch type errors is fragile: not all APIs validate strictly, and those that do return raw error messages that the LLM may misinterpret."
+    },
+    {
+      "id": "c6",
+      "scenario": "You write a `prompt-tool-schema-review.md` prompt and run it on your 8 production tool schemas before a major release. It finds 3 HIGH severity findings across 2 schemas. A colleague says 'these are minor nit-picks, ship it.' You disagree.",
+      "question": "What is the most precise argument for fixing HIGH severity findings before shipping?",
+      "options": [
+        "A. HIGH severity findings are defined as issues that cause incorrect or failed tool calls in production, not style preferences; shipping them guarantees production failures",
+        "B. Fixing schemas after shipping requires a redeployment; it's always cheaper to fix before launch",
+        "C. The prompt may be wrong; HIGH findings should be reviewed by a human before treating them as blockers",
+        "D. HIGH severity findings also affect cost; bad schemas generate more tokens and more retries"
+      ],
+      "answer": "A",
+      "explanation": "HIGH severity is specifically defined as issues that will cause incorrect or failed tool calls in production. This is not a style issue. Examples: an abbreviated parameter name that the LLM consistently gets wrong, a categorical string without an enum that causes malformed values, a missing required field. These are functional defects, not preferences. The colleague's objection conflates severity labels with opinion."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your agent has two tools: `search_knowledge_base(query)` and `search_web(query)`. Both have identical descriptions: 'Search for information.' In production the LLM alternates randomly between them regardless of context. Users complain that internal policy questions are going to web search instead of the knowledge base.",
+      "question": "What is the schema fix, and which rule does it invoke?",
+      "options": [
+        "A. Rule 1: merge the two tools into one `search(source, query)` tool to avoid ambiguity",
+        "B. Rule 5: both tools need descriptions that explain when to use each one specifically, with examples of the type of query each handles",
+        "C. Rule 2: rename the parameters to `kb_query` and `web_query` to distinguish them",
+        "D. Rule 3: make `query` optional in one tool so the LLM can distinguish them by required fields"
+      ],
+      "answer": "B",
+      "explanation": "Rule 5: descriptions must tell the LLM when to call this tool, not just what it does. Identical descriptions give the LLM no decision signal. Fix: `search_knowledge_base` description should say 'Search the internal company knowledge base for policies, procedures, and internal documentation. Use for questions about internal processes, HR policies, or product specifications.' And `search_web` should say 'Search the public internet for current events, external pricing, public documentation. Use only when the answer is unlikely to be in internal documents.'"
+    },
+    {
+      "id": "c8",
+      "scenario": "A junior engineer reviews a tool schema and says: 'The Pydantic model generates the schema automatically, so I don't need to write descriptions. The field names are self-explanatory.' The Pydantic model has fields: `q: str`, `n: int`, `asc: bool`, `cat: Optional[str]`.",
+      "question": "What is wrong with this reasoning?",
+      "options": [
+        "A. Pydantic-generated schemas never include descriptions; you must always write them manually in a separate JSON file",
+        "B. Pydantic automates schema generation but the field names are abbreviations that violate Rule 2; and 'self-explanatory' to the engineer does not mean the LLM will use them correctly - descriptions with examples are required",
+        "C. The schema generation is correct; the problem is that Pydantic's JSON Schema format is not compatible with the Anthropic API",
+        "D. Self-explanatory names are fine for simple fields; only complex nested objects need descriptions"
+      ],
+      "answer": "B",
+      "explanation": "Two problems: (1) The field names violate Rule 2. 'q', 'n', 'asc', 'cat' are abbreviations that the LLM may not reliably map to the correct values. Pydantic does not fix naming conventions; it only automates schema structure. (2) 'Self-explanatory' is an engineer's judgment about engineer-readable code, not about LLM-readable schemas. The LLM needs concrete examples ('blue running shoes', 'footwear') not just names, because names tell it the type, not the expected content."
+    }
+  ]
+}

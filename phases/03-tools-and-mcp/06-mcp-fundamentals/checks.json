@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "06-mcp-fundamentals",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your company has 4 AI clients (Claude Desktop, an internal copilot, a customer portal, and a CLI tool) and 6 capability providers (CRM, ticketing system, knowledge base, calendar, file storage, and analytics). Without MCP, every integration is custom.",
+      "question": "How many custom integrations does MCP reduce the maximum from, and to what minimum?",
+      "options": [
+        "A. From 10 (4+6) to 4 (number of clients)",
+        "B. From 24 (4x6) to 10 (4+6)",
+        "C. From 24 (4x6) to 6 (number of providers)",
+        "D. From 24 (4x6) to 1 (universal connector)"
+      ],
+      "answer": "B",
+      "explanation": "Without a standard, each of 4 clients needs a custom adapter for each of 6 providers: 4x6=24. With MCP, each client implements MCP once (4 client implementations) and each provider implements MCP once (6 server implementations): 4+6=10. Each new client or provider adds 1 implementation, not N."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building an MCP server for your product catalog database. You want to expose two capabilities: (1) a way to search for products given a query string, and (2) a way to read a specific product's full details by its ID.",
+      "question": "Which primitives should you use for each capability?",
+      "options": [
+        "A. Both as Tools, because both require the server to process a request",
+        "B. Search as a Tool, product details as a Resource",
+        "C. Both as Resources, because both return data",
+        "D. Search as a Prompt, product details as a Resource"
+      ],
+      "answer": "B",
+      "explanation": "Search takes a dynamic query and cannot be addressed by a stable URI, making it a Tool. Product details for a known ID are stable, addressable (e.g. product://catalog/P42), listable, and safely pre-fetchable, making them a Resource. Resources are for stable, addressable data; Tools are for on-demand actions with variable inputs."
+    },
+    {
+      "id": "c3",
+      "scenario": "A developer builds an MCP server. The server includes a 'generate_report' capability. Inside the handler, the server calls the LLM to write a narrative summary before returning the report.",
+      "question": "Which MCP primitive is designed for this server-initiated LLM call?",
+      "options": [
+        "A. Tool, because the server is executing an action",
+        "B. Resource, because the server is returning generated content",
+        "C. Sampling, because the server is asking the host to run the LLM on its behalf",
+        "D. Prompt, because the server is generating text"
+      ],
+      "answer": "C",
+      "explanation": "Sampling is the only MCP primitive that flows from server to host. The server sends a sampling/createMessage request to the host, which runs the LLM and returns the result. This is the standard way for a server to invoke inference without having its own LLM connection."
+    },
+    {
+      "id": "c4",
+      "scenario": "An MCP host sends the following message to a server: {\"jsonrpc\": \"2.0\", \"method\": \"notifications/initialized\", \"params\": {}}. The server receives it.",
+      "question": "What should the server do?",
+      "options": [
+        "A. Send a response with id: null to acknowledge the notification",
+        "B. Process it as a normal request and respond with the server's initialized state",
+        "C. Record that the handshake is complete and send no response (notifications have no id)",
+        "D. Respond with an error because notifications are not part of the MCP protocol"
+      ],
+      "answer": "C",
+      "explanation": "JSON-RPC notifications have no id field and require no response. The notifications/initialized message signals that the host has received the server's initialize response and the handshake is complete. The server processes it internally and sends nothing back."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your team maintains prompt templates for customer support scenarios. You want LLMs using your MCP server to be able to request these templates with parameters filled in. The templates change every quarter as policies update.",
+      "question": "Which primitive best fits this use case?",
+      "options": [
+        "A. Tools, because the server needs to fill in parameters before returning",
+        "B. Resources, because the templates are data that can be addressed by URI",
+        "C. Prompts, because they are reusable templates the server owns and can fill with parameters",
+        "D. Sampling, because the server needs to generate the filled template using the LLM"
+      ],
+      "answer": "C",
+      "explanation": "Prompts are MCP's primitive for reusable prompt templates that the server owns and can parameterize. When the host calls prompts/get with arguments, the server returns the filled message array. This lets the server team update templates without changing the host application. Resources would work for static content but Prompts are the semantic fit for LLM-targeted templates."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are reading MCP documentation and see that the initialize response includes a 'capabilities' object with keys like {\"tools\": {\"listChanged\": false}, \"resources\": {\"subscribe\": false}}.",
+      "question": "What is the purpose of this capabilities negotiation step?",
+      "options": [
+        "A. It tells the host which programming language the server is written in",
+        "B. It lets the host know which primitives the server supports and which optional features (like subscriptions) are enabled, so the host does not call methods the server cannot handle",
+        "C. It authenticates the server to the host using a capability token",
+        "D. It specifies the maximum number of concurrent tool calls the server accepts"
+      ],
+      "answer": "B",
+      "explanation": "Capabilities negotiation lets host and server agree on which features are available before any capability calls are made. If a server declares resources.subscribe: false, the host knows not to send resources/subscribe requests. This prevents runtime errors from calling unsupported methods."
+    },
+    {
+      "id": "c7",
+      "scenario": "A team is building integrations for both Claude Desktop and an OpenAI-based internal copilot. They want to expose the same database query capabilities to both.",
+      "question": "What is the correct approach with MCP?",
+      "options": [
+        "A. Build one MCP server; both Claude Desktop and the OpenAI copilot connect to it as MCP clients",
+        "B. Build two MCP servers, one optimized for Claude's tool schema format and one for OpenAI's",
+        "C. MCP only works with Anthropic models; the OpenAI copilot needs a separate REST API",
+        "D. Build one MCP server for Claude Desktop and use function calling directly for the OpenAI copilot"
+      ],
+      "answer": "A",
+      "explanation": "MCP is model-agnostic. Any AI client that implements the MCP host protocol can connect to any MCP server. The team builds one server with their database capabilities; both Claude Desktop and the OpenAI copilot (if it supports MCP) connect to it. This is the core value of a standard protocol."
+    },
+    {
+      "id": "c8",
+      "scenario": "A developer wraps their entire internal API as a single MCP Tool called 'api_call' with parameters for the endpoint path, method, and body. It works technically.",
+      "question": "What does this approach sacrifice compared to using the appropriate MCP primitives?",
+      "options": [
+        "A. Nothing; tools can represent any capability and the LLM will figure out the rest",
+        "B. The host cannot discover individual capabilities, pre-fetch data as resources, or offer prompt templates as a catalog - all capabilities are opaque behind one generic tool",
+        "C. The server will fail to initialize because tools must have specific names matching predefined categories",
+        "D. Performance, because a single tool is slower than multiple specialized tools"
+      ],
+      "answer": "B",
+      "explanation": "A single generic 'api_call' tool hides capability semantics. The host cannot list safe read-only resources for pre-fetching, cannot show users a catalog of prompt templates, and the LLM must guess how to construct API calls instead of using typed schemas. MCP primitives provide semantic signal that enables richer host behavior."
+    }
+  ]
+}

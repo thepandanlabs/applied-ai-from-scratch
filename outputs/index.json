@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated": "2026-05-25",
-  "total": 46,
+  "generated": "2026-05-26T07:12:51Z",
+  "total": 60,
   "artifacts": [
     {
       "phase": 2,
@@ -416,6 +416,160 @@
       "file": "phases/05-evaluation-and-eval-driven-development/14-capstone-eval-first/outputs/runbook-eval-first-development.md",
       "name": "runbook-eval-first-development",
       "description": "7-step runbook for eval-first development of any AI feature: success criteria, golden set, scorers, CI thresholds, and online eval sampling strategy."
+    },
+    {
+      "phase": "03",
+      "lesson": "01",
+      "name": "skill-function-calling",
+      "file": "phases/03-tools-and-mcp/01-function-calling-fundamentals/outputs/skill-function-calling.md",
+      "tags": [
+        "tools",
+        "function-calling",
+        "anthropic"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "02",
+      "name": "prompt-tool-schema-review",
+      "file": "phases/03-tools-and-mcp/02-tool-schema-design/outputs/prompt-tool-schema-review.md",
+      "tags": [
+        "tools",
+        "schema",
+        "design"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "03",
+      "name": "skill-parallel-tool-calls",
+      "file": "phases/03-tools-and-mcp/03-parallel-streaming-tool-calls/outputs/skill-parallel-tool-calls.md",
+      "tags": [
+        "tools",
+        "parallel",
+        "streaming"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "04",
+      "name": "skill-tool-output-contract",
+      "file": "phases/03-tools-and-mcp/04-structured-tool-outputs/outputs/skill-tool-output-contract.md",
+      "tags": [
+        "tools",
+        "structured-output",
+        "pydantic"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "05",
+      "name": "skill-robust-tool-design",
+      "file": "phases/03-tools-and-mcp/05-robust-tools/outputs/skill-robust-tool-design.md",
+      "tags": [
+        "tools",
+        "idempotency",
+        "reliability"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "06",
+      "name": "skill-mcp-mental-model",
+      "file": "phases/03-tools-and-mcp/06-mcp-fundamentals/outputs/skill-mcp-mental-model.md",
+      "tags": [
+        "mcp",
+        "fundamentals"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "07",
+      "name": "skill-mcp-server-template",
+      "file": "phases/03-tools-and-mcp/07-build-mcp-server/outputs/skill-mcp-server-template.md",
+      "tags": [
+        "mcp",
+        "server",
+        "python",
+        "typescript"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "08",
+      "name": "skill-mcp-client",
+      "file": "phases/03-tools-and-mcp/08-build-mcp-client/outputs/skill-mcp-client.md",
+      "tags": [
+        "mcp",
+        "client"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "09",
+      "name": "skill-mcp-transport-selector",
+      "file": "phases/03-tools-and-mcp/09-mcp-transports/outputs/skill-mcp-transport-selector.md",
+      "tags": [
+        "mcp",
+        "transport",
+        "stdio",
+        "http"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "10",
+      "name": "skill-mcp-resources-prompts",
+      "file": "phases/03-tools-and-mcp/10-mcp-resources-and-prompts/outputs/skill-mcp-resources-prompts.md",
+      "tags": [
+        "mcp",
+        "resources",
+        "prompts"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "11",
+      "name": "skill-mcp-security-checklist",
+      "file": "phases/03-tools-and-mcp/11-mcp-security/outputs/skill-mcp-security-checklist.md",
+      "tags": [
+        "mcp",
+        "security",
+        "oauth"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "12",
+      "name": "skill-mcp-gateway",
+      "file": "phases/03-tools-and-mcp/12-mcp-gateways-and-registries/outputs/skill-mcp-gateway.md",
+      "tags": [
+        "mcp",
+        "gateway",
+        "registry"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "13",
+      "name": "skill-real-system-integration",
+      "file": "phases/03-tools-and-mcp/13-integrating-real-systems/outputs/skill-real-system-integration.md",
+      "tags": [
+        "mcp",
+        "integration",
+        "production"
+      ]
+    },
+    {
+      "phase": "03",
+      "lesson": "14",
+      "name": "runbook-mcp-ecosystem",
+      "file": "phases/03-tools-and-mcp/14-capstone-mcp-ecosystem/outputs/runbook-mcp-ecosystem.md",
+      "tags": [
+        "mcp",
+        "capstone",
+        "runbook"
+      ]
     }
   ]
 }
