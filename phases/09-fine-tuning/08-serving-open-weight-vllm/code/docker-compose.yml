@@ -1,0 +1,81 @@
+version: "3.9"
+
+# vLLM inference server with OpenAI-compatible API
+# Requires: NVIDIA GPU with CUDA support and Docker with GPU passthrough
+#
+# Usage:
+#   docker compose up -d                  # start server in background
+#   docker compose logs -f                # stream logs
+#   docker compose down                   # stop server
+#
+# Client connects at: http://localhost:8000/v1
+# Health check:       curl http://localhost:8000/health
+# Available models:   curl http://localhost:8000/v1/models
+
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.6.3
+    container_name: vllm-server
+    ipc: host
+    ports:
+      - "8000:8000"
+
+    # GPU configuration - requires nvidia-container-toolkit
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # Model configuration
+    # Change --model to any HuggingFace model ID
+    # Qwen2.5-1.5B-Instruct is a good 1.5B model for CPU-only testing too
+    command: >
+      --model Qwen/Qwen2.5-1.5B-Instruct
+      --host 0.0.0.0
+      --port 8000
+      --max-model-len 4096
+      --max-num-seqs 32
+      --dtype float16
+
+    # HuggingFace model cache - prevents re-downloading on restart
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+
+    # Memory limits - tune based on your GPU VRAM
+    # A100 80GB: remove limits
+    # RTX 4090 24GB: set to 22g
+    # CPU-only (slow, dev only): comment out the deploy block above
+    environment:
+      - HF_HUB_ENABLE_HF_TRANSFER=1    # faster downloads
+      - VLLM_WORKER_MULTIPROC_METHOD=spawn
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s   # allow time for model loading
+
+    restart: unless-stopped
+
+volumes:
+  hf_cache:
+    name: vllm-hf-cache
+
+# ---
+# Alternative models to swap in (change --model above):
+#
+# Larger / more capable:
+#   meta-llama/Llama-3.2-3B-Instruct        (3B, requires GPU)
+#   Qwen/Qwen2.5-7B-Instruct                (7B, requires 16GB+ VRAM)
+#   mistralai/Mistral-7B-Instruct-v0.3      (7B)
+#
+# Smaller / CPU-friendly (slow but runnable without GPU):
+#   Qwen/Qwen2.5-0.5B-Instruct             (0.5B)
+#
+# Fine-tuned checkpoints (your own):
+#   --model /path/to/checkpoint             (mount volume with model files)
+# ---

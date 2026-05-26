@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "09-capstone-finetune-roi",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team wants to fine-tune a model to make their chatbot 'more helpful in general.' They have a large dataset of chat logs. They do not have a specific metric they are trying to improve.",
+      "question": "What should happen before any data preparation or training begins?",
+      "options": [
+        "A. Start with data cleaning since data quality is always the first bottleneck",
+        "B. Define a specific, measurable success metric and establish a baseline before proceeding",
+        "C. Run a small fine-tuning experiment first to see what improvement looks like, then define the metric",
+        "D. Fine-tuning is not appropriate here; use RLHF instead for general helpfulness improvements"
+      ],
+      "answer": "B",
+      "explanation": "Fine-tuning without a measurable success metric produces a model you cannot evaluate, defend to stakeholders, or monitor in production. The decision ladder from this lesson makes this explicit: you must be able to measure whether the fine-tuned model is actually better before starting. 'More helpful in general' is not a metric."
+    },
+    {
+      "id": "c2",
+      "scenario": "A team has completed fine-tuning on a medical NER model. The fine-tuned model achieves 87% valid JSON rate and extracts an average of 4.2 entities per note. The prompt-engineered baseline achieves 85% valid JSON and 4.0 entities. The team asks if they should deploy.",
+      "question": "Based on the go/no-go criteria from this lesson, what is the correct decision?",
+      "options": [
+        "A. Deploy; any improvement over the baseline justifies deployment",
+        "B. Do not deploy; the fine-tuned model does not beat the prompt-engineered baseline by 5 percentage points on the primary metric",
+        "C. Deploy; a 2-point improvement multiplied by high volume will produce significant value",
+        "D. Run another round of fine-tuning with more epochs before making a decision"
+      ],
+      "answer": "B",
+      "explanation": "The go/no-go criteria require the fine-tuned model to beat prompt-engineering by at least 5 percentage points. A 2-point improvement (85% to 87%) does not clear this threshold. When the gap is this small, further prompt engineering is almost always the better investment: lower cost, no maintenance overhead, and no fine-tuning infrastructure to operate."
+    },
+    {
+      "id": "c3",
+      "scenario": "A fine-tuning project has a total project cost of $340 (teacher generation + training + evaluation). The baseline model costs $820/month to run. The fine-tuned model costs $65/month. What is the payback period and go/no-go recommendation on cost grounds?",
+      "question": "What is the payback period and does it meet the project's 3-month target?",
+      "options": [
+        "A. About 0.45 months; clear GO on cost grounds",
+        "B. About 2.8 months; borderline but within the 3-month target",
+        "C. About 4.1 months; no-go on cost grounds",
+        "D. Cannot be calculated without knowing the number of training epochs"
+      ],
+      "answer": "A",
+      "explanation": "Monthly savings = $820 - $65 = $755. Payback = $340 / $755 = 0.45 months, approximately 13-14 days. This is well within the 3-month target. On cost grounds alone, this is a strong GO. The remaining go/no-go dimensions (accuracy improvement, safety tests, latency) still need to pass before deployment."
+    },
+    {
+      "id": "c4",
+      "scenario": "A fine-tuned model has been in production for 3 months. Weekly accuracy checks show: week 1: 91%, week 2: 90%, week 3: 89%, week 4: 88%, week 5: 85%, week 6: 83%. No code changes were made.",
+      "question": "What does this pattern indicate, and what action should you take?",
+      "options": [
+        "A. This is normal variance; fine-tuned models fluctuate 5-8 points week to week",
+        "B. The model weights are corrupting over time; redeploy from the saved checkpoint",
+        "C. Input distribution has shifted over the 6 weeks; the current inputs are outside the model's training distribution; re-run the distillation pipeline with current production examples",
+        "D. The model needs more training epochs; submit a new fine-tuning job on the original dataset"
+      ],
+      "answer": "C",
+      "explanation": "A gradual accuracy decline of 8 percentage points over 6 weeks with no code changes is the classic signature of input distribution shift. The fine-tuned model was trained on data that looks different from what is arriving now. Re-distilling using fresh production examples re-aligns the student model with the current distribution. Retraining on the original dataset would not help."
+    },
+    {
+      "id": "c5",
+      "scenario": "After a fine-tuning job completes, an engineer sends one test prompt to the new model. It returns a perfect, well-formatted JSON response. The engineer tells the team the model is ready to deploy.",
+      "question": "What should the team do before proceeding?",
+      "options": [
+        "A. Deploy at 5% traffic and monitor; one successful test is enough to validate format",
+        "B. Run the full three-way evaluation on at least 50 held-out examples before making a deployment decision",
+        "C. Send 5 more test prompts; if all 5 pass, that is sufficient evidence",
+        "D. Run a cost analysis; if the cost projections are positive, one successful test is sufficient"
+      ],
+      "answer": "B",
+      "explanation": "The lesson is explicit on this: one prompt is anecdote, not evidence. The capstone evaluation criteria require numeric scores for all three conditions (baseline, prompt-engineered, fine-tuned) on at least 50 held-out examples. A model that looks great on one prompt may fail on edge cases, different entity types, or malformed inputs that the test prompt did not cover."
+    },
+    {
+      "id": "c6",
+      "scenario": "During fine-tuning evaluation, you discover the fine-tuned model achieves 93% accuracy on your primary metric (a 12-point improvement over the prompt-engineered baseline) but one of its outputs on a safety test contains a medical dosage recommendation that should not be provided without a physician.",
+      "question": "What is the correct go/no-go decision?",
+      "options": [
+        "A. GO; a 12-point accuracy improvement justifies the deployment and the safety issue can be addressed with a disclaimer",
+        "B. NO-GO; any safety regression is a hard no-go regardless of accuracy improvement; audit training data before resubmitting",
+        "C. GO, but add a content filter in front of the model to catch safety violations in production",
+        "D. GO at 5% traffic; monitor for safety violations and roll back if more appear"
+      ],
+      "answer": "B",
+      "explanation": "The go/no-go criteria are explicit: any regression on safety tests is a hard no-go with no exceptions. Accuracy improvements do not override safety failures. The correct path is to audit the training data for examples that could have taught this behavior, remove or correct them, re-filter with a safety-aware judge, and retrain before reconsidering deployment."
+    },
+    {
+      "id": "c7",
+      "scenario": "A team stores the fine-tuned model ID as a hardcoded string in their API handler code. Three months later, the model starts degrading due to distribution shift. The team needs to roll back to the baseline model quickly.",
+      "question": "What is the problem with hardcoding the model ID, and what is the correct pattern?",
+      "options": [
+        "A. Hardcoding is acceptable; a code deploy to change the model ID takes less than 5 minutes",
+        "B. Hardcoding the model ID means a rollback requires a code change and a full deployment cycle; the model ID should be stored in an environment variable so rollback is a configuration change with no deployment",
+        "C. Hardcoding is preferred; it makes the model ID auditable in version control",
+        "D. The issue is not the hardcoding but the lack of a second fine-tuned model to roll back to"
+      ],
+      "answer": "B",
+      "explanation": "In a production incident, requiring a code change plus deployment cycle to roll back a degrading model adds unnecessary risk and delay. Storing the model ID in an environment variable allows rollback by changing a configuration value and restarting the service, with no code change required. This is the pattern the runbook recommends: configurable model IDs with the baseline model ID also preserved as a fallback."
+    },
+    {
+      "id": "c8",
+      "scenario": "A team completed all five capstone evaluation checks: keep rate above 60%, a three-way eval on 75 held-out examples showing the fine-tuned model beats prompt-engineering by 11 points, no safety regressions, positive ROI with 0.8-month payback, and a cron-based drift monitoring script deployed.",
+      "question": "Which of the five capstone completion criteria have they satisfied?",
+      "options": [
+        "A. Only 1: they need a written go/no-go decision with numeric criteria, which was not mentioned",
+        "B. All 5: dataset quality check, eval baseline established, positive ROI, explicit go/no-go decision, and drift monitoring plan",
+        "C. 4 of 5: they are missing the explicit written go/no-go decision",
+        "D. 3 of 5: they are missing both the written go/no-go decision and evidence that the fine-tuned model beats the baseline by at least 5 points on a different metric"
+      ],
+      "answer": "C",
+      "explanation": "The lesson's five completion criteria are: (1) dataset quality check, (2) eval baseline established with numeric scores, (3) positive ROI, (4) explicit written go/no-go decision with numeric criteria, and (5) drift monitoring plan. The scenario covers 1, 2, 3, and 5. Criterion 4 requires a written decision citing numeric evidence, not just the existence of good numbers. 'Looks good' is explicitly not sufficient."
+    }
+  ]
+}

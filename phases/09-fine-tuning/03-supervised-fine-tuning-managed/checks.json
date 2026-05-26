@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "03-supervised-fine-tuning-managed",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team has 200 curated training examples, a tight 2-week timeline, and no dedicated ML infrastructure. The training data is anonymized and contains no regulated PII. You need a consistent JSON output format from a smaller model.",
+      "question": "Which fine-tuning approach fits this situation best?",
+      "options": [
+        "A. Self-hosted LoRA on a rented GPU cluster, because managed APIs are too expensive.",
+        "B. Managed fine-tuning API, because there is no infrastructure to provision and the data has no residency requirement.",
+        "C. Skip fine-tuning and use few-shot prompting, because 200 examples is not enough.",
+        "D. Train from scratch on a small open-weight model, because you need full control."
+      ],
+      "answer": "B",
+      "explanation": "Managed APIs are the correct starting point when data has no residency requirement, there is no existing GPU infrastructure, and the timeline is short. 200 curated examples is sufficient for behavior fine-tuning. Self-hosted LoRA adds infrastructure overhead that is not justified here."
+    },
+    {
+      "id": "c2",
+      "scenario": "You upload a JSONL file to the OpenAI fine-tuning API. The job starts, runs for 90 minutes, and then fails with an error indicating the training file is malformed. You check the file and find that 15 lines have the last message role set to 'user' instead of 'assistant'.",
+      "question": "What process failure allowed this to happen, and how do you prevent it next time?",
+      "options": [
+        "A. The API should have caught this during upload; file a bug with OpenAI.",
+        "B. The dataset pipeline's deduplication step should have removed these lines.",
+        "C. validate_dataset() was not run before upload; adding pre-upload validation catches role sequence errors immediately.",
+        "D. The training dataset was too small; adding more examples would dilute the bad lines."
+      ],
+      "answer": "C",
+      "explanation": "Pre-upload validation checks role sequences and catches the 'last message must be assistant' requirement in seconds. Running validate_dataset() before every upload makes this failure impossible. Deduplication does not check role order, and dataset size has no effect on format errors."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are about to submit a fine-tuning job with 400 examples, average 200 tokens per example, using gpt-4o-mini-2024-07-18 at $3.00 per 1M training tokens, for 3 epochs.",
+      "question": "What is the approximate estimated training cost?",
+      "options": [
+        "A. Less than $1.00",
+        "B. Between $1.00 and $5.00",
+        "C. Between $5.00 and $20.00",
+        "D. More than $20.00"
+      ],
+      "answer": "A",
+      "explanation": "Tokens per epoch: 400 examples * 200 tokens * 1.3 overhead = ~104,000. Total tokens: 104,000 * 3 epochs = 312,000. Cost: (312,000 / 1,000,000) * $3.00 = $0.94. Fine-tuning a well-curated small dataset is very cheap. The expensive resource is engineer time on dataset curation, not the API cost."
+    },
+    {
+      "id": "c4",
+      "scenario": "You submit a fine-tuning job and your wait_for_job() function polls every 30 seconds. After 40 minutes the job is still showing status 'running'. Your script is set to timeout after 1 hour.",
+      "question": "What is the correct behavior while the job is running?",
+      "options": [
+        "A. Cancel the job and resubmit with fewer epochs to reduce training time.",
+        "B. Continue polling at the configured interval, printing status and any new events until the terminal states (succeeded, failed, cancelled) are reached.",
+        "C. Increase the poll interval to 5 minutes to avoid hitting rate limits.",
+        "D. Assume the job failed silently and start a new one."
+      ],
+      "answer": "B",
+      "explanation": "Fine-tuning jobs take 30 minutes to several hours depending on dataset size and queue depth. The correct behavior is to keep polling at the configured interval and print events as they arrive. Canceling a running job wastes the training cost already spent. Do not assume failure - always retrieve the actual status from the API."
+    },
+    {
+      "id": "c5",
+      "scenario": "A fine-tuning job completes successfully. The API returns a model ID in the format ft:gpt-4o-mini-2024-07-18:your-org::a1b2c3d4. You run a quick test and the output looks promising. Your terminal session ends before you save the model ID anywhere.",
+      "question": "What is the consequence, and what should the correct workflow have done?",
+      "options": [
+        "A. No consequence - the model ID appears in the OpenAI dashboard and can be retrieved at any time.",
+        "B. The model is deleted after 24 hours if not used, so you must retrain immediately.",
+        "C. The model ID is hard to find after the fact; the correct workflow saves the fine_tuned_model value to a config file or secret store before the session ends.",
+        "D. The model ID is embedded in the training file name, so you can reconstruct it from the upload."
+      ],
+      "answer": "C",
+      "explanation": "While the model may technically be retrievable from the dashboard, many teams have repeated expensive fine-tuning runs because the model ID was only printed to a terminal log. The correct workflow saves fine_tuned_model immediately when the job succeeds - to a config file, environment variable, or secret store. Never rely on scrolling back through terminal output."
+    },
+    {
+      "id": "c6",
+      "scenario": "You deploy a fine-tuned model and after one week of production use, your team notices it performs about the same as the base model with a well-crafted system prompt. The fine-tuning run cost $2 and took 45 minutes. Your manager wants to immediately run another fine-tuning job with 3x more data.",
+      "question": "What should you do first before authorizing more training?",
+      "options": [
+        "A. Accept the result - fine-tuned models always perform about the same as the base model.",
+        "B. Diagnose the root cause: review training examples for quality issues, check whether the eval metric matches the production behavior you care about, and verify the fine-tune is being called with the same system prompt used in training.",
+        "C. Run the new job with 3x data immediately - more data always improves performance.",
+        "D. Switch to a larger base model - gpt-4o instead of gpt-4o-mini."
+      ],
+      "answer": "B",
+      "explanation": "More data does not fix a quality problem - it amplifies it. Before adding data, diagnose: are training examples actually high quality? Is the eval metric measuring what matters in production? Is the production system prompt identical to the one in training data? A fine-tune that matches baseline performance usually has a dataset quality or eval alignment issue, not a data quantity issue."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your company handles healthcare data. You want to fine-tune a model on clinical notes to improve medical terminology extraction. Legal has confirmed the training data is de-identified but has not approved sending data to third-party APIs.",
+      "question": "Which fine-tuning path is appropriate here?",
+      "options": [
+        "A. Use the managed API with a signed BAA - OpenAI offers HIPAA compliance for fine-tuning.",
+        "B. Use the managed API with data encryption in transit - that satisfies the data residency requirement.",
+        "C. Move to self-hosted fine-tuning (LoRA) on your own infrastructure, because data residency requirements prevent sending data to third-party APIs.",
+        "D. Skip fine-tuning and use RAG instead, because medical data should never be used for training."
+      ],
+      "answer": "C",
+      "explanation": "When legal or compliance requirements prevent sending data to third-party APIs, self-hosted fine-tuning is the correct path regardless of cost or complexity. This is the primary justified reason to move from managed APIs to LoRA on your own infrastructure. Encryption in transit does not address data residency - the data still leaves your infrastructure."
+    },
+    {
+      "id": "c8",
+      "scenario": "A fine-tuning job completes and returns model ID ft:gpt-4o-mini-2024-07-18:acme::xyz123. You update your code to use this model ID. Three months later, calls to this model start returning errors. You check and the model ID no longer resolves.",
+      "question": "What most likely happened and how should you handle fine-tuned model IDs in production?",
+      "options": [
+        "A. The model expired - OpenAI deletes fine-tuned models after 90 days by default. Store model IDs with expiry dates and plan for retraining.",
+        "B. The model was overwritten by a newer fine-tuning job with the same suffix.",
+        "C. The base model gpt-4o-mini-2024-07-18 was deprecated and the fine-tune was deleted with it.",
+        "D. The API key rotated and the model is inaccessible from the new key."
+      ],
+      "answer": "C",
+      "explanation": "When a base model is deprecated, fine-tuned models built on it may become inaccessible. Always check the base model's deprecation timeline before fine-tuning. Store the base model version alongside the fine-tuned model ID. Plan for periodic retraining on supported base models - treat fine-tuned models as having a lifecycle tied to their base model's support window."
+    }
+  ]
+}

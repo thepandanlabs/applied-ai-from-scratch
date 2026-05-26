@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "06-preference-tuning-dpo",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your customer support model writes technically correct responses but sounds curt and impersonal. Customers complain about tone. You have 800 examples of human-preferred responses saved alongside the rejected alternatives from a previous annotation sprint.",
+      "question": "Which training approach is most appropriate here, and why?",
+      "options": [
+        "A. SFT on the 800 preferred responses only, because you already have correct outputs",
+        "B. DPO using the chosen/rejected pairs, because tone is a subjective quality best taught by preference ranking rather than a target output",
+        "C. Both SFT and DPO simultaneously on the same dataset to maximize signal",
+        "D. Neither: tone cannot be improved through fine-tuning and requires prompt engineering only"
+      ],
+      "answer": "B",
+      "explanation": "Tone is subjective and hard to specify from scratch, but easy to rank. DPO is designed exactly for this: you have the preference signal (human comparisons) but not a single 'correct' answer. SFT requires a definitive correct output, which does not exist for subjective style."
+    },
+    {
+      "id": "c2",
+      "scenario": "A team is building a DPO dataset. They collect 2,000 annotation pairs and run them through a DPODatasetBuilder. The builder rejects 820 examples: 600 are ties, 180 are too short. The keep rate is 59%.",
+      "question": "What should the team do?",
+      "options": [
+        "A. Lower the minimum length threshold to recover more examples and bring the keep rate above 60%",
+        "B. Proceed with the 1,180 valid triplets; the 59% keep rate is close to healthy and the rejections are correct",
+        "C. Force annotators to choose a winner for every pair, including ties, to recover the 600 rejected examples",
+        "D. Discard the entire dataset and start over because a 41% rejection rate indicates fundamentally flawed annotation guidelines"
+      ],
+      "answer": "B",
+      "explanation": "Ties happen when two responses are genuinely similar in quality. Forcing a choice produces noisy signal. A 59% keep rate is near the 60% threshold and the rejected examples are correctly filtered. 1,180 high-signal triplets train better than 2,000 where 600 were forced coin flips."
+    },
+    {
+      "id": "c3",
+      "scenario": "An engineer sets up DPO training using TRL's DPOTrainer. The beta parameter is set to 0.01. After training, the model scores much better on alignment metrics but its task accuracy drops from 91% to 72%.",
+      "question": "What most likely caused the accuracy regression?",
+      "options": [
+        "A. The training dataset was too small for DPO to converge",
+        "B. The reference model checkpoint was from a different model family",
+        "C. The beta value is too low, allowing the model to drift too far from the SFT reference",
+        "D. DPO inherently trades task accuracy for alignment and the 19-point drop is expected"
+      ],
+      "answer": "C",
+      "explanation": "Beta controls the KL penalty between the DPO model and the SFT reference. A very low beta (0.01) allows aggressive preference optimization with little constraint, causing the model to over-optimize on preference signal at the cost of the task capability learned during SFT. Increasing beta keeps the model closer to its SFT behavior."
+    },
+    {
+      "id": "c4",
+      "scenario": "A team wants to fine-tune a base LLM for a new customer support domain using DPO. They have 600 human preference annotations but have not run any SFT first.",
+      "question": "What will most likely happen if they run DPO directly on the base model?",
+      "options": [
+        "A. DPO will work correctly because it does not require the model to understand the task first",
+        "B. DPO will fail to run because TRL's DPOTrainer requires an SFT checkpoint as input",
+        "C. DPO on a base model will likely make performance worse because the model needs task capability before preference tuning can refine it",
+        "D. DPO will work but will require 5x more preference pairs to compensate for the missing SFT stage"
+      ],
+      "answer": "C",
+      "explanation": "DPO nudges a capable model toward preferred behavior. It cannot teach the task from scratch. On a base model with no task training, DPO has no meaningful capability to refine. The standard production pipeline is SFT first to build task capability, then DPO to align on style, tone, or safety."
+    },
+    {
+      "id": "c5",
+      "scenario": "An annotation team produces 1,500 preference pairs for DPO training. After building the dataset, you notice the chosen responses average 420 tokens while rejected responses average 95 tokens.",
+      "question": "What problem does this length imbalance create, and how should you address it?",
+      "options": [
+        "A. No problem; longer responses are inherently better and the model should learn to be verbose",
+        "B. The model may learn to maximize response length rather than improve quality; audit whether length correlates with actual quality in your annotations",
+        "C. The imbalance will cause the training to crash because DPO requires equal token counts in chosen and rejected",
+        "D. This is expected and healthy; DPO always produces longer chosen responses as part of alignment"
+      ],
+      "answer": "B",
+      "explanation": "A 4x length imbalance risks teaching the model 'be verbose' rather than 'be helpful.' The model cannot distinguish between the preference signal and the length signal if they are perfectly correlated. Audit whether length correlates with annotator preference; if it does, sample pairs with similar lengths or add explicit length-balanced examples."
+    },
+    {
+      "id": "c6",
+      "scenario": "A company runs RLHF (Reinforcement Learning from Human Feedback) today. An engineer proposes switching to DPO. The engineering lead asks what the key operational difference is.",
+      "question": "What is the most accurate description of how DPO differs from RLHF in terms of what components are required?",
+      "options": [
+        "A. DPO requires a separate reward model and RL training loop; RLHF does not",
+        "B. DPO eliminates the need for a separate reward model and RL training loop by optimizing preferences directly in a supervised training step",
+        "C. DPO and RLHF are identical in implementation but DPO uses a different loss function name",
+        "D. RLHF is strictly better than DPO for all alignment tasks because it trains a richer reward model"
+      ],
+      "answer": "B",
+      "explanation": "RLHF requires training a reward model from preference data, then using RL (e.g., PPO) to optimize the language model against that reward model. This is complex and unstable. DPO reformulates the same objective into a direct supervised loss on preference pairs, eliminating the reward model and the RL loop while achieving comparable alignment results."
+    },
+    {
+      "id": "c7",
+      "scenario": "You complete DPO training on a customer support model. In evaluation, the DPO checkpoint scores 18 points higher than the SFT baseline on a tone rubric. However, on your 50-question factual accuracy test, the DPO model scores 83% vs the SFT model's 91%.",
+      "question": "Based on the Evaluate It criteria from this lesson, should you deploy the DPO model?",
+      "options": [
+        "A. Yes, because an 18-point tone improvement clearly outweighs an 8-point accuracy drop",
+        "B. No, because any accuracy regression at all disqualifies a DPO model from deployment",
+        "C. No, because an 8-point accuracy regression exceeds the 5-point threshold; diagnose whether beta is too low or training ran too long before deploying",
+        "D. Yes, but only if you add a disclaimer to users that factual accuracy may have decreased"
+      ],
+      "answer": "C",
+      "explanation": "The lesson's evaluation criterion is explicit: DPO should not degrade task accuracy by more than 5 percentage points. An 8-point drop exceeds this threshold. The tone improvement is real but the accuracy regression is a regression. Increasing beta or reducing training epochs would keep the model closer to the SFT baseline capability while retaining some alignment benefit."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are designing a DPO dataset and notice that 75% of your 900 preference pairs come from billing and account cancellation scenarios. The other 25% cover general product questions.",
+      "question": "What risk does this prompt distribution create for the fine-tuned model?",
+      "options": [
+        "A. No risk; more examples of difficult scenarios makes the model better at all scenarios",
+        "B. The model will over-fit to billing and cancellation tone patterns, potentially applying them inappropriately to unrelated scenarios",
+        "C. The DPO loss function automatically rebalances prompt distributions, so this is not an issue",
+        "D. The 75/25 split is ideal because it mirrors the annotation difficulty ratio"
+      ],
+      "answer": "B",
+      "explanation": "Prompt diversity is a key DPO dataset health check. A model trained on 75% billing scenarios learns alignment signals from those contexts. Those signals may generalize poorly or misapply to general product questions. Before training, cluster prompts by topic and verify sufficient coverage across the scenarios you want the model to handle."
+    }
+  ]
+}

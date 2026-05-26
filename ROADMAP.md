@@ -193,19 +193,19 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 09: Fine-Tuning & Customization [⬚] (~10 hours)
+## Phase 09: Fine-Tuning & Customization [✅] (~10 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | The Decision Ladder: Prompt, RAG, or Finetune? | ⬚ | ~45 min |
-| 02 | Dataset Engineering: the Durable Moat | ⬚ | ~60 min |
-| 03 | Supervised Fine-Tuning: Managed APIs First | ⬚ | ~60 min |
-| 04 | LoRA / QLoRA: Intuition + Hands-On Run | ⬚ | ~75 min |
-| 05 | Evaluating a Fine-Tune vs Baseline | ⬚ | ~60 min |
-| 06 | Preference Tuning: DPO | ⬚ | ~45 min |
-| 07 | Distillation for Cost | ⬚ | ~45 min |
-| 08 | Serving an Open-Weight Model: vLLM | ⬚ | ~60 min |
-| 09 | Capstone: Fine-Tune for a Domain Task, Prove ROI with Evals | ⬚ | ~90 min |
+| 01 | The Decision Ladder: Prompt, RAG, or Finetune? | ✅ | ~45 min |
+| 02 | Dataset Engineering: the Durable Moat | ✅ | ~60 min |
+| 03 | Supervised Fine-Tuning: Managed APIs First | ✅ | ~60 min |
+| 04 | LoRA / QLoRA: Intuition + Hands-On Run | ✅ | ~75 min |
+| 05 | Evaluating a Fine-Tune vs Baseline | ✅ | ~60 min |
+| 06 | Preference Tuning: DPO | ✅ | ~45 min |
+| 07 | Distillation for Cost | ✅ | ~45 min |
+| 08 | Serving an Open-Weight Model: vLLM | ✅ | ~60 min |
+| 09 | Capstone: Fine-Tune for a Domain Task, Prove ROI with Evals | ✅ | ~90 min |
 
 ---
 

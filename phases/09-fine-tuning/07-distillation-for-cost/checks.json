@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "07-distillation-for-cost",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team runs contract extraction using Claude Sonnet at 500 documents per day. The monthly bill is $5,400. They try switching to Claude Haiku directly. Quality drops from 94% to 78%. Their threshold is 90%.",
+      "question": "What should the team do next?",
+      "options": [
+        "A. Accept the quality drop and stay on Haiku to capture the cost savings",
+        "B. Use Claude Haiku with a more detailed system prompt to close the quality gap",
+        "C. Use Claude Sonnet to generate high-quality training examples, filter them, and fine-tune Claude Haiku on the task",
+        "D. Switch to a different provider that offers a cheaper Sonnet-equivalent model"
+      ],
+      "answer": "C",
+      "explanation": "Off-the-shelf Haiku cannot match Sonnet on a specialized task. Distillation uses the teacher (Sonnet) to generate task-specific training data and fine-tunes the student (Haiku) to match performance on that narrow task. A fine-tuned small model on a specific task often reaches or beats the large model's score while costing 10x less."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your distillation pipeline generates 500 examples. The LLM judge discards 270 of them (54% discard rate). Your colleague argues you should lower the quality threshold from 3.5 to 2.0 to keep more data.",
+      "question": "What is the correct response to this suggestion?",
+      "options": [
+        "A. Agree: more training examples always improve model performance regardless of individual quality",
+        "B. Disagree: keep the threshold or raise it. If you need more examples, generate more prompts from the teacher",
+        "C. Agree, but only lower the threshold to 3.0 as a compromise",
+        "D. Agree, because a 54% discard rate indicates the judge is miscalibrated and should be ignored"
+      ],
+      "answer": "B",
+      "explanation": "The quality filter protects ROI. Adding mediocre examples dilutes training signal and introduces patterns the student should not learn. If 230 examples are too few, run more prompts through the teacher. The lesson is explicit: do not lower quality standards to pad example count."
+    },
+    {
+      "id": "c3",
+      "scenario": "A company processes 50 documents per day using a large language model at $180/month. They estimate distillation would cost $200 upfront (teacher generation + fine-tune) and reduce ongoing costs to $15/month.",
+      "question": "Should they pursue distillation?",
+      "options": [
+        "A. Yes, because $165/month in savings clearly justifies the $200 upfront cost",
+        "B. No, because the volume is too low to justify the engineering complexity",
+        "C. Yes, but only if they can reduce the upfront cost below $100",
+        "D. No, because distillation never makes sense for document processing tasks"
+      ],
+      "answer": "B",
+      "explanation": "50 documents per day is in the low-volume range where distillation ROI becomes questionable, not because the payback period is bad (it's about 1.2 months) but because the engineering effort, ongoing maintenance, and drift monitoring overhead may outweigh the modest dollar savings. The skill doc notes distillation works best above 100+ calls per day for high-volume justification."
+    },
+    {
+      "id": "c4",
+      "scenario": "You run a quality judge on 400 teacher-generated examples and 392 of them score 4 or 5. Keep rate is 98%. You proceed with fine-tuning on all 392 examples.",
+      "question": "What concern should you investigate before trusting this dataset?",
+      "options": [
+        "A. Nothing - a 98% keep rate confirms excellent teacher quality",
+        "B. The judge may be miscalibrated and scoring too generously; manually review 20 examples to verify it is actually discriminating correctly",
+        "C. 392 examples is too few; you need at least 1,000 to get a 98% keep rate that is meaningful",
+        "D. The teacher model has overfit to your task and the student model will also overfit"
+      ],
+      "answer": "B",
+      "explanation": "A 98% keep rate is a warning sign that the judge may not be filtering anything meaningful. A judge that scores nearly everything 4-5 provides no quality signal. The pipeline spec calls for a calibration check: manually review 10 high-scoring and 10 low-scoring examples to verify the judge is discriminating correctly."
+    },
+    {
+      "id": "c5",
+      "scenario": "Six months after deploying a distilled student model for invoice parsing, accuracy on a weekly eval drops from 91% to 82%. Nothing changed in your code.",
+      "question": "What is the most likely cause and what should you do?",
+      "options": [
+        "A. The fine-tuned model has degraded due to model drift on Anthropic's side; file a support ticket",
+        "B. The input distribution has shifted (new invoice formats, new vendors) and the student's training data no longer covers the current distribution; re-run the distillation pipeline with current production inputs",
+        "C. The quality threshold of 3.5 was too high, causing the student to underfit; lower the threshold and retrain",
+        "D. Six months is the natural expiration for a fine-tuned model; all fine-tuned models need to be replaced on a 6-month cycle"
+      ],
+      "answer": "B",
+      "explanation": "Fine-tuned models do not degrade on their own. Accuracy drops almost always mean the input distribution has shifted away from the training distribution. New invoice layouts, new vendor formats, or new terminology will degrade a model trained on an older data snapshot. The fix is re-distillation using fresh production examples that represent the current distribution."
+    },
+    {
+      "id": "c6",
+      "scenario": "A team wants to distill a creative writing assistant that generates marketing copy in a variety of styles and tones for any product category.",
+      "question": "Why is this a poor candidate for distillation?",
+      "options": [
+        "A. Creative writing tasks always require the teacher model in production",
+        "B. Distillation only works with JSON output formats, not prose",
+        "C. The task is open-ended with highly variable inputs and no well-defined quality criterion, making it hard to filter or train to a stable quality level",
+        "D. Marketing copy cannot be generated by small models regardless of fine-tuning"
+      ],
+      "answer": "C",
+      "explanation": "Distillation works best for narrow, repeatable tasks with stable input distributions and clear quality criteria. Open-ended creative tasks across variable product categories require broad world knowledge and stylistic range that small models lack. The quality filter also requires a definable success criterion, which is difficult for subjective creative output."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your distillation pipeline costs $85 to run (teacher generation + fine-tune fee). Before distillation, the task costs $620/month. After deploying the fine-tuned student, it costs $48/month.",
+      "question": "What is the payback period and what does that tell you about this project?",
+      "options": [
+        "A. Payback is about 3 days; this is an excellent ROI and you should expand the pipeline to other tasks",
+        "B. Payback is about 0.15 months (roughly 4-5 days); clear positive ROI well within the 3-month target",
+        "C. Payback is about 1.5 months; acceptable but borderline given the engineering overhead",
+        "D. Payback cannot be calculated without knowing the number of training tokens"
+      ],
+      "answer": "B",
+      "explanation": "Monthly savings = $620 - $48 = $572. Payback = $85 / $572 = 0.15 months, approximately 4-5 days. This is well under the 3-month target for positive ROI. At this ratio, the fine-tune cost pays back in less than a week and every subsequent month delivers $572 in savings."
+    }
+  ]
+}

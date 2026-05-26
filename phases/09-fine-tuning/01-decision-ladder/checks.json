@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "01-decision-ladder",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team's customer support chatbot uses Claude with a two-sentence system prompt. The answers are correct but sound robotic. A teammate says: 'We need to fine-tune. I have 50 examples of good tone.' Your CTO asks for your recommendation.",
+      "question": "What should you recommend, and why?",
+      "options": [
+        "A. Start the fine-tune immediately - 50 examples is enough for tone adaptation",
+        "B. Try a detailed system prompt and few-shot examples first - prompting is not yet exhausted and 50 examples is too few to fine-tune reliably",
+        "C. Use RAG - index the brand voice guide and retrieve tone examples at query time",
+        "D. Upgrade to a larger model - the robotic tone is a capability limitation"
+      ],
+      "answer": "B",
+      "explanation": "The decision ladder says try cheaper rungs first. A two-sentence system prompt is not exhausted prompting. Add explicit tone instructions, persona definition, and 10-20 few-shot examples. 50 examples is below the 100-example threshold for reliable fine-tuning. Only move to fine-tuning after prompting + few-shot demonstrably fail."
+    },
+    {
+      "id": "c2",
+      "scenario": "A healthcare startup builds a symptom checker. The model gives medically incorrect answers because it lacks knowledge of rare diseases documented only in their proprietary clinical database of 10,000 case studies.",
+      "question": "Which tool is most appropriate as the first intervention?",
+      "options": [
+        "A. Fine-tune the base model on the 10,000 case studies",
+        "B. Add the case studies to a vector store and use RAG to retrieve relevant cases at query time",
+        "C. Write a detailed system prompt that tells the model to be accurate about rare diseases",
+        "D. Train a model from scratch on the proprietary database"
+      ],
+      "answer": "B",
+      "explanation": "This is a knowledge gap, not a behavior gap. The model lacks the information because it was not in the training data. RAG retrieves the relevant case studies at query time. Fine-tuning on case studies does not add the knowledge reliably - the model will learn to generate text that looks like medical answers and will hallucinate rare disease information it never actually saw. RAG is rung 3; fine-tuning for knowledge gaps is a common mistake."
+    },
+    {
+      "id": "c3",
+      "scenario": "An e-commerce company uses GPT-4 to extract structured product data from unstructured supplier descriptions. The desired output is a strict JSON schema with 12 required fields. Despite detailed prompting and 15 few-shot examples, the model still produces malformed JSON on ~15% of inputs.",
+      "question": "Is fine-tuning justified here? What is the key indicator?",
+      "options": [
+        "A. No - the 15% failure rate suggests the model is capable and prompting needs more iteration",
+        "B. No - this is a knowledge gap and RAG with schema examples would solve it",
+        "C. Yes - strict output format that cannot be reliably achieved with prompting + few-shot is a documented justification for fine-tuning",
+        "D. Yes - any structured output task always requires fine-tuning to be reliable"
+      ],
+      "answer": "C",
+      "explanation": "This is one of the three legitimate reasons to fine-tune: consistent output format that cannot be reliably prompted. The team has exhausted prompting (detailed prompt) and few-shot (15 examples). The residual 15% failure rate on a strict schema is a documented failure at lower rungs. Fine-tuning on 200+ correct examples of the extraction task is appropriate here. This is a behavior gap, not a knowledge gap."
+    },
+    {
+      "id": "c4",
+      "scenario": "A legal tech company wants their contract review AI to use precise legal terminology (e.g., 'indemnification clause' vs 'compensation clause', 'tortious interference' vs 'interference'). The model currently uses lay terms. They have a 300-page legal glossary and 150 annotated contract examples.",
+      "question": "What is the recommended approach?",
+      "options": [
+        "A. Fine-tune only - the vocabulary requirement is purely behavioral",
+        "B. RAG only - index the glossary and retrieve the correct terms at query time",
+        "C. RAG first (index the glossary), then evaluate whether fine-tuning on the 150 annotated examples is still needed for the residual vocabulary gap",
+        "D. Few-shot prompting with 20 examples from the glossary - no need for RAG or fine-tuning"
+      ],
+      "answer": "C",
+      "explanation": "Legal terminology spans both knowledge (the glossary is a knowledge base) and behavior (using those terms consistently). The correct order is: RAG the glossary first (cheapest, immediate), then evaluate whether 150 examples warrant a fine-tune for residual issues. Starting with fine-tuning skips rung 3 and may not fully solve the terminology problem anyway if the model lacks the definitions."
+    },
+    {
+      "id": "c5",
+      "scenario": "A team has fine-tuned a model 3 times trying to fix its reasoning on multi-step math word problems. Each fine-tune improves accuracy by 2-3% but the model still fails on novel problem structures. The team wants to do a fourth fine-tune with more data.",
+      "question": "What is the decision ladder's diagnosis of this situation?",
+      "options": [
+        "A. More data will fix it - fine-tuning is the right tool, just needs scale",
+        "B. Fine-tuning is amplifying existing math capability, not creating new reasoning ability. Use a more capable base model.",
+        "C. Switch to RAG - index solved math problems and retrieve similar examples at query time",
+        "D. The prompting has not been exhausted - add chain-of-thought instructions to the system prompt"
+      ],
+      "answer": "B",
+      "explanation": "Fine-tuning amplifies existing capability; it does not create new capability. If the base model cannot reliably perform multi-step reasoning, fine-tuning will improve performance within the existing capability ceiling but cannot break through it. The 2-3% gains are the model learning patterns, not gaining reasoning ability. The correct fix is a more capable base model (Claude Opus, GPT-4o) that has stronger reasoning, possibly combined with chain-of-thought prompting."
+    },
+    {
+      "id": "c6",
+      "scenario": "A startup argues: 'We should fine-tune our model because then we own a proprietary model. Competitors use the same base models we do, but they cannot replicate our fine-tune.' Is this a valid reason to fine-tune?",
+      "question": "How should you evaluate this argument?",
+      "options": [
+        "A. Valid - a fine-tuned model is a defensible proprietary asset that competitors cannot copy",
+        "B. Partially valid - the fine-tune itself is not the moat, but the dataset it was trained on is",
+        "C. Invalid - all fine-tunes eventually become open source so there is no long-term advantage",
+        "D. Valid only if the fine-tune achieves >10% improvement over the baseline"
+      ],
+      "answer": "B",
+      "explanation": "The fine-tune weights are not the moat. Any competitor with the same dataset could produce a similar fine-tune. The moat is the dataset: the 50,000 carefully curated, human-reviewed, production-validated examples that took 18 months to collect. The dataset is the competitive advantage. A fine-tune produced from a competitor's dataset would perform similarly. When evaluating the 'ownership' argument, ask what dataset is required to reproduce this fine-tune."
+    },
+    {
+      "id": "c7",
+      "scenario": "A team has collected 80,000 raw customer service chat transcripts and wants to fine-tune a model to respond like their best agents. They ask if 80,000 examples is enough to start the fine-tune.",
+      "question": "What is the critical question the decision ladder surfaces before approving this fine-tune?",
+      "options": [
+        "A. 80,000 is too many examples - large datasets cause overfitting",
+        "B. Are these transcripts already formatted as input/output pairs with quality labels, or are they raw conversations that need curation?",
+        "C. Fine-tuning APIs have a maximum of 10,000 examples, so the dataset must be downsampled",
+        "D. 80,000 examples guarantees success - proceed immediately"
+      ],
+      "answer": "B",
+      "explanation": "Raw chat transcripts are not fine-tuning examples. A fine-tuning dataset requires clean input/output pairs where each input is a customer query and each output is the ideal agent response. 80,000 raw transcripts contain bad agent responses, off-topic conversations, incomplete exchanges, and inconsistent quality. Before asking 'how many examples', ask 'how many quality-reviewed input/output pairs can we extract from these transcripts?' Dataset curation (Lesson 02) is the actual bottleneck, not raw conversation count."
+    },
+    {
+      "id": "c8",
+      "scenario": "You apply the decision ladder to a problem and reach rung 4 (fine-tune justified). Your dataset has 120 examples. A colleague says: '120 examples is above your 100-example threshold, so let's train.' What is the responsible next step?",
+      "question": "What should happen before the fine-tuning job starts?",
+      "options": [
+        "A. Start the fine-tune - 120 examples meets the minimum threshold",
+        "B. Split the 120 examples into train/validation/test sets, establish a baseline eval score from the prompt-only model, and only proceed if the held-out test set is large enough to measure improvement",
+        "C. Collect more examples until you have at least 500 before spending on training compute",
+        "D. Run few-shot prompting with all 120 examples in context first - if that works, no fine-tuning needed"
+      ],
+      "answer": "B",
+      "explanation": "The 100-example threshold is the minimum to attempt a fine-tune, not a guarantee of success. Before training, you need: a train/val/test split (e.g., 80/20/20 = 96/12/12), a baseline eval score from the prompt-only model on the test set, and enough held-out examples to detect improvement. With only 12 test examples, a 1-example difference is an 8% swing - noisy at that scale. 120 examples is workable but requires careful splitting and a clear eval metric before spending on compute."
+    }
+  ]
+}

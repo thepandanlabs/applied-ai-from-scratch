@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-evaluating-fine-tune",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team fine-tuned a model for JSON extraction. Before building the training set, you randomly selected 20% of the total labeled examples and set them aside. The remaining 80% was used for training. After training, you ran the eval harness on the 20% hold-out set and got 74% exact match vs 62% for the baseline.",
+      "question": "A colleague suggests you should also evaluate on the training set to get a 'full picture'. What is the problem with this idea?",
+      "options": [
+        "A. No problem - evaluating on training data verifies the model learned correctly",
+        "B. The model likely memorized training examples, so accuracy on training data will appear artificially high and tell you nothing about real-world performance",
+        "C. It wastes compute - running eval on training data costs the same but adds no value",
+        "D. The training set is too large for the eval harness to process efficiently"
+      ],
+      "answer": "B",
+      "explanation": "Fine-tuned models often achieve near-perfect accuracy on training examples through memorization, not generalization. If you evaluate on training data and see 95% accuracy, you cannot tell if the model has learned the task or just memorized 1,000 answers. The hold-out set is the only dataset that reflects how the model will perform on inputs it has never seen - which is what production looks like. Evaluating on training data tells you about memorization, not capability."
+    },
+    {
+      "id": "c2",
+      "scenario": "You built a fine-tune eval harness and ran it on 80 test examples. The fine-tuned model gets 68% exact match vs 58% for the baseline - a 17% relative improvement. Your team's deployment threshold is 15%. Someone raises the concern that 80 examples might not be a reliable enough sample.",
+      "question": "How do you assess whether 80 examples is sufficient to trust a 17% improvement?",
+      "options": [
+        "A. 80 examples is always sufficient - 100 is the traditional statistics minimum and you are close enough",
+        "B. Calculate the confidence interval: for proportions at n=80, the 95% CI is roughly +-11%. A 17% improvement exceeds 3x the CI margin, so the signal is reliable",
+        "C. The only way to know is to re-run the eval 10 times and check if results are consistent",
+        "D. 80 examples is too small - always use at least 1,000 examples before making a go/no-go decision"
+      ],
+      "answer": "B",
+      "explanation": "The 95% confidence interval for a proportion at n=80 is approximately +-11 percentage points. An improvement of 17% relative (roughly 10 absolute percentage points going from 58% to 68%) is close to the CI margin. Using the rule of thumb that improvement should exceed 3x the CI for reliability, this is borderline. With n=200, the CI shrinks to +-7pp, giving more confidence. For a 17% improvement specifically, 80 examples provides weak evidence - 200+ would be better. The key skill is calculating whether your signal is larger than the noise, not applying a fixed sample size rule."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your fine-tuned model achieves 79% exact match vs 65% for the baseline - a 21% relative improvement. However, when you check format validity (valid JSON output rate), the fine-tuned model returns invalid JSON 8% of the time vs 2% for the baseline.",
+      "question": "What should you do with this result?",
+      "options": [
+        "A. Deploy the fine-tune - a 21% accuracy improvement far outweighs a 6 percentage point format regression",
+        "B. Do not deploy - an 8% invalid JSON rate is an 8% hard failure rate in production that creates downstream errors regardless of content accuracy",
+        "C. Deploy with a JSON validation wrapper that falls back to the baseline on invalid output",
+        "D. Retrain with a higher rank (r=32) to improve format compliance"
+      ],
+      "answer": "B",
+      "explanation": "A format validity rate of 92% means 8% of production requests will return output that cannot be parsed downstream - these are hard failures, not wrong answers. The downstream system calling this model expects valid JSON; it cannot handle parse errors gracefully at 8% rate. The format validity regression is a blocking failure that must be fixed before deployment. The fix is usually to adjust the training data format (ensure all training examples use the exact output format), add a system prompt reinforcing JSON output, or add more examples of the output schema. Retraining with higher rank makes overfitting worse, not better."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your team fine-tuned a classification model. The fine-tuned model is 18% better on overall accuracy. But when you break down results by class, you notice: on the rare 'urgent escalation' class (5% of examples), accuracy dropped from 85% (baseline) to 60% (fine-tuned). On all other classes, the fine-tune improved.",
+      "question": "What does this pattern indicate and how does it affect your deployment decision?",
+      "options": [
+        "A. This is expected - rare classes always perform worse on fine-tuned models due to data imbalance",
+        "B. The 'urgent escalation' regression is acceptable since it only affects 5% of traffic",
+        "C. This is a high-risk regression: a drop from 85% to 60% on 'urgent escalation' means the fine-tune will miss more critical cases, and overall accuracy hides this",
+        "D. The overall 18% improvement is the only metric that matters for the go/no-go decision"
+      ],
+      "answer": "C",
+      "explanation": "For a critical class like 'urgent escalation', a 25 percentage point accuracy drop is potentially catastrophic regardless of overall accuracy. Overall accuracy improves because the fine-tune gets better on the common classes (95% of traffic) while getting worse on the rare but critical class. In production, this means more missed urgent escalations - exactly the failure mode with the highest cost. The regression test suite exists to catch this. A responsible go/no-go decision requires class-level analysis, not just aggregate accuracy, especially when failure modes are asymmetric in their impact."
+    },
+    {
+      "id": "c5",
+      "scenario": "You ran an exact match eval on a JSON extraction fine-tune. Your normalization function strips whitespace but does not parse and re-serialize the JSON. You notice the fine-tuned model sometimes returns keys in different order (e.g., {\"b\":1,\"a\":2} instead of {\"a\":2,\"b\":1}). Both are semantically identical JSON.",
+      "question": "What is the impact of this normalization gap on your eval results?",
+      "options": [
+        "A. No impact - JSON key order does not affect the eval score",
+        "B. The fine-tuned model will be scored as incorrect on examples where it returns correct JSON with different key order, artificially deflating its accuracy",
+        "C. The baseline model will be unfairly penalized since it never changes key order",
+        "D. This gap means you need to switch from exact match to LLM-as-judge for all JSON tasks"
+      ],
+      "answer": "B",
+      "explanation": "Without parsing and re-serializing with sorted keys, {\"b\":1,\"a\":2} and {\"a\":2,\"b\":1} compare as different strings even though they represent identical data structures. If the fine-tuned model has learned to output keys in a different (but valid) order, it will be penalized on every such output. This artificially deflates the fine-tune's score and can make a good model appear worse than the baseline. The fix: always normalize by parsing to a Python dict and re-serializing with json.dumps(sort_keys=True). Validating your normalization on 20 examples by hand before running the full harness catches this class of bug."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your team is evaluating a fine-tune that requires deploying a new dedicated model server. The baseline model is accessed via API at $0.002/request. The fine-tuned model on your own server costs $0.0006/request in infrastructure. Your fine-tune achieves 72% exact match vs 62% for the baseline (16% relative improvement). Your deployment threshold for a new server is 15%.",
+      "question": "Calculating cost-per-correct-output, which model is more economical at scale?",
+      "options": [
+        "A. Baseline: cost-per-correct = $0.002/0.62 = $0.00323; Fine-tune: $0.0006/0.72 = $0.00083. Fine-tune is 75% cheaper per correct output - clear economic win.",
+        "B. They are economically equivalent because the fine-tune only improves accuracy by 10 percentage points",
+        "C. Baseline is more economical because API costs include support and reliability guarantees",
+        "D. The fine-tune is more expensive because you must also pay for training, which is a sunk cost"
+      ],
+      "answer": "A",
+      "explanation": "Cost-per-correct-output is the right metric for production decision-making. Baseline: $0.002 per call / 0.62 correct rate = $0.00323 per correct output. Fine-tune: $0.0006 per call / 0.72 correct rate = $0.00083 per correct output. The fine-tune is 74% cheaper per correct output, because the infrastructure cost savings compound with the accuracy improvement. At 10,000 requests/day the savings are significant. Training cost is a one-time investment that amortizes over the model's lifetime - it is not part of the per-output cost calculation. The economic and quality cases both support deployment."
+    },
+    {
+      "id": "c7",
+      "scenario": "Six months after deploying a fine-tuned model, accuracy starts declining in production. Your eval harness still shows 74% on the original test set, matching when you deployed. But production logging shows only 61% of outputs are being accepted by downstream systems.",
+      "question": "What is the most likely cause and how do you diagnose it?",
+      "options": [
+        "A. The model weights degraded over time - restart the model server to restore accuracy",
+        "B. Production traffic has drifted from the test set distribution - the test set no longer represents real inputs",
+        "C. The downstream system acceptance criteria changed without your knowledge",
+        "D. The fine-tune needs to be retrained with the same data to refresh model weights"
+      ],
+      "answer": "B",
+      "explanation": "Test set drift is a common production failure mode. The test set was built 6 months ago and represents traffic from that period. Production inputs have evolved (new terminology, new input formats, new edge cases), but the test set has not. The fine-tune scores well on old test data but poorly on new production patterns. Diagnosis: sample 200 recent production inputs with human-labeled outputs, run the harness on this fresh set, and compare to the stale set. If scores diverge significantly, refresh at least 20% of the test set with recent production examples every quarter. This is why eval is not a one-time activity - it is an ongoing operational practice."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are about to run a go/no-go eval for a fine-tuned summarization model. Unlike JSON extraction, exact match is not meaningful for summaries. A summary that uses different synonyms but covers the same points is just as good as one that matches word-for-word.",
+      "question": "Which evaluation approach is most appropriate for this task?",
+      "options": [
+        "A. Use ROUGE score - it measures n-gram overlap and is the standard for summarization",
+        "B. Use exact match with fuzzy threshold - count outputs as correct if they are 70% similar",
+        "C. Use LLM-as-judge: have a capable model rate each output on defined criteria (coverage, accuracy, conciseness) and calibrate against human labels",
+        "D. Use perplexity - lower perplexity means the fine-tuned model is more confident and therefore better"
+      ],
+      "answer": "C",
+      "explanation": "ROUGE measures n-gram overlap, which penalizes valid paraphrasing and rewards surface-level copying - a poor signal for summarization quality. Fuzzy threshold matching has the same problem. Perplexity measures how surprising the text is to the model, not how accurate or useful the summary is. LLM-as-judge is the right approach for open-ended generation: define criteria (does the summary cover the key points, is it factually accurate, is it concise), have a capable model rate each output, and calibrate the judge against 50 human labels to verify agreement above 85%. The criteria definition step is critical - vague criteria produce unreliable scores."
+    }
+  ]
+}

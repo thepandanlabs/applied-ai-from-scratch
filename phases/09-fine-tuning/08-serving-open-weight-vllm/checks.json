@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "08-serving-open-weight-vllm",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team fine-tuned a Qwen2.5-7B model for medical entity extraction. The model is ready. You need to decide whether to self-host with vLLM or use a managed API.",
+      "question": "Which factor would most strongly justify self-hosting with vLLM over using a managed API?",
+      "options": [
+        "A. You want to iterate quickly on the model and need to update it weekly",
+        "B. The clinical notes contain patient data that must not leave your network for compliance reasons",
+        "C. The volume is only 30 requests per day",
+        "D. You do not have an engineering team to maintain infrastructure"
+      ],
+      "answer": "B",
+      "explanation": "Data residency and compliance are the strongest self-hosting drivers. When data cannot leave your network (HIPAA, GDPR, internal policy), managed APIs are not an option regardless of cost or convenience. Self-hosting with vLLM is the standard solution for on-premises inference on fine-tuned models with data boundary requirements."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are deploying a Qwen2.5-7B model (7 billion parameters) at FP16 precision on a server with a single GPU. You check the GPU memory requirements and need to ensure you have enough VRAM.",
+      "question": "Approximately how much VRAM do you need for a 7B model at FP16 before accounting for KV cache overhead?",
+      "options": [
+        "A. 3-6 GB",
+        "B. 14 GB",
+        "C. 26 GB",
+        "D. 68 GB"
+      ],
+      "answer": "B",
+      "explanation": "A 7B parameter model at FP16 (2 bytes per parameter) requires approximately 14 GB of VRAM for model weights alone. Add 20-30% overhead for KV cache and activations, so you need a GPU with at least 18-20 GB of VRAM in practice. An A10G (24 GB) or RTX 4090 (24 GB) is the typical minimum for a 7B model."
+    },
+    {
+      "id": "c3",
+      "scenario": "You serve a fine-tuned 7B model with vLLM. During a load test with 50 concurrent requests, median latency is 280ms and P99 latency is 4.2 seconds. Your SLA is 500ms P99.",
+      "question": "What does this latency profile tell you, and what should you investigate first?",
+      "options": [
+        "A. The median is fine so there is no problem; P99 latency is always 10-15x the median for LLMs",
+        "B. P99 far exceeds your SLA; investigate whether MAX_NUM_SEQS is too low, causing requests to queue behind others",
+        "C. P99 latency above 4 seconds always indicates quantization is needed",
+        "D. The 50-request load test is invalid; vLLM requires sequential load testing"
+      ],
+      "answer": "B",
+      "explanation": "A P99 of 4.2 seconds with a median of 280ms indicates tail latency from request queuing. When MAX_NUM_SEQS is too low, requests beyond the concurrency limit wait for a slot. The first step is to check vLLM metrics for queue depth and increase MAX_NUM_SEQS if VRAM allows. P99 is what 1% of users experience; it must meet SLA, not just the median."
+    },
+    {
+      "id": "c4",
+      "scenario": "An engineer switches an existing extraction pipeline from the OpenAI API to a local vLLM server. They change base_url to http://localhost:8000/v1. The first 10 requests work fine. Starting at request 11, the model returns incoherent mixed-language text.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. vLLM cannot handle more than 10 concurrent requests without a paid license",
+        "B. The model's context window is filling up across sessions",
+        "C. The wrong chat template is being applied to the model, causing systematic garbling of input formatting",
+        "D. vLLM has a 10-request cache that expires and needs to be cleared"
+      ],
+      "answer": "C",
+      "explanation": "Garbled or incoherent outputs, especially mixed-language text, are a classic symptom of a wrong or missing chat template. Each chat model has a specific format for system, user, and assistant turns. When the template is wrong, the model receives malformatted input and generates garbage. Check the tokenizer config and verify the chat template matches the model you are serving."
+    },
+    {
+      "id": "c5",
+      "scenario": "You need to serve a 34B parameter model in production. You have two A100 40GB GPUs available. A colleague suggests using tensor parallelism.",
+      "question": "What does tensor parallelism do in this context, and what vLLM configuration option controls it?",
+      "options": [
+        "A. Tensor parallelism splits the input batch across GPUs; controlled by --max-num-seqs",
+        "B. Tensor parallelism splits the model weights across multiple GPUs so a model that does not fit on one GPU can be served across several; controlled by --tensor-parallel-size",
+        "C. Tensor parallelism quantizes model weights to reduce memory; controlled by --quantization",
+        "D. Tensor parallelism runs multiple model copies for load balancing; controlled by --gpu-count"
+      ],
+      "answer": "B",
+      "explanation": "A 34B model at FP16 requires about 68 GB of VRAM, which does not fit on a single A100 40GB. Tensor parallelism splits the model's weight matrices across multiple GPUs so each GPU holds a slice of the model. Set --tensor-parallel-size 2 to split across both A100s (80 GB combined). This is distinct from data parallelism (multiple model copies) or quantization (weight compression)."
+    },
+    {
+      "id": "c6",
+      "scenario": "A team trained a LoRA adapter on top of Llama-3.1-8B for a legal document task. They want to serve it with vLLM in production. They must choose between merging the adapter weights first or using vLLM's experimental native LoRA serving.",
+      "question": "Which approach is recommended for a stable production deployment, and why?",
+      "options": [
+        "A. Native LoRA serving, because it avoids the merge step and is officially stable in all vLLM versions",
+        "B. Merge the adapter weights into the base model and serve the merged model, because it avoids experimental features and provides a stable, single artifact",
+        "C. Neither; LoRA adapters cannot be served with vLLM and must be converted to full fine-tuned models",
+        "D. Native LoRA serving, because merged models always have lower quality than adapter-applied models"
+      ],
+      "answer": "B",
+      "explanation": "Merging the LoRA adapter into the base model produces a single, standard model checkpoint that vLLM serves without any special handling. Native LoRA serving in vLLM is experimental and adds complexity. For production deployments, the merged model is the stable choice: one artifact, no experimental flags, straightforward rollback if needed."
+    },
+    {
+      "id": "c7",
+      "scenario": "You have a fine-tuned Qwen 7B model serving 500 requests per day. Running the model on a cloud A10G instance costs $1.50/hour ($1,080/month). Using the equivalent managed API would cost $320/month.",
+      "question": "Based on cost alone, which approach is more economical, and what additional factor might justify the more expensive option?",
+      "options": [
+        "A. Self-hosting is cheaper; use vLLM",
+        "B. Managed API is cheaper at this volume; self-hosting would only make sense with higher volume or data privacy requirements",
+        "C. Both cost the same after accounting for GPU utilization",
+        "D. The managed API is always cheaper for fine-tuned models"
+      ],
+      "answer": "B",
+      "explanation": "At 500 requests per day, the managed API ($320/month) is significantly cheaper than a dedicated A10G ($1,080/month). The cost breakeven for self-hosting typically requires $50-100K+ in annual API spend. The reason to self-host despite higher cost would be data residency requirements (data must not leave your network) or regulatory compliance, not economics."
+    }
+  ]
+}

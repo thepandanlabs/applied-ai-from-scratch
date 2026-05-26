@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "02-dataset-engineering",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team auto-generates 3,000 fine-tuning examples by running their current prompting system and saving the outputs as training data. They call this 'distillation.' The fine-tuned model performs worse than the baseline on their eval set.",
+      "question": "What is the most likely cause of the degraded performance?",
+      "options": [
+        "A. 3,000 examples is too many - the model overfit to the training data",
+        "B. The auto-generated outputs encode the existing system's errors and biases - the model learned to reproduce what was already wrong",
+        "C. Distillation only works with teacher models larger than the student model",
+        "D. The JSONL format was probably incorrect, causing training errors"
+      ],
+      "answer": "B",
+      "explanation": "Auto-generated examples without human review teach the model to reproduce the generator's errors. If the current prompting system already produces mediocre outputs, the fine-tuned model learns to produce those mediocre outputs consistently. Fine-tuning amplifies the behavior in the dataset. If 20% of the examples contain a specific mistake, the fine-tuned model will make that mistake more consistently than the base model."
+    },
+    {
+      "id": "c2",
+      "scenario": "A dataset pipeline processes 500 raw examples and the deduplication step removes 200 of them - a 40% duplicate rate. The team shrugs and proceeds with the 300 remaining examples.",
+      "question": "What does a 40% duplicate rate indicate about the data collection process, and what should the team do?",
+      "options": [
+        "A. 40% duplication is normal for production data - proceed with 300 examples",
+        "B. The data collection process is sampling the same inputs repeatedly - fix the sampling before collecting more data to avoid wasting annotation effort",
+        "C. The deduplication algorithm is too aggressive - lower the similarity threshold",
+        "D. 300 examples is insufficient - just add more raw data until 500 unique examples remain"
+      ],
+      "answer": "B",
+      "explanation": "A 40% duplicate rate is a data collection problem, not a pipeline problem. It means the source of raw examples (e.g., a specific date range, a single customer, a repeated test input) is not diverse. Simply collecting more data from the same source will produce the same duplication rate. Fix the sampling diversity first: collect from different time periods, different users, different edge cases. Then collect more. Otherwise you are paying annotation costs on near-identical examples."
+    },
+    {
+      "id": "c3",
+      "scenario": "Two annotators independently rate 20 examples before full annotation begins. Their agreement rate is 60%. The project lead says 'Good enough, let's start.' Your contract validation catches issues in a separate code review.",
+      "question": "What is the consequence of proceeding at 60% annotator agreement?",
+      "options": [
+        "A. No consequence - 60% is statistically significant for a 20-example calibration set",
+        "B. The dataset will contain contradictory examples - the fine-tuned model will average between two incompatible behaviors, producing worse outputs than either behavior alone",
+        "C. The consequence depends on which annotator is correct - resolve the disagreements and recount",
+        "D. 60% agreement only matters for classification tasks, not generative fine-tuning"
+      ],
+      "answer": "B",
+      "explanation": "When annotators disagree 40% of the time, the dataset contains contradictory examples of the same input producing different-quality outputs. Fine-tuning on inconsistent data teaches the model to average across those behaviors. The result is a model that performs poorly in two directions simultaneously: neither as formal as the strict annotator wanted, nor as casual as the permissive annotator intended. The 80% agreement target exists because contradictory data directly degrades model quality."
+    },
+    {
+      "id": "c4",
+      "scenario": "A company exports all customer support tickets from the past year: 10,000 examples. Analysis shows 75% are billing questions, 15% are technical questions, and 10% are everything else. They fine-tune on this distribution.",
+      "question": "What problem will the fine-tuned model have, and how do you fix the dataset?",
+      "options": [
+        "A. No problem - the model will correctly learn that billing questions are most common",
+        "B. The model will over-index on billing question patterns and underperform on technical and edge-case questions - oversample underrepresented categories to balance the dataset",
+        "C. 10,000 examples is too many for the billing category to dominate - this only matters at small dataset sizes",
+        "D. The imbalance reflects reality and the fine-tune should match it"
+      ],
+      "answer": "B",
+      "explanation": "Fine-tuning on imbalanced categories produces a model that performs well on the dominant category and degrades on underrepresented ones. The model will handle billing questions confidently while giving worse answers on technical questions than the base model. Fix: set a category distribution target (no single category over 30%) and oversample underrepresented categories before training. In this case, deliberately collect more technical and edge-case examples, or downsample billing to achieve balance."
+    },
+    {
+      "id": "c5",
+      "scenario": "Before starting a fine-tuning project, an engineer says: 'Let's skip writing the input/output contract - it takes 30 minutes and we all know what a good response looks like.' The team agrees and starts collecting examples.",
+      "question": "What specific problem will emerge during annotation, and what artifact prevents it?",
+      "options": [
+        "A. No problem - an implicit contract is fine for experienced annotators",
+        "B. Annotators will each apply their own implicit definition of 'good', producing inconsistent examples - a written contract with explicit format requirements, length limits, and forbidden content prevents this",
+        "C. The problem is only that annotation will be slower without a contract, not that quality will suffer",
+        "D. Modern fine-tuning APIs automatically normalize inconsistent examples during training"
+      ],
+      "answer": "B",
+      "explanation": "Without a written contract, 'we all know what good looks like' means each annotator has a private definition. Annotator A writes 4-sentence responses. Annotator B writes 2-sentence responses. Annotator C uses formal language; Annotator D uses casual language. The dataset contains all four styles. The fine-tuned model learns a blend of all four, which is worse than any single style. A contract takes 30 minutes to write and prevents 10 hours of annotation rework."
+    },
+    {
+      "id": "c6",
+      "scenario": "A team has 150 high-quality, human-reviewed fine-tuning examples. They set the train/val/test split to 90/5/5, giving them 135 train, 7 val, 8 test examples. They train and measure 'no improvement' on the test set.",
+      "question": "Is 'no improvement' a reliable signal with 8 test examples?",
+      "options": [
+        "A. Yes - 8 examples is enough to measure statistical significance",
+        "B. No - with 8 test examples, a single example difference is a 12.5% swing in measured accuracy, making the signal too noisy to trust. The team may be discarding a real improvement.",
+        "C. Yes - if the improvement was real, it would show up even in 8 examples",
+        "D. No - the split is wrong. All 150 examples should be used for training at this scale."
+      ],
+      "answer": "B",
+      "explanation": "With 8 test examples, 1 example difference = 12.5% accuracy swing. This is measurement noise, not a real signal. The team cannot distinguish 'fine-tune made no difference' from 'fine-tune made a 10% improvement that the small test set could not detect.' Collect more examples to expand the test set before making a go/no-go decision. Alternatively, use the existing test set directionally but acknowledge the error bars are large."
+    },
+    {
+      "id": "c7",
+      "scenario": "An engineer notices that their fine-tuning dataset has a 'leakage' problem: 5 examples from the test set appear (with minor wording changes) in the training set. The fine-tune shows a 15% improvement on the test set.",
+      "question": "How reliable is the 15% improvement, and what is the correct fix?",
+      "options": [
+        "A. Reliable - the model learned the right behavior from those examples",
+        "B. Unreliable - the model may have memorized the near-duplicate training examples and is regurgitating them on the test set. Remove all test-overlapping examples from the training set and re-train.",
+        "C. Partially reliable - only the 5 leaked questions are affected, the other test results are valid",
+        "D. The fix is to add more unique test examples, not to remove the leaked training examples"
+      ],
+      "answer": "B",
+      "explanation": "Data leakage from test set to training set inflates eval metrics because the model has seen (near-)identical inputs during training. The 15% improvement number is not trustworthy. The correct fix is: remove all training examples that overlap with the test set (by fingerprint or manual review), re-run the split with a fixed seed, and re-train. The test set must be completely held out from any training or hyperparameter decision. Using a seeded, reproducible split from the pipeline prevents this class of error."
+    }
+  ]
+}

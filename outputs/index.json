@@ -1363,6 +1363,126 @@
         "communication",
         "stakeholders"
       ]
+    },
+    {
+      "name": "prompt-finetune-decision-guide",
+      "description": "Decision ladder for choosing between prompting, RAG, and fine-tuning",
+      "phase": "09",
+      "lesson": "01",
+      "file": "phases/09-fine-tuning/01-decision-ladder/outputs/prompt-finetune-decision-guide.md",
+      "tags": [
+        "fine-tuning",
+        "decision",
+        "rag",
+        "prompting"
+      ]
+    },
+    {
+      "name": "skill-dataset-pipeline",
+      "description": "Pipeline for curating, validating, and formatting fine-tuning datasets",
+      "phase": "09",
+      "lesson": "02",
+      "file": "phases/09-fine-tuning/02-dataset-engineering/outputs/skill-dataset-pipeline.md",
+      "tags": [
+        "fine-tuning",
+        "dataset",
+        "engineering",
+        "curation"
+      ]
+    },
+    {
+      "name": "skill-managed-finetune-workflow",
+      "description": "End-to-end workflow for managed fine-tuning APIs with validation, cost estimation, and status polling",
+      "phase": "09",
+      "lesson": "03",
+      "file": "phases/09-fine-tuning/03-supervised-fine-tuning-managed/outputs/skill-managed-finetune-workflow.md",
+      "tags": [
+        "fine-tuning",
+        "openai",
+        "managed-api",
+        "workflow"
+      ]
+    },
+    {
+      "name": "skill-lora-training-script",
+      "description": "Reference configuration for LoRA/QLoRA training with hyperparameters and failure modes",
+      "phase": "09",
+      "lesson": "04",
+      "file": "phases/09-fine-tuning/04-lora-qlora/outputs/skill-lora-training-script.md",
+      "tags": [
+        "lora",
+        "qlora",
+        "fine-tuning",
+        "peft",
+        "training"
+      ]
+    },
+    {
+      "name": "skill-finetune-eval-harness",
+      "description": "Evaluation harness for comparing a fine-tuned model to its baseline with go/no-go decision framework",
+      "phase": "09",
+      "lesson": "05",
+      "file": "phases/09-fine-tuning/05-evaluating-fine-tune/outputs/skill-finetune-eval-harness.md",
+      "tags": [
+        "fine-tuning",
+        "evaluation",
+        "baseline",
+        "go-no-go"
+      ]
+    },
+    {
+      "name": "skill-dpo-dataset-format",
+      "description": "Format spec and validation checklist for DPO preference training datasets",
+      "phase": "09",
+      "lesson": "06",
+      "file": "phases/09-fine-tuning/06-preference-tuning-dpo/outputs/skill-dpo-dataset-format.md",
+      "tags": [
+        "dpo",
+        "preference-tuning",
+        "fine-tuning",
+        "rlhf"
+      ]
+    },
+    {
+      "name": "skill-distillation-pipeline",
+      "description": "Pattern spec for building teacher-student distillation pipelines with quality filtering",
+      "phase": "09",
+      "lesson": "07",
+      "file": "phases/09-fine-tuning/07-distillation-for-cost/outputs/skill-distillation-pipeline.md",
+      "tags": [
+        "distillation",
+        "fine-tuning",
+        "cost-optimization",
+        "teacher-student"
+      ]
+    },
+    {
+      "name": "skill-vllm-deployment-config",
+      "description": "Reference configuration for deploying a vLLM server with Docker, GPU requirements, and client integration",
+      "phase": "09",
+      "lesson": "08",
+      "file": "phases/09-fine-tuning/08-serving-open-weight-vllm/outputs/skill-vllm-deployment-config.md",
+      "tags": [
+        "vllm",
+        "serving",
+        "open-weight",
+        "deployment",
+        "gpu"
+      ]
+    },
+    {
+      "name": "runbook-finetune-project",
+      "description": "Complete runbook for a fine-tuning project from dataset prep through deployment and drift monitoring",
+      "phase": "09",
+      "lesson": "09",
+      "file": "phases/09-fine-tuning/09-capstone-finetune-roi/outputs/runbook-finetune-project.md",
+      "tags": [
+        "fine-tuning",
+        "capstone",
+        "runbook",
+        "roi",
+        "production"
+      ]
     }
   ]
 }

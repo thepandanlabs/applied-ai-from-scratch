@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "04-lora-qlora",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team needs to fine-tune a 7B model on 2,000 proprietary examples. The model has 7 billion total parameters. You configure LoRA with r=16, targeting only the four attention projection layers (q_proj, k_proj, v_proj, o_proj). Each projection is a 4096x4096 matrix. There are 32 transformer layers.",
+      "question": "Approximately what percentage of the model's parameters will be trainable?",
+      "options": [
+        "A. About 50% - LoRA trains half the attention weights",
+        "B. About 10% - LoRA skips MLP layers",
+        "C. About 0.08% - only the small A and B adapter matrices train",
+        "D. About 0.8% - LoRA trains one adapter per attention head"
+      ],
+      "answer": "C",
+      "explanation": "For r=16, each adapter pair has r*(d_in + d_out) = 16*(4096+4096) = 131,072 parameters. Four projection layers across 32 transformer layers = 4 * 32 * 131,072 = 16,777,216 trainable params. Divided by 7B total = 0.24%. The closest answer is 'about 0.08%' which reflects the correct order of magnitude (sub-1%). LoRA's whole point is that <1% of parameters capture the adaptation needed."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are setting up QLoRA on a machine with a single RTX 3090 (24GB VRAM). Your base model is a 13B parameter model. A colleague says you should skip the 4-bit quantization and use bfloat16 for the frozen weights to preserve quality.",
+      "question": "What happens if you follow this advice?",
+      "options": [
+        "A. Training succeeds - 13B in bfloat16 uses 26GB but the GPU handles overflow to system RAM",
+        "B. Training fails at model load time - 13B in bfloat16 needs ~26GB, exceeding the 24GB card",
+        "C. Training succeeds but is 2x slower due to the extra precision",
+        "D. Training succeeds but only if you reduce batch size to 1"
+      ],
+      "answer": "B",
+      "explanation": "A 13B model in bfloat16 (2 bytes per param) requires 13B * 2 = 26GB just for the weights, before activations or optimizer states. The RTX 3090 has 24GB. The model will not fit. QLoRA's 4-bit quantization reduces frozen weight storage to ~3 bytes per parameter (NF4 with double quantization), bringing a 13B model down to about 7GB for weights, well within the 24GB budget."
+    },
+    {
+      "id": "c3",
+      "scenario": "You trained a LoRA adapter for structured JSON extraction and validated it. The fine-tuned model is 22% better than baseline on your test set. Now you need to deploy it to production. Your serving infrastructure uses a model server that loads standard HuggingFace model directories and does not support PEFT adapters directly.",
+      "question": "What is the correct deployment approach?",
+      "options": [
+        "A. Upload the adapter files and base model separately, load both at serving time with PEFT",
+        "B. Use merge_and_unload() to compute W + B@A for every layer, then save the merged model as a standalone artifact",
+        "C. Convert the adapter to ONNX format for compatibility with standard model servers",
+        "D. Fine-tune again without LoRA to get a full model with the same improvements"
+      ],
+      "answer": "B",
+      "explanation": "merge_and_unload() computes W_merged = W_frozen + B@A for every LoRA layer, producing a standard model with no adapter dependency. The merged model is a regular HuggingFace model directory that any standard serving infrastructure can load. It has no inference latency overhead from the adapter. The merged model is larger than the adapter (full model weights) but identical in behavior to running the adapter at inference time."
+    },
+    {
+      "id": "c4",
+      "scenario": "After 3 epochs of LoRA training, you check the loss curves. Training loss is 0.4 and continuing to decrease. Validation loss started at 1.2, dropped to 0.85 after epoch 1, then increased to 0.91 after epoch 2 and 1.05 after epoch 3.",
+      "question": "What do these curves indicate and what should you do?",
+      "options": [
+        "A. Training is going well - training loss decreasing means the model is improving",
+        "B. The model is overfitting - use the checkpoint from epoch 1 when validation loss was lowest",
+        "C. The validation set is too small - discard validation metrics and use epoch 3 checkpoint",
+        "D. The learning rate is too low - increase it to bring validation loss back down"
+      ],
+      "answer": "B",
+      "explanation": "Training loss decreasing while validation loss increases is the classic overfitting signature. The model is memorizing training examples instead of learning generalizable patterns. The optimal checkpoint was after epoch 1 when validation loss was 0.85. This is why SFTConfig has load_best_model_at_end=True and metric_for_best_model='eval_loss' - it automatically reverts to the best checkpoint. Using epoch 3 would deploy a model that performs worse than epoch 1 on real data."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are configuring LoRA for a Mistral 7B model. You look up the architecture and see it has: q_proj, k_proj, v_proj, o_proj (attention), and gate_proj, up_proj, down_proj (MLP feedforward). A blog post recommends targeting all 7 module types for maximum quality.",
+      "question": "For a standard 2,000-example fine-tuning task, what is the best target_modules selection?",
+      "options": [
+        "A. All 7 modules - more target layers always improves task-specific performance",
+        "B. Only q_proj and v_proj - targeting all four attention projections wastes parameters",
+        "C. Start with the 4 attention projections (q/k/v/o) only, expand to MLP only if needed",
+        "D. Only MLP layers - feedforward networks store factual knowledge better than attention"
+      ],
+      "answer": "C",
+      "explanation": "Attention projections (q/k/v/o) capture the model's task understanding and are the highest-value targets per trainable parameter. Adding MLP layers increases trainable parameters by roughly 3x while providing diminishing quality gains for most tasks. On a 2,000-example dataset, more parameters means higher overfitting risk. Start with attention-only. If training loss plateaus well above your target after 3 epochs with a reasonable rank, then consider adding MLP layers."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your team has a 7B model adapted with LoRA (r=8). You run the go/no-go eval from Lesson 09-05 and find: exact match accuracy improved from 62% (baseline) to 74% (fine-tuned), a 19% relative improvement. Training cost was $45. The model will handle 10,000 requests per day. The baseline model costs $0.002 per request via API. Your hosted adapter adds $0.0005 infrastructure cost per request.",
+      "question": "A team member argues the fine-tune was not worth it because the adapter adds operational complexity. What is the economic counter-argument?",
+      "options": [
+        "A. The fine-tune is not worth it - operational complexity always outweighs small cost savings",
+        "B. The 19% quality improvement alone justifies it regardless of cost",
+        "C. At 10,000 requests/day, the infrastructure cost difference is negative - the fine-tuned model costs more",
+        "D. The fine-tune reduces per-request API cost by $0.0015, saving $15/day, recovering training cost in 3 days"
+      ],
+      "answer": "D",
+      "explanation": "Baseline API cost: $0.002 per request. Fine-tuned model: runs on own infrastructure at $0.0005/request (hosting the open-weight model). Savings per request: $0.0015. At 10,000 requests/day: $15/day savings. Training cost $45 recovered in 3 days. After that, pure savings. The economic argument and the quality argument (19% improvement) both support deployment. Operational complexity is a real cost but at this request volume, it pays off quickly."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are fine-tuning a model using QLoRA and SFTTrainer. Training crashes after 200 steps with: 'RuntimeError: CUDA out of memory. Tried to allocate 2.34 GiB. GPU has 1.2 GiB free.' Your current config: per_device_train_batch_size=4, gradient_accumulation_steps=4, max_seq_length=1024.",
+      "question": "Which combination of changes most effectively reduces memory usage while preserving training quality?",
+      "options": [
+        "A. Reduce rank from r=16 to r=4 - fewer adapter parameters use less memory",
+        "B. Reduce per_device_train_batch_size to 1, increase gradient_accumulation_steps to 16, enable gradient_checkpointing=True",
+        "C. Switch from 4-bit to 8-bit quantization - 8-bit is more memory efficient",
+        "D. Reduce max_seq_length to 128 - shorter sequences use less attention memory"
+      ],
+      "answer": "B",
+      "explanation": "The OOM happens during forward/backward pass, not from weight storage. Reducing per_device_train_batch_size to 1 cuts activation memory by 4x (the immediate cause of OOM). Increasing gradient_accumulation_steps to 16 maintains the same effective batch size of 16, preserving training dynamics. gradient_checkpointing=True trades compute for memory by recomputing activations during the backward pass instead of storing them - typically saves 30-40% VRAM at a 20% speed cost. Reducing rank saves negligible activation memory. Switching to 8-bit uses more memory than 4-bit. Reducing seq_length to 128 would hurt quality severely if examples are longer."
+    },
+    {
+      "id": "c8",
+      "scenario": "After merging your LoRA adapter with the base model, you notice the merged model gives slightly different outputs than running inference through the unmerged adapter at inference time.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. merge_and_unload() introduces approximation errors that degrade model quality",
+        "B. The merge was done in a different numerical precision than training (e.g., float16 vs bfloat16)",
+        "C. LoRA adapters cannot be merged exactly - there is always information loss",
+        "D. The adapter was overfitted and the merge exposed the overfitting"
+      ],
+      "answer": "B",
+      "explanation": "merge_and_unload() computes W + B@A exactly - there is no approximation. However, if the base model was trained with bfloat16 adapter weights and you load the base model in float16 for the merge, the numerical representation differs slightly. The fix: load the base model for merging in the same dtype used during training (torch_dtype=torch.bfloat16). Additionally, ensure bfloat16 and float16 are not mixed during inference. Always specify dtype explicitly and match it to your training precision."
+    }
+  ]
+}
