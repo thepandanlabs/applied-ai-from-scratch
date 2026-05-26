@@ -30,6 +30,15 @@ jobs:
       - name: Generate site/data.js
         run: node site/build.js
 
+      - name: Install Marp CLI
+        run: npm install -g @marp-team/marp-cli
+
+      - name: Generate slide decks
+        run: |
+          mkdir -p site/slides
+          npx marp --input-dir slides/ --theme slides/theme.css --html --output site/slides/ --allow-local-files
+        continue-on-error: true
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3

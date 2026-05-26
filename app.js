@@ -184,12 +184,22 @@ function renderHome() {
   `;
 }
 
+// Phases with slide decks available (add slug as key, filename stem as value)
+const SLIDE_DECKS = {
+  '00': 'phase-00-setup',
+  '02': 'phase-02-rag',
+};
+
 function phaseCard(phase) {
   const done = phase.lessons.filter(l => l.status === 'complete').length;
   const total = phase.lessons.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const clickable = phase.status !== 'planned' || phase.slug;
   const href = clickable ? `#phase/${phase.id}` : 'javascript:void(0)';
+  const slideDeck = SLIDE_DECKS[phase.id];
+  const slidesBtn = slideDeck
+    ? `<a class="slides-btn" href="site/slides/${slideDeck}.html" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open facilitator slide deck">⧉ Slides</a>`
+    : '';
 
   return `
     <a class="phase-card ${phase.status}" href="${href}" style="display:block; text-decoration:none;">
@@ -197,6 +207,7 @@ function phaseCard(phase) {
       <div class="phase-card-status">
         <span class="status-dot ${phase.status}"></span>
         <span class="status-label ${phase.status}">${statusLabel(phase.status)}</span>
+        ${slidesBtn}
       </div>
       <div class="phase-card-title">${phase.title}</div>
       <div class="phase-card-desc">${phase.description}</div>

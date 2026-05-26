@@ -1,0 +1,278 @@
+/* @theme applied-ai */
+/*
+  Applied AI From Scratch — Marp Theme
+  Dark-first, minimal, modern AI company aesthetic.
+  Inspired by Anthropic/OpenAI internal deck style.
+*/
+
+@import 'default';
+
+:root {
+  --bg:         #0a0a0a;
+  --surface:    #141414;
+  --surface-2:  #1e1e1e;
+  --border:     #2a2a2a;
+  --accent:     #4f46e5;
+  --accent-2:   #a78bfa;
+  --green:      #10b981;
+  --amber:      #f59e0b;
+  --text:       #e8e8e8;
+  --text-muted: #8a8a8a;
+  --code-bg:    #111111;
+  --font-head:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-body:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-code:  "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, monospace;
+}
+
+section {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 22px;
+  line-height: 1.6;
+  padding: 60px 72px;
+  width: 1280px;
+  height: 720px;
+}
+
+/* ── Headings ── */
+h1 {
+  font-family: var(--font-head);
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+  margin: 0 0 24px 0;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-family: var(--font-head);
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text);
+  margin: 0 0 20px 0;
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-family: var(--font-head);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--accent-2);
+  margin: 0 0 14px 0;
+}
+
+/* ── Body text ── */
+p {
+  margin: 0 0 16px 0;
+  color: var(--text);
+}
+
+ul, ol {
+  margin: 0 0 16px 0;
+  padding-left: 28px;
+}
+
+li {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+li::marker {
+  color: var(--accent);
+}
+
+strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+em {
+  color: var(--accent-2);
+  font-style: normal;
+}
+
+/* ── Code ── */
+code {
+  font-family: var(--font-code);
+  font-size: 0.85em;
+  background: var(--surface-2);
+  color: var(--accent-2);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+pre {
+  font-family: var(--font-code);
+  font-size: 15px;
+  line-height: 1.55;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 20px 24px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+pre code {
+  background: none;
+  color: #d4d4d4;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ── Blockquotes (callouts) ── */
+blockquote {
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  color: var(--text-muted);
+  margin: 16px 0;
+  padding: 16px 24px;
+  border-radius: 0 6px 6px 0;
+  font-size: 0.95em;
+}
+
+blockquote p { margin: 0; color: var(--text-muted); }
+blockquote strong { color: var(--accent-2); }
+
+/* ── Tables ── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+  margin: 16px 0;
+}
+
+th {
+  background: var(--surface-2);
+  color: var(--accent-2);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+tr:last-child td { border-bottom: none; }
+
+/* ── Footer ── */
+footer {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-muted);
+  position: absolute;
+  bottom: 24px;
+  left: 72px;
+  right: 72px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ── Page number ── */
+section::after {
+  font-family: var(--font-body);
+  font-size: 13px;
+  color: var(--text-muted);
+  content: attr(data-marpit-pagination) ' / ' attr(data-marpit-pagination-total);
+  position: absolute;
+  bottom: 24px;
+  right: 72px;
+}
+
+/* ── Horizontal rule (section divider) ── */
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+
+/* ── Title slide ── */
+section.title {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 80px 96px;
+  background: var(--bg);
+}
+
+section.title::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-2) 100%);
+}
+
+section.title h1 {
+  font-size: 60px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 16px;
+  line-height: 1.1;
+}
+
+section.title h2 {
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+}
+
+section.title p {
+  font-size: 18px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── Section header slides ── */
+section.section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--surface);
+  border-left: 4px solid var(--accent);
+}
+
+section.section h1 {
+  font-size: 48px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+section.section p {
+  font-size: 20px;
+  color: var(--text-muted);
+}
+
+/* ── Split layout ── */
+section.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+
+/* ── Code-heavy slides ── */
+section.code h2 {
+  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+section.code pre {
+  font-size: 14px;
+}
+
+/* ── Accent color helpers ── */
+.accent   { color: var(--accent); }
+.accent-2 { color: var(--accent-2); }
+.green    { color: var(--green); }
+.amber    { color: var(--amber); }
+.muted    { color: var(--text-muted); }

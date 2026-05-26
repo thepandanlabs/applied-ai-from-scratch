@@ -387,6 +387,21 @@ img, svg { display: block; max-width: 100%; }
 .status-label.progress { color: var(--amber); }
 .status-label.planned  { color: var(--text-muted); }
 
+.slides-btn {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  text-decoration: none;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  padding: 2px 8px;
+  opacity: 0.75;
+  transition: opacity 0.15s;
+}
+.slides-btn:hover { opacity: 1; }
+
 .phase-card-title {
   font-size: 15px;
   font-weight: 600;
