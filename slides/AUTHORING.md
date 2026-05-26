@@ -238,9 +238,9 @@ The `ascii` fence tag applies `.ascii` CSS class, giving it the warm surface bac
 | P03: Tools & MCP | `phase-03-tools-and-mcp.md` | Done |
 | P05: Evaluation | `phase-05-evaluation.md` | Done |
 | P06: Shipping | `phase-06-shipping.md` | Done |
-| P07: Observability | — | To do |
-| P08: Security | — | To do |
-| P09: Fine-Tuning | — | To do |
+| P07: Observability | `phase-07-observability.md` | Done |
+| P08: Security | `phase-08-security.md` | Done |
+| P09: Fine-Tuning | `phase-09-fine-tuning.md` | Done |
 | P10: Multimodal & Voice | — | To do |
 | P11: FDE Skillset | — | To do |
 | P12: Capstones | — | To do |

@@ -193,6 +193,9 @@ const SLIDE_DECKS = {
   '04': 'phase-04-agents',
   '05': 'phase-05-evaluation',
   '06': 'phase-06-shipping',
+  '07': 'phase-07-observability',
+  '08': 'phase-08-security',
+  '09': 'phase-09-fine-tuning',
 };
 
 function phaseCard(phase) {
