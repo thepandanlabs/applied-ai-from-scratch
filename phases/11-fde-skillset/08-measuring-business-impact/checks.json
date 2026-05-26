@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "08-measuring-business-impact",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You have completed a 6-week pilot of an AI document summarizer for a legal firm. Your eval results show RAGAS faithfulness of 0.89 and answer relevance of 0.82. You are preparing for the QBR with the firm's managing partner, who controls the renewal budget.",
+      "question": "Which of the following is the most useful thing to present at the QBR?",
+      "options": [
+        "A. RAGAS faithfulness of 0.89, which exceeds the industry benchmark of 0.85",
+        "B. The model correctly summarized 89% of documents in our test set",
+        "C. Associates now review and approve contract summaries in an average of 8 minutes, down from 34 minutes, saving approximately 520 associate-hours per month",
+        "D. The system achieved 82% answer relevance, meaning it focuses on the right parts of each document"
+      ],
+      "answer": "C",
+      "explanation": "The managing partner makes the renewal decision based on business impact, not model metrics. Option C is the only answer in Layer 3 (business KPI) language. It names a concrete operational improvement (time per review), quantifies the volume impact (hours per month), and connects directly to cost. Options A, B, and D are all Layer 1 (eval) or Layer 2 (operational) metrics without business translation."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your ImpactTracker shows a quality-to-success correlation of 0.31 on your pilot data. Your model quality scores average 0.82, but the task success rate is only 58%.",
+      "question": "What does a quality-success correlation of 0.31 indicate?",
+      "options": [
+        "A. The model is performing well - 0.31 is a strong correlation for AI systems",
+        "B. Your eval metric is not measuring what predicts real-world task success, and the metric chain is broken between Layer 1 and Layer 2",
+        "C. The operational team is using the system incorrectly, reducing task success",
+        "D. 58% task success is acceptable for a first pilot deployment"
+      ],
+      "answer": "B",
+      "explanation": "A quality-success correlation of 0.31 means your eval metric (model quality score) is a poor predictor of whether the system actually accomplishes its goal in production. This breaks the metric chain between Layer 1 and Layer 2. The eval is measuring something that does not matter in practice. You need to investigate: what does task failure look like? Is the eval grading the wrong thing? Is the operational definition of 'success' different from what the eval measures? A correlation below 0.5 is a signal to redesign the eval metric."
+    },
+    {
+      "id": "c3",
+      "scenario": "A customer says: 'We want to start the pilot next Monday. Can we measure the baseline after the pilot is done, using historical data?' You do not have a pre-pilot baseline.",
+      "question": "What is the problem with this approach, and what should you do?",
+      "options": [
+        "A. It is fine - historical data is equivalent to a pre-pilot baseline",
+        "B. It is a minor inconvenience - do the pilot and add a note that baseline is approximate",
+        "C. Without a measured pre-pilot baseline, you cannot prove improvement - historical data may not represent the same conditions, making the impact case unverifiable",
+        "D. Push back only if the historical data is more than 6 months old"
+      ],
+      "answer": "C",
+      "explanation": "A pre-pilot baseline must be measured under the same conditions as the pilot. Historical data may reflect different volumes, seasonal patterns, different agent teams, or different ticket types. If the baseline is unreliable, you cannot make a credible before/after comparison. The correct response is to delay the pilot start by 1-2 weeks to measure a proper baseline, or to run the AI in shadow mode (not routing live tickets) for a baseline measurement period. Proceeding without a baseline undermines the renewal case."
+    },
+    {
+      "id": "c4",
+      "scenario": "After a successful pilot, you present the impact report: 'Our system reduced escalation rate from 34% to 18%, saving 180 agent-hours per month.' The VP says: 'That is great, but what does 180 agent-hours translate to in dollars?' You do not have the cost-per-agent-hour data.",
+      "question": "What should you have done before the QBR, and what do you do now?",
+      "options": [
+        "A. Estimate $50/hour as a standard industry rate and present the number",
+        "B. Before the QBR, you should have asked the customer for their cost-per-agent-hour; now, ask the VP for that figure and offer to send a revised calculation within 24 hours",
+        "C. Decline to put a dollar value on it since it requires customer financial data you should not have",
+        "D. Use a public benchmark: 'industry average support agent cost is $X/hour'"
+      ],
+      "answer": "B",
+      "explanation": "The dollar translation requires customer-specific cost data that only the customer has. You should have asked for it before the QBR - this is a standard item in the pre-pilot alignment checklist. In the moment, the correct response is to ask the VP directly ('What is your fully loaded cost per agent hour?') and offer to send the complete dollar calculation within 24 hours. Using an industry estimate (option A) or a public benchmark (option D) risks being wrong in a way that undermines credibility. Option C is unnecessarily cautious - the customer wants this number."
+    },
+    {
+      "id": "c5",
+      "scenario": "You have been running a pilot for 3 weeks. The business stakeholder asks for a preliminary impact report. You look at your logs and realize you only captured the eval metric (model quality score), not task success, escalation rate, or resolution time.",
+      "question": "What is the lesson here, and what can you do now?",
+      "options": [
+        "A. Collect the missing operational metrics retroactively by surveying the support team about recent interactions",
+        "B. The lesson is to instrument all three layers before the pilot starts; now, you have two options: extend the pilot with proper instrumentation, or manually review a sample of interactions to reconstruct operational metrics",
+        "C. Present only the eval metric and explain that operational metrics will be available after a longer deployment",
+        "D. The eval metric is sufficient if it is high enough (above 0.85)"
+      ],
+      "answer": "B",
+      "explanation": "This is the core lesson of the metric instrumentation failure mode. Without operational metrics, you cannot make a business case. The two realistic recovery options are: (1) add instrumentation now and extend the pilot period to collect enough data with the new metrics, or (2) do a manual retrospective review of a representative sample (30-50 interactions) to reconstruct task success and escalation rates. Option A (surveying the team) is unreliable - memory is inaccurate. Option D is wrong - no eval score translates directly to a renewal argument without operational context."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your AI pilot for a support team shows: task success rate 81% (vs. 68% baseline), but customer satisfaction proxy dropped from 0.74 to 0.61 during the pilot. The model quality score averaged 0.85.",
+      "question": "What does this mixed result indicate, and how should you present it?",
+      "options": [
+        "A. Present only the task success improvement since it is more significant",
+        "B. The satisfaction drop is a data quality issue - ignore it",
+        "C. Present all three metrics honestly; the satisfaction drop is a real signal that the system may be succeeding at routing (Layer 2) but creating a worse customer experience (Layer 3) - investigate before expanding",
+        "D. The satisfaction drop offsets the task success improvement; the pilot failed"
+      ],
+      "answer": "C",
+      "explanation": "A mixed result where task success improves but satisfaction drops is a meaningful finding, not a reason to hide data. It signals that the system routes tickets correctly but may be creating friction in the customer interaction - perhaps the AI response is too terse, too slow, or missing empathy cues that human agents provided. This must be investigated and fixed before scaling. Presenting only the positive metric (option A) destroys credibility when the satisfaction drop surfaces later. Option D (the pilot failed) is too binary - the system is doing part of its job and needs tuning."
+    },
+    {
+      "id": "c7",
+      "scenario": "A customer wants to expand the AI system after a successful pilot. They ask: 'Can you give us your projection for annual ROI at full deployment scale?' The pilot handled 50 interactions over 4 weeks. Full deployment would handle 800 interactions per day.",
+      "question": "What information do you need from the customer before producing this projection?",
+      "options": [
+        "A. Only the deployment volume (800/day), which you already have",
+        "B. The fully loaded cost per agent interaction, the annual agent headcount cost, and confirmation that the pilot metrics are representative of the full deployment use cases",
+        "C. The exact number of agents whose jobs will be replaced",
+        "D. The average revenue per customer, to compute revenue impact"
+      ],
+      "answer": "B",
+      "explanation": "An ROI projection requires: (1) cost per interaction baseline to multiply by the volume improvement, (2) confirmation that the pilot's 50-interaction sample is representative of all 800 daily interactions (different ticket types may have different success rates), and (3) any additional costs at scale (infrastructure, monitoring, model API costs). Option A alone gives you volume but not dollar value. Option C frames the question as job replacement, which is often politically sensitive and usually incorrect - the system handles volume growth, not headcount reduction. Option D may apply for revenue-generating interactions but is not the primary metric for a support use case."
+    }
+  ]
+}

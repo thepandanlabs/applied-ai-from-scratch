@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "03-discovery-vague-ask-to-spec",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You run the spec writer on your discovery notes. Section 2 (Success Metric) outputs: '[SUGGESTED] Reduce document review time from 45 minutes to under 15 minutes per application within 60 days, measured via dashboard time-tracking.' The customer has not confirmed this metric.",
+      "question": "What is the correct next action?",
+      "options": [
+        "A. Accept the suggested metric and start building since it is reasonable",
+        "B. Send the customer a single confirmation question: 'Does this metric match your expectation?'",
+        "C. Remove the metric and build first, then define success based on what you observe",
+        "D. Replace the suggested metric with a broader goal to avoid being held to a specific number"
+      ],
+      "answer": "B",
+      "explanation": "A [SUGGESTED] metric is a hypothesis, not a confirmed requirement. The spec writer flags it because Claude generated it from the notes, not from an explicit customer statement. One email confirmation converts it from a guess to a shared commitment. Building without confirmation means you may be measuring the wrong thing."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your AI spec has a data source section that reads: '[UNKNOWN - must resolve before build] Assumed: Salesforce CRM records. Owner not confirmed.' Your manager says the build needs to start Monday.",
+      "question": "What is the risk of starting the build with this flag unresolved?",
+      "options": [
+        "A. Minor risk: you can always add the data connection later in the build",
+        "B. Low risk: Salesforce has a well-documented API so access should be straightforward",
+        "C. High risk: you may build a system whose primary data source is inaccessible, requiring a rebuild",
+        "D. Medium risk: you can use synthetic data while waiting for access confirmation"
+      ],
+      "answer": "C",
+      "explanation": "An unconfirmed data source is not a minor gap. If the owner is unknown, you cannot request access. If access is blocked (IT approval, GDPR review, wrong Salesforce plan tier), you may spend 1-2 weeks building a system you cannot connect to real data. This is one of the most common week-2 blockers in AI pilots."
+    },
+    {
+      "id": "c3",
+      "scenario": "A spec has the following success metric: 'Improve the quality of compliance reviews.' The customer has confirmed this is what they want. You are ready to build.",
+      "question": "What is wrong with this success metric?",
+      "options": [
+        "A. Nothing: the customer confirmed it, so it is a valid success criterion",
+        "B. It lacks a number, baseline, time horizon, and measurement source, making it unevaluable",
+        "C. It is too technical; it should use simpler language",
+        "D. It should include the name of the AI model to be used"
+      ],
+      "answer": "B",
+      "explanation": "Customer confirmation of a vague metric does not make it evaluable. 'Improve quality' has no number (what percentage improvement?), no baseline (what is quality today?), no time horizon (by when?), and no measurement source (how will you measure quality?). When the eval runs, there is no test to pass or fail. A spec with an unquantified success metric cannot be evaluated."
+    },
+    {
+      "id": "c4",
+      "scenario": "You finish the discovery call and write the AI spec. The integration points section says: 'AI output goes into the customer's workflow.' You flag this as [UNKNOWN]. The customer is not available for a follow-up call for 3 days.",
+      "question": "What should you do in the 3 days before the follow-up?",
+      "options": [
+        "A. Start building toward the most likely integration point to save time",
+        "B. Build the core AI logic without the integration layer, so you can add it once confirmed",
+        "C. Email one specific question: 'Which tool or screen should the AI output appear in?'",
+        "D. Ask a colleague who worked with this customer type before to guess the integration point"
+      ],
+      "answer": "C",
+      "explanation": "The correct move is to send a targeted written question immediately so the 3-day clock starts now, not in 3 days. Building toward a guessed integration point risks rework. The email is 1 sentence and takes 2 minutes. Building the AI logic is reasonable in parallel only if the integration layer is cleanly separated and can be attached later without structural changes."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are reviewing a colleague's AI spec before they start building. The 'Risks and Unknowns' section is blank. They say: 'I don't see any major risks for this project.'",
+      "question": "How should you respond?",
+      "options": [
+        "A. Accept it: a blank risk section means the spec is clean",
+        "B. Ask them to fill in at least the standard risks: model latency, data format variance, and integration constraints",
+        "C. Add your own risks to their spec without asking",
+        "D. Tell them to start building and document risks as they appear"
+      ],
+      "answer": "B",
+      "explanation": "Every AI project has at minimum three standard risks: model latency (will response time meet UX requirements?), data format variance (will real data match the assumed format?), and integration constraints (does the target system support the required connection type?). A blank risk section means these haven't been considered, not that they don't exist. Naming them before build means they are watched, not discovered."
+    },
+    {
+      "id": "c6",
+      "scenario": "You complete the spec and show it to the VP of Engineering at the customer. She says: 'This looks great. Can you also add automated email replies to customers and a reporting dashboard?' This is significantly beyond the original scope.",
+      "question": "How does the out-of-scope section of the spec help you handle this?",
+      "options": [
+        "A. It doesn't: the VP outranks the original stakeholder, so the spec must be updated",
+        "B. It provides a documented baseline to reference, so you can say: 'Here is what was scoped. Adding these features changes the timeline. Shall we do a scoping session for the expanded ask?'",
+        "C. You can use the spec to reject the new requirements permanently",
+        "D. The out-of-scope section should be updated immediately to include the new requirements"
+      ],
+      "answer": "B",
+      "explanation": "The out-of-scope section is not a blocker: it is a documented baseline. When new requirements arrive, you can reference it to explain what was agreed and what the new scope would mean for the timeline. This converts a scope-creep conversation from a negotiation to a planning conversation: the spec is the starting point, not the ending point."
+    },
+    {
+      "id": "c7",
+      "scenario": "Six weeks after the build, you run the eval harness. The system passes the eval: average ticket categorization time dropped from 8 minutes to 2.5 minutes. The customer is pleased but says: 'We thought it would also suggest responses, not just categorize.' There is no mention of response drafting in the spec.",
+      "question": "What does this outcome reveal about the discovery process?",
+      "options": [
+        "A. The spec was correct: the system met its defined goal",
+        "B. The eval was too narrow: it should have tested response drafting too",
+        "C. The discovery call missed a stakeholder expectation that was never captured in the spec",
+        "D. The customer changed their requirements after sign-off, which is not a discovery failure"
+      ],
+      "answer": "C",
+      "explanation": "The system met its documented spec. The problem is that the spec was incomplete: a key stakeholder expectation (response drafting) was not captured during discovery. This is a discovery failure, not a build failure. The correct prevention: at the end of the discovery call, ask: 'Are there any capabilities you expect this system to have that we haven't discussed?' This surfaces implicit expectations before they become post-demo surprises."
+    }
+  ]
+}

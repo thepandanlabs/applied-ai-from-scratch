@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "01-what-an-fde-does",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You are two weeks into an AI pilot. You have a clean codebase with unit tests, CI/CD, and well-documented APIs. You have not yet run the prototype on any real customer data. The customer demo is in 5 days.",
+      "question": "From an FDE perspective, what is the most critical risk to address immediately?",
+      "options": [
+        "A. The test coverage could be higher before a customer-facing demo",
+        "B. The prototype has not been validated on real customer data, and the demo is in 5 days",
+        "C. The CI/CD pipeline should be reviewed to ensure it handles edge cases",
+        "D. The documentation should be reviewed by the customer before the demo"
+      ],
+      "answer": "B",
+      "explanation": "FDEs are measured on outcomes, not code quality. A demo on synthetic or no data is a failure risk. The clean codebase is good but irrelevant if the system hasn't been proven on real inputs. Getting 20+ real customer samples and testing before the demo is the top priority."
+    },
+    {
+      "id": "c2",
+      "scenario": "An AI pilot has been running well in demos. The customer loved it. The FDE hands off to the customer's engineering team. Two weeks later, the system is down and no one at the customer site knows how to restart it. The FDE is on a new engagement.",
+      "question": "Which phase of the FDE lifecycle was most likely skipped or rushed?",
+      "options": [
+        "A. Discover: the problem was not well understood",
+        "B. Build: the code quality was insufficient for production",
+        "C. Hand Off: the receiving team was not briefed and a runbook was not provided",
+        "D. Validate: the demo did not use real customer data"
+      ],
+      "answer": "C",
+      "explanation": "The symptom is operational failure after handoff. The receiving team cannot restart the system, which means they were not prepared. This is a Hand Off failure: no runbook, no dry-run walkthrough, and no escalation path. The demo success is irrelevant if the handoff was incomplete."
+    },
+    {
+      "id": "c3",
+      "scenario": "A customer says: 'We want AI to make our sales team more productive.' You are starting a new engagement.",
+      "question": "Which of the following responses best reflects the FDE scoping approach?",
+      "options": [
+        "A. Start building a sales assistant prototype using the latest model to show quick progress",
+        "B. Ask what specific task in the sales workflow takes the most time and what success looks like as a number",
+        "C. Propose a multi-agent system that handles prospecting, drafting, and follow-ups",
+        "D. Request access to their CRM data to start analyzing patterns"
+      ],
+      "answer": "B",
+      "explanation": "The statement 'make our sales team more productive' is not a requirement. Before building or requesting data access, the FDE must extract a specific process, a measurable outcome, and a baseline. The scoping phase converts vague asks into concrete, measurable requirements."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are an FDE finishing week 1 of a 3-week pilot. You have a rough, messy prototype that runs on 30 real customer samples with a 15% failure rate. A colleague suggests you spend week 2 refactoring before showing the customer.",
+      "question": "What should you do?",
+      "options": [
+        "A. Agree: clean code in week 2 will make week 3 demos go better",
+        "B. Show the customer the current prototype and failure analysis before refactoring",
+        "C. Delay the customer update until the code is production-ready",
+        "D. Refactor in parallel with customer demos to avoid slowing down"
+      ],
+      "answer": "B",
+      "explanation": "Week 1's goal is to prove the hypothesis on real data, which you've done. A 15% failure rate on real data is valuable signal that you and the customer need to discuss. Refactoring before showing the customer delays that feedback loop and risks building the wrong thing cleanly. Show the results, get feedback, then improve."
+    },
+    {
+      "id": "c5",
+      "scenario": "You run the FDE self-assessment mid-engagement and score 75% overall. Your lowest competency is Handoff at 25%. The customer milestone is in 6 days.",
+      "question": "What is the most important single action to take today based on this assessment?",
+      "options": [
+        "A. Write more documentation to improve the Handoff score before the milestone",
+        "B. Ask the customer to name the person or team who will own the system after you leave",
+        "C. Improve the overall score by focusing on your highest-gap competency areas",
+        "D. Continue current work since overall 75% is a strong position"
+      ],
+      "answer": "B",
+      "explanation": "A 25% Handoff score likely means the handoff recipient has not been identified. Documentation cannot be written for an unknown audience. The first step is naming the recipient, which only the customer can do. This single action unblocks all subsequent handoff preparation."
+    },
+    {
+      "id": "c6",
+      "scenario": "A customer says the AI pilot was a success in the demo. Three months later, the system is being used by only 2 of the 50 intended users. The customer is considering not renewing.",
+      "question": "How should an FDE interpret this outcome?",
+      "options": [
+        "A. The AI model was not good enough for production use",
+        "B. The pilot succeeded: the demo was positive and that was the deliverable",
+        "C. The pilot failed: FDE success is measured on production adoption, not demo feedback",
+        "D. The customer's engineering team failed to integrate the system properly"
+      ],
+      "answer": "C",
+      "explanation": "FDEs are measured on outcomes: pilot converted to production, customer renewed, time-to-value achieved. A successful demo with 4% adoption is a failed engagement. The root cause (unclear integration path, poor handoff, wrong use case) is the FDE's to diagnose and own, not the customer's engineering team's fault."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are joining an FDE team from a backend engineering role. Your manager tells you that your performance will be measured on 'pilot conversion rate' rather than 'story points completed.' You are preparing for your first customer engagement.",
+      "question": "Which change in working style is most important to make immediately?",
+      "options": [
+        "A. Write more thorough unit tests to ensure production quality from the start",
+        "B. Start each engagement by asking what success looks like in a number, before any code",
+        "C. Move faster by skipping architecture planning and going straight to code",
+        "D. Focus on the technical depth of the solution to impress the customer"
+      ],
+      "answer": "B",
+      "explanation": "The shift from story points to pilot conversion rate means success is defined by customer outcomes, not code output. The highest-leverage change is asking for a measurable success definition at the start of every engagement. Without it, there is no way to know if you are building the right thing or if the pilot has succeeded."
+    }
+  ]
+}

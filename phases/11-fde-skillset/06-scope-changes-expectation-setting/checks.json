@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "06-scope-changes-expectation-setting",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You are in week 4 of a 6-week engagement to build a document classifier. Your primary contact sends a message: 'We just realized we also need the system to handle documents in Spanish. Our team processes about 30% Spanish docs.' Multi-language support was listed in your original NOT IN SCOPE section.",
+      "question": "How should you classify this request?",
+      "options": [
+        "A. Clarification, because the customer is giving you more information about their documents",
+        "B. Expansion, because multi-language support adds significant new work not covered in the original scope",
+        "C. Pivot, because processing Spanish documents requires a completely different system",
+        "D. Clarification, because you should have asked about language requirements during discovery"
+      ],
+      "answer": "B",
+      "explanation": "Multi-language support was explicitly listed as NOT IN SCOPE. The goal (document classification) is the same, but this adds substantial new work: a different or multilingual embedding model, new labeled training data in Spanish, updated eval sets, and possibly different preprocessing. That is expansion, regardless of who failed to ask the right question during discovery."
+    },
+    {
+      "id": "c2",
+      "scenario": "A customer sends a Slack message at 4pm on Friday: 'Hey quick question, can we also add X feature? It would be huge for us.' You know X would add roughly 2 weeks of work to a 4-week project. The customer is waiting for your response.",
+      "question": "What is the correct immediate response?",
+      "options": [
+        "A. Say yes immediately to keep the customer happy and figure out the timeline later",
+        "B. Say no immediately to protect the delivery date",
+        "C. Tell the customer you will assess the impact and get back to them by a specific time within 24 hours",
+        "D. Ask the customer to submit a formal change request form before you can respond"
+      ],
+      "answer": "C",
+      "explanation": "The 24-hour rule exists specifically for this situation. An immediate yes commits you without understanding the full impact. An immediate no may be wrong (the customer might be willing to extend the timeline). A formal process is bureaucratic overkill. The right response names a specific return time and signals you are taking the request seriously. Never answer scope change requests immediately."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are running a ScopeChangeEvaluator on this request: 'When we said our internal knowledge base, we meant only the HR and Finance wikis. Engineering docs are out of scope for this phase.' The original scope said 'all internal wikis.' The request reduces the scope.",
+      "question": "What classification should the tool return, and what is the correct action?",
+      "options": [
+        "A. Expansion, because the customer is changing the agreed scope",
+        "B. Pivot, because the goal has fundamentally changed",
+        "C. Clarification, because the goal is the same and the scope is narrowing, not growing",
+        "D. Expansion, because you will now need to add filtering logic to exclude Engineering docs"
+      ],
+      "answer": "C",
+      "explanation": "Clarification means the same goal with better definition. Scope reduction is still clarification, not expansion. The customer is not asking for more, they are narrowing the target. This almost always reduces work. The correct action is to update the scope doc, document what changed, and confirm in writing. Note: if the narrowing requires significant rework (e.g., you already ingested Engineering docs), that tradeoff should be noted in the response."
+    },
+    {
+      "id": "c4",
+      "scenario": "Halfway through a 3-month AI project, the customer's new CTO says: 'Our previous vendor was building this as a rules-based system. Can we switch to that approach instead of the LLM-based one? Rules are more predictable.' The current LLM system is 60% complete.",
+      "question": "How should you classify and respond to this request?",
+      "options": [
+        "A. Expansion, because you will need to build both systems in parallel",
+        "B. Clarification, because the goal (automated classification) is the same",
+        "C. Pivot, because switching from an LLM approach to a rules-based system requires restarting the design and implementation",
+        "D. Clarification, because the customer is just specifying a technical preference"
+      ],
+      "answer": "C",
+      "explanation": "The underlying goal (automated classification) may be the same, but the approach change is a fundamental architectural decision that invalidates the work completed so far. Data labeling, prompt engineering, model evaluation, and infrastructure are all different for a rules-based system. This is a pivot: it requires stopping current work, scoping the new approach from scratch, and resetting the timeline. A new CTO making this call also signals a stakeholder alignment issue that should be surfaced."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are presenting the scope change playbook to a new customer at project kickoff. They push back: 'This seems very formal. We prefer to work flexibly and discuss changes as they come up verbally.' You are concerned that verbal-only scope management will cause problems.",
+      "question": "What is the most effective way to address this concern while preserving the customer relationship?",
+      "options": [
+        "A. Agree to work verbally and take your own private notes to protect yourself",
+        "B. Insist on the formal process and risk the relationship if they disagree",
+        "C. Explain that the written process protects them too, by giving them a clear record of what was agreed and preventing misalignment between their own stakeholders",
+        "D. Use the formal process anyway without telling them and send written summaries after every verbal discussion"
+      ],
+      "answer": "C",
+      "explanation": "The scope doc and change log are not bureaucracy, they are alignment tools. Customers who prefer verbal communication still have multiple stakeholders who were not in the room. The written record protects the customer from their own internal miscommunication. Frame it as: 'I will always confirm our verbal agreements in writing so everyone on your team has the same picture.' Option D is deceptive. Option A creates a power imbalance. Option B may win the argument but lose the relationship."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your impact assessment finds that a requested expansion will add 8 engineering days to a 20-day project. You present this to the customer. They respond: 'That seems like a lot. Can you just squeeze it in over the weekends?' You have no intention of working weekends.",
+      "question": "What is the correct response?",
+      "options": [
+        "A. Agree to work weekends to maintain the customer relationship",
+        "B. Decline working weekends and present the three options: accept the expansion with a timeline extension, decline the expansion, or reduce another deliverable to make room",
+        "C. Decline working weekends and drop the expansion without discussing alternatives",
+        "D. Ask your manager to handle this conversation"
+      ],
+      "answer": "B",
+      "explanation": "When a customer pushes back on an impact assessment, the correct move is to present structured options, not to negotiate your working hours. The three options are: accept the expansion with the honest timeline extension, decline the expansion and stay on schedule, or trade off another deliverable to create room for the new feature. Presenting options respects the customer's autonomy while being honest about constraints. Agreeing to absorb the work informally is how you end up with a 60-hour work week and a missed deadline."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are maintaining a scope doc with a change log. Your customer asks a new feature request, and after your assessment you classify it as expansion that would add 4 days. The customer approves the extension. What should happen in the scope doc?",
+      "question": "Which information belongs in the change log entry?",
+      "options": [
+        "A. Only the date and a brief description of the new feature",
+        "B. The date, the original request text, the classification, the decision (approved with 4-day extension), and who approved it",
+        "C. The date, the new delivery date, and your internal effort estimate",
+        "D. A summary written from memory at the end of the project"
+      ],
+      "answer": "B",
+      "explanation": "The change log entry must capture enough detail to reconstruct the decision later. At minimum: the date, the original request (verbatim or close paraphrase), your classification, the decision made, and who made it. If the project ends in dispute, the change log is your evidence. A one-line 'added feature X' entry is inadequate. The approval attribution matters because customers sometimes forget what their own stakeholders agreed to."
+    },
+    {
+      "id": "c8",
+      "scenario": "You have been working with a customer for 4 weeks. They have made two expansion requests, both of which you assessed and they approved with timeline extensions. A third expansion request has just arrived. The project is now 2 weeks past the original end date.",
+      "question": "What should you do before assessing the third request?",
+      "options": [
+        "A. Assess and approve it as you did the previous two, since the process is working",
+        "B. Refuse the third request automatically since the project is already late",
+        "C. Escalate to your manager or account lead, since multiple expansions indicate a scoping problem that the change management process alone cannot fix",
+        "D. Accept the request but do not extend the timeline this time"
+      ],
+      "answer": "C",
+      "explanation": "Two approved expansions plus a third request is a pattern, not an isolated event. It means the original discovery was incomplete, the customer's stakeholders are not aligned, or the customer does not understand that expansions have costs. At this point the change management process is treating symptoms, not the cause. Escalating to your manager allows a more senior conversation about the project's overall health, whether a new scoping phase is needed, and whether additional budget or timeline must be formally renegotiated."
+    }
+  ]
+}

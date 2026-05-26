@@ -225,20 +225,20 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 11: The Forward-Deployed Skillset [⬚] (~10 hours)
+## Phase 11: The Forward-Deployed Skillset [✅] (~10 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | What an FDE Actually Does | ⬚ | ~45 min |
-| 02 | Scoping Before Solving: Requirements Gathering | ⬚ | ~60 min |
-| 03 | Discovery: Vague Ask to AI Spec | ⬚ | ~60 min |
-| 04 | Choosing the Right Pattern | ⬚ | ~45 min |
-| 05 | Demos That Survive Real Data | ⬚ | ~60 min |
-| 06 | Mid-Stream Scope Changes & Expectation Setting | ⬚ | ~45 min |
-| 07 | Integrating into a Messy Customer Environment | ⬚ | ~60 min |
-| 08 | Measuring Business Impact | ⬚ | ~45 min |
-| 09 | Handoff: Docs, Runbooks, Teaching the Team | ⬚ | ~60 min |
-| 10 | Communicating with Non-Technical Stakeholders | ⬚ | ~45 min |
+| 01 | What an FDE Actually Does | ✅ | ~45 min |
+| 02 | Scoping Before Solving: Requirements Gathering | ✅ | ~60 min |
+| 03 | Discovery: Vague Ask to AI Spec | ✅ | ~60 min |
+| 04 | Choosing the Right Pattern | ✅ | ~45 min |
+| 05 | Demos That Survive Real Data | ✅ | ~60 min |
+| 06 | Mid-Stream Scope Changes & Expectation Setting | ✅ | ~45 min |
+| 07 | Integrating into a Messy Customer Environment | ✅ | ~60 min |
+| 08 | Measuring Business Impact | ✅ | ~45 min |
+| 09 | Handoff: Docs, Runbooks, Teaching the Team | ✅ | ~60 min |
+| 10 | Communicating with Non-Technical Stakeholders | ✅ | ~45 min |
 
 ---
 

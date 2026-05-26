@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "07-messy-customer-environment",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You are scoping a 6-week AI project for a healthcare company. You ask about data access and learn that patient records live in an EMR system from 2005 that has no documented API. The IT team confirms the only access method is a nightly CSV export to a shared network drive.",
+      "question": "How should you classify this finding in the integration audit?",
+      "options": [
+        "A. LOW - CSV exports are common and easy to work with",
+        "B. MEDIUM - you can build an import pipeline to consume the CSV files",
+        "C. HIGH or BLOCKER - no real-time API means the architecture must change, with significant implications for latency and freshness requirements",
+        "D. HIGH - but only if the project requires real-time data access"
+      ],
+      "answer": "C",
+      "explanation": "No API on the primary data source is one of the most common FDE blockers. Whether it is HIGH or BLOCKER depends on the latency requirements: if the project needs real-time data, this is a BLOCKER. If nightly batch is acceptable, it is HIGH (requires building an ingestion pipeline, adds failure modes, limits what the system can do). Either way, it is not MEDIUM or LOW - it changes the architecture fundamentally and must be surfaced before design begins."
+    },
+    {
+      "id": "c2",
+      "scenario": "During a network domain audit, the customer's IT team says: 'All outbound calls to cloud services are blocked by our firewall. Any external vendor needs to submit an IP allowlisting request to our security team. That process takes 3 to 4 weeks and requires a business justification form approved by a VP.'",
+      "question": "What is the correct action after this discovery?",
+      "options": [
+        "A. Note it as LOW risk - the customer can start the allowlisting process any time",
+        "B. Start the allowlisting process immediately and factor 4 weeks into the project timeline before the system can be tested end-to-end",
+        "C. Redesign the system to avoid all outbound cloud API calls by deploying a local model",
+        "D. Note it as MEDIUM risk and address it in the third week of the project"
+      ],
+      "answer": "B",
+      "explanation": "A 4-week allowlisting process is a HIGH risk and a hard dependency on the timeline. If you do not start the process in week 1, you cannot test the integrated system until week 5 of a 6-week project. The correct action is to flag it immediately, start the formal request process in the first week, and reflect the dependency in the project plan. Option C may be correct if the allowlisting is truly impossible, but that is a separate architectural decision to explore."
+    },
+    {
+      "id": "c3",
+      "scenario": "A European retail customer tells you: 'We process EU customer data including purchase history and browsing behavior. Our legal team has confirmed that this data cannot leave EU jurisdiction under any circumstances.' You are planning to use Claude via Anthropic's US-hosted API.",
+      "question": "How should you classify this finding and what is the mitigation?",
+      "options": [
+        "A. LOW - you can anonymize the data before sending it to the model",
+        "B. MEDIUM - most cloud providers have EU data centers you can use",
+        "C. BLOCKER or HIGH - EU data residency requirements may eliminate the planned architecture; explore EU-region deployments or on-premise model options before proceeding",
+        "D. LOW - GDPR applies to storage, not to API calls for processing"
+      ],
+      "answer": "C",
+      "explanation": "EU data residency requirements are a compliance blocker if the planned infrastructure is US-only. The correct response is to surface this immediately and explore alternatives: EU-region API deployments (Anthropic, Azure, AWS all have EU options), on-premise model deployment, or legal review of what 'cannot leave EU' means for transient API processing. Anonymization (option A) does not necessarily satisfy GDPR for all data types. This must be resolved before design, not after."
+    },
+    {
+      "id": "c4",
+      "scenario": "You discover that the customer has an internal escalation tool called 'APEX' that the AI system needs to write to in order to create escalation tickets. The engineer who built APEX left the company 8 months ago. The only documentation is a README in a private Git repository that the current IT team believes is 'mostly accurate.' No one has touched the APEX codebase in 14 months.",
+      "question": "What should you do with this finding?",
+      "options": [
+        "A. Accept it as LOW risk - old internal tools usually have stable APIs",
+        "B. Flag it as HIGH risk and identify an owner, test the API immediately in week 1, and have a contingency plan if the API is unreliable",
+        "C. Redesign the system to avoid writing to APEX",
+        "D. Accept it as MEDIUM risk - you can figure out the API during the build phase"
+      ],
+      "answer": "B",
+      "explanation": "An undocumented, unowned internal system with a single maintainer who left is a HIGH risk. The API may work, or it may have undocumented quirks, inconsistent behavior, or silent failures. The correct action is: identify a current owner (even if informal), test the API in week 1 of the project, document what you discover, and have a contingency plan (e.g., a wrapper layer, a fallback to CSV export) if the API is unreliable. Discovering this in week 5 is the expensive version."
+    },
+    {
+      "id": "c5",
+      "scenario": "A startup customer says 'We don't really have an IT team, it's just the two founders. We use all cloud services, everything has APIs, and we are fine with data going anywhere.' You run the integration audit and find no blockers or high risks.",
+      "question": "What is the correct conclusion?",
+      "options": [
+        "A. Skip the rest of the audit since there are no issues",
+        "B. Complete the audit, document the clean results, and proceed to design - but note that the startup environment may change rapidly",
+        "C. The audit result is suspicious - no risks is a sign the customer did not understand the questions",
+        "D. Flag the whole audit as HIGH risk because startups have unstable infrastructure"
+      ],
+      "answer": "B",
+      "explanation": "A clean audit result on a cloud-native startup with no compliance requirements is realistic and valid. Complete the audit, document the results, and proceed. The caveat worth noting is that startup environments change: what is fine today may have a new compliance requirement after a funding round, or may change infrastructure providers. Documenting the audit date and conditions protects you if the environment changes. Option C is wrong - not all customers have enterprise blockers."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are in the second week of a 10-week project. You discover that the customer's primary data system requires HIPAA compliance from all vendors that access it. You did not ask about HIPAA in your initial discovery. The AI model provider you have been planning to use does not offer a Business Associate Agreement.",
+      "question": "What went wrong and what is the correct response?",
+      "options": [
+        "A. Nothing went wrong - HIPAA is a compliance issue the customer should have disclosed",
+        "B. The integration audit was either skipped or incomplete - the compliance domain question about HIPAA should have surfaced this in week 1; now you must stop, find an alternative provider with BAA, and reset the timeline",
+        "C. Continue with the current provider and add a data anonymization layer to avoid HIPAA scope",
+        "D. Proceed but document that the customer accepted the HIPAA risk"
+      ],
+      "answer": "B",
+      "explanation": "This is a textbook case of an integration audit being skipped or rushed. HIPAA applicability is a standard question in the compliance domain. Discovering it in week 2 means the architecture was designed without a required constraint. The correct response: stop the current design, find a HIPAA-compliant provider (AWS Bedrock, Azure OpenAI, and others offer BAA), reset the timeline to account for the change, and have an honest conversation with the customer about the impact. Option C (anonymization) may work technically but requires legal review - it is not a safe assumption."
+    },
+    {
+      "id": "c7",
+      "scenario": "A customer says 'We want to give you access to our Salesforce instance. Here is a login to one of our employee's accounts. They are leaving next month anyway so you can use it until then.' You need ongoing service-level access for a 4-month project.",
+      "question": "What risk does this represent and what should you do?",
+      "options": [
+        "A. LOW risk - it is just a temporary measure while the service account is set up",
+        "B. HIGH risk - human user accounts are tied to employment status and will be deactivated when the employee leaves, breaking your integration mid-project; push for a proper service account",
+        "C. MEDIUM risk - document it and set a reminder to ask for a new account before the employee leaves",
+        "D. Accept it and rotate to a new account when needed"
+      ],
+      "answer": "B",
+      "explanation": "Using a human user's credentials for automated system access is an anti-pattern with a known failure mode: when the employee leaves, the account is deactivated and your integration breaks. For a 4-month project, this will almost certainly cause an incident. The correct response is to flag this as HIGH risk and push for a dedicated service account immediately. If the customer's policy genuinely does not allow service accounts (a common enterprise constraint), that itself is a HIGH risk to document and mitigate differently."
+    }
+  ]
+}

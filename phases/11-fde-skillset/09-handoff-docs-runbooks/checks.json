@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "09-handoff-docs-runbooks",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You are finishing a 3-month AI project for a healthcare company. Your system is stable and the customer team seems confident. Your manager says: 'Just write up a quick summary doc and share your login credentials so they can access the infrastructure if needed.' You are concerned this is not a complete handoff.",
+      "question": "What are the two most significant risks with this approach?",
+      "options": [
+        "A. The summary doc may not be well-written, and the credentials may get lost",
+        "B. Shared login credentials are a security and accountability risk, and a summary doc without runbook content means the team cannot diagnose failures without calling you",
+        "C. The customer team may not read the summary doc, and credentials may expire",
+        "D. The summary doc may be too long, and the credentials may not work for all systems"
+      ],
+      "answer": "B",
+      "explanation": "Sharing your personal login credentials to production infrastructure is a security violation (no audit trail, no principle of least privilege, credential will be deactivated when you leave). And a 'summary doc' without specific failure diagnoses, restart procedures, and eval commands means the team cannot operate the system independently. The hallmark of a complete handoff is that the team can diagnose and fix the three most common failures without calling you."
+    },
+    {
+      "id": "c2",
+      "scenario": "You have written all four handoff documents and emailed them to the customer team. Three weeks later, the customer calls because their scheduled document re-ingestion job failed and nobody knows how to restart it.",
+      "question": "What does this failure tell you about the handoff process?",
+      "options": [
+        "A. The runbook was incomplete - the re-ingestion job failure was a known risk and should have had a dedicated runbook section",
+        "B. The customer team did not read the documentation carefully enough",
+        "C. Handoff documents cannot cover every possible failure mode",
+        "D. The failure was unforeseeable - scheduled job failures are rare"
+      ],
+      "answer": "A",
+      "explanation": "You built the system, so you knew which jobs ran on a schedule and which failures were most likely. A scheduled job failure is one of the most common operational issues in any system. The runbook should have had an explicit section: symptom (new documents not searchable), cause (job failed or ran but hit a rate limit), fix (how to check the log, how to restart the job, how to verify success). Documenting and emailing is not a handoff - it is document delivery. A live handoff session where the team simulates a failure would have caught this gap."
+    },
+    {
+      "id": "c3",
+      "scenario": "During the live handoff session, you ask the customer's tech lead to restart the system using only the runbook. They get stuck at step 3 and ask you: 'What does it mean when it says to check the health endpoint?' You answer the question verbally.",
+      "question": "What should you do after answering the question?",
+      "options": [
+        "A. Nothing - answering questions is the purpose of the handoff session",
+        "B. Update the runbook to add a clear explanation of the health endpoint check, so the next person to read it does not have the same question",
+        "C. Make a note to email a clarification after the session",
+        "D. Accept that some things require institutional knowledge that cannot be documented"
+      ],
+      "answer": "B",
+      "explanation": "Every question the tech lead needs to ask you during the live session is a runbook gap. The session's purpose is not just explanation - it is discovering gaps in real-time and fixing them before you leave. If you answer verbally and do not update the doc, the next person to encounter the same situation (a new engineer, or the same tech lead 6 months later) will have no record. Update the runbook during the session or immediately after."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are writing the 'Common Failures' section of the runbook. The system you built has three known failure modes. For one of them - 'API key expiration causes all queries to return 500 errors' - you write: 'Rotate the API key.' How could this runbook entry fail?",
+      "question": "What is missing from this runbook entry?",
+      "options": [
+        "A. The estimated time to fix",
+        "B. The symptom description, the exact steps to rotate the key (where to get the new key, where to update it, how to restart the service), and how to verify the fix worked",
+        "C. A link to the external API documentation",
+        "D. The name of the engineer who should perform the rotation"
+      ],
+      "answer": "B",
+      "explanation": "A runbook entry for a failure mode must have three parts: (1) Symptom - what the user or system sees that indicates this is the problem, (2) Fix - specific step-by-step instructions that assume the reader has not done this before, including exactly where to update the key and how to restart the service, (3) Verification - how to confirm the fix worked. 'Rotate the API key' has none of these. At 2am, 'rotate the API key' is not actionable for someone who has not done it before."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your escalation path document says: 'If you cannot resolve the issue, contact the FDE team.' The customer asks: 'What is the contact for the FDE team?' You realize you did not include contact information.",
+      "question": "What must an escalation path include to be operationally complete?",
+      "options": [
+        "A. The name and email of the FDE lead",
+        "B. A clear decision tree of when to escalate to each level, contact information (email, Slack, emergency phone) for each level, expected response times, and a template for what to include in the escalation message",
+        "C. The phone number of the FDE firm's main office",
+        "D. A general statement that the FDE team can be contacted for any issues"
+      ],
+      "answer": "B",
+      "explanation": "An escalation path needs four things to be operationally complete: (1) clear criteria for when to escalate to each level (so the team does not over-escalate or under-escalate), (2) contact information for each level with multiple channels (email for normal, phone/Slack for urgent), (3) expected response times (so the team knows if they need to wait or escalate further), and (4) a template for the escalation message (so the FDE team gets the right information immediately). An escalation path without response times or message templates causes wasted time in both directions."
+    },
+    {
+      "id": "c6",
+      "scenario": "You have written a Prompt and Model Change Guide. A new engineer at the customer joins 4 months after handoff and wants to improve the system by adding a query rewriting step. They read your guide and update the system prompt. Three days later, users report that answer quality has dropped significantly.",
+      "question": "What should the Prompt and Model Change Guide have included to prevent this?",
+      "options": [
+        "A. A prohibition against making any changes without FDE approval",
+        "B. Step-by-step instructions for running the eval set before deploying any prompt change, what passing/failing scores mean, and how to roll back if quality drops",
+        "C. A warning that prompt changes are dangerous and should be avoided",
+        "D. A list of approved prompt modifications only"
+      ],
+      "answer": "B",
+      "explanation": "The guide should have made the eval workflow mandatory and clear: (1) make the change, (2) run the eval command (with exact syntax), (3) compare to the baseline scores, (4) only deploy if scores meet the threshold, (5) if not, restore the backup. The failure here was that the engineer could make a change and deploy it without running evals first - the guide did not make the eval step a required gate. A good prompt change guide makes it harder to skip evals than to do them."
+    },
+    {
+      "id": "c7",
+      "scenario": "A customer says they want to skip the live handoff session and just receive the documents. 'We are a technical team, we can read docs.' You have the four documents ready. Should you agree?",
+      "question": "What is the risk of skipping the live handoff session, and how should you respond?",
+      "options": [
+        "A. Agree - the documents are the important part, not the meeting",
+        "B. The live session is where runbook gaps are discovered in real time; without it, the first production failure becomes the gap-discovery event; offer a shortened 90-minute session and explain what it catches that document review does not",
+        "C. Refuse to hand over the documents without a live session",
+        "D. Accept it but schedule a 30-minute follow-up call for questions"
+      ],
+      "answer": "B",
+      "explanation": "The live handoff session's value is not explanation - it is gap discovery. When the team attempts to restart the system using only the runbook and gets stuck, you learn the gap immediately. Without this, the first production incident becomes the test. The correct response is to acknowledge their technical confidence, explain what the session catches, and offer a shortened version (the most critical part: have them simulate the most common failure while you watch). A 30-minute follow-up for questions (option D) is too passive - you will not discover gaps that the team does not know they have."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are completing a handoff for a system where the 'What this system does NOT do' section of the System Overview is blank. When you ask the customer's tech lead, they say: 'It will do whatever users ask it to do, right?' You know the system was scoped to answer HR policy questions only.",
+      "question": "Why is the 'What this system does NOT do' section critical, and what should you do?",
+      "options": [
+        "A. It is a nice-to-have but not critical if the system is well-scoped",
+        "B. Without explicit non-scope boundaries, the customer team will expand the system's use cases beyond what was designed for, causing quality issues and potential compliance violations; fill it in before leaving",
+        "C. The system should be designed to handle any input gracefully, making this section unnecessary",
+        "D. This is only relevant for compliance-regulated industries"
+      ],
+      "answer": "B",
+      "explanation": "The 'Not in scope' section is the most important part of the system overview for a customer team that did not build the system. Without it, the team will naturally expand usage: 'Can it answer questions about compensation?' 'Can it handle legal questions?' Each expansion puts the system in a domain it was not designed for, with an eval set that does not cover it, at a quality level that may be unacceptable. Explicit non-scope also prevents the customer from blaming the system for failing at something it was never designed to do."
+    }
+  ]
+}

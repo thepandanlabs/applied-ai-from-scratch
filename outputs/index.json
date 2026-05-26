@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated": "2026-05-26T10:34:17Z",
-  "total": 122,
+  "generated": "2026-05-26T11:05:40Z",
+  "total": 132,
   "artifacts": [
     {
       "phase": 2,
@@ -1252,6 +1252,116 @@
         "capstone",
         "security",
         "runbook"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "01",
+      "name": "prompt-fde-role-map",
+      "file": "phases/11-fde-skillset/01-what-an-fde-does/outputs/prompt-fde-role-map.md",
+      "tags": [
+        "fde",
+        "role",
+        "engagement"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "02",
+      "name": "prompt-scoping-interview-guide",
+      "file": "phases/11-fde-skillset/02-scoping-before-solving/outputs/prompt-scoping-interview-guide.md",
+      "tags": [
+        "fde",
+        "scoping",
+        "requirements"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "03",
+      "name": "prompt-ai-spec-template",
+      "file": "phases/11-fde-skillset/03-discovery-vague-ask-to-spec/outputs/prompt-ai-spec-template.md",
+      "tags": [
+        "fde",
+        "spec",
+        "discovery"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "04",
+      "name": "prompt-pattern-decision-guide",
+      "file": "phases/11-fde-skillset/04-choosing-the-right-pattern/outputs/prompt-pattern-decision-guide.md",
+      "tags": [
+        "fde",
+        "patterns",
+        "decision"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "05",
+      "name": "skill-demo-prep-checklist",
+      "file": "phases/11-fde-skillset/05-demos-that-survive-real-data/outputs/skill-demo-prep-checklist.md",
+      "tags": [
+        "fde",
+        "demo",
+        "testing"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "06",
+      "name": "prompt-scope-change-playbook",
+      "file": "phases/11-fde-skillset/06-scope-changes-expectation-setting/outputs/prompt-scope-change-playbook.md",
+      "tags": [
+        "fde",
+        "scope",
+        "expectations"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "07",
+      "name": "skill-integration-audit-checklist",
+      "file": "phases/11-fde-skillset/07-messy-customer-environment/outputs/skill-integration-audit-checklist.md",
+      "tags": [
+        "fde",
+        "integration",
+        "audit"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "08",
+      "name": "prompt-impact-measurement-framework",
+      "file": "phases/11-fde-skillset/08-measuring-business-impact/outputs/prompt-impact-measurement-framework.md",
+      "tags": [
+        "fde",
+        "impact",
+        "metrics"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "09",
+      "name": "skill-handoff-package-template",
+      "file": "phases/11-fde-skillset/09-handoff-docs-runbooks/outputs/skill-handoff-package-template.md",
+      "tags": [
+        "fde",
+        "handoff",
+        "runbook"
+      ]
+    },
+    {
+      "phase": "11",
+      "lesson": "10",
+      "name": "prompt-stakeholder-communication-guide",
+      "file": "phases/11-fde-skillset/10-communicating-with-stakeholders/outputs/prompt-stakeholder-communication-guide.md",
+      "tags": [
+        "fde",
+        "communication",
+        "stakeholders"
       ]
     }
   ]

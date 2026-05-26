@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "04-choosing-the-right-pattern",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A customer needs a system that classifies 200 support tickets per day into 5 fixed categories. The categories never change. Response time must be under 1 second. They have 18 months of historical labeled tickets.",
+      "question": "Which pattern should you start with?",
+      "options": [
+        "A. Agent with tools, so the system can look up category definitions dynamically",
+        "B. RAG, to retrieve similar historical tickets and use them as context",
+        "C. Single LLM call with a well-crafted prompt",
+        "D. Fine-tuning on the labeled historical data"
+      ],
+      "answer": "C",
+      "explanation": "Fixed categories, no retrieval needed, sub-second latency required, deterministic output preferred. Single LLM call scores highest on these axes. Fine-tuning is a reasonable second option if the prompt approach fails quality requirements, but the default starting point is always the simplest pattern that can meet the spec."
+    },
+    {
+      "id": "c2",
+      "scenario": "You run the PatternMatcher on a requirement: 'Help support agents find answers in our 10,000-article knowledge base.' The tool scores RAG highest. Your colleague says: 'We should use an agent so it can search multiple times if the first result isn't good enough.'",
+      "question": "How do you evaluate this suggestion?",
+      "options": [
+        "A. Agree: multi-step search is clearly better than single retrieval",
+        "B. The agent adds iterative retrieval capability, but also adds latency and non-determinism. Start with RAG and add agent behavior only if single-retrieval quality is insufficient.",
+        "C. Disagree: agents are always worse than RAG for knowledge base tasks",
+        "D. The colleague is right: agents should always be used when the knowledge base is large"
+      ],
+      "answer": "B",
+      "explanation": "The colleague's suggestion has merit for complex queries, but 'multiple searches if needed' is a hypothesis, not a confirmed requirement. Start with RAG. Measure query quality on real samples. If a meaningful percentage of queries fail because single retrieval is insufficient, then add iterative retrieval. Adding agent complexity before measuring whether it is needed violates the 'simplest pattern first' principle."
+    },
+    {
+      "id": "c3",
+      "scenario": "A requirement says: 'Research any public company on demand. Pull their latest earnings, news, SEC filings, and competitor pricing, then write a 1-page summary.' The PatternMatcher recommends Agent with tools.",
+      "question": "Why is Single LLM call not the right pattern here?",
+      "options": [
+        "A. Single LLM call cannot produce 1-page summaries",
+        "B. Single LLM call cannot access live external data sources required by the task",
+        "C. Single LLM call is too slow for research tasks",
+        "D. Single LLM call lacks the reasoning ability for financial data"
+      ],
+      "answer": "B",
+      "explanation": "The requirement specifies live data (latest earnings, current news, competitor pricing). A single LLM call has no mechanism to fetch live external data. The multi-step nature (fetch earnings AND news AND filings AND pricing, then synthesize) and live data requirements are the axes that push this to Agent with tools."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are building a contract review system. The PatternMatcher scores Agent with tools highest (12 points) and Single LLM call second (9 points). The agent recommendation triggers a warning: 'If the only tool is a document lookup, RAG may suffice.' The contract is always provided as input to the system.",
+      "question": "What should you do?",
+      "options": [
+        "A. Use the agent because it scored highest",
+        "B. Since the contract is already provided as input, there is no retrieval needed. Use a single LLM call with the contract in context.",
+        "C. Use RAG to retrieve similar contract clauses from a database",
+        "D. Use multi-agent to parallelize the review"
+      ],
+      "answer": "B",
+      "explanation": "The mismatch warning is critical here. If the contract is always provided as input, there is no retrieval step: the document is already in context. The 'tool' the agent would use is simply reading input it already has. A single LLM call with the contract in the prompt context is the correct pattern, and significantly simpler than an agent."
+    },
+    {
+      "id": "c5",
+      "scenario": "A customer wants to fine-tune a model on their 500 labeled customer service examples to improve response quality. The PatternMatcher triggers a warning: 'Validate that prompt engineering cannot meet quality requirements first.'",
+      "question": "What should you do before starting fine-tuning?",
+      "options": [
+        "A. Start fine-tuning: 500 examples is enough to justify it",
+        "B. Spend 2 days testing few-shot prompting with samples from the 500 examples, and measure quality against the success metric",
+        "C. Tell the customer fine-tuning is not worth the cost",
+        "D. Request more labeled examples before evaluating the approach"
+      ],
+      "answer": "B",
+      "explanation": "The warning is a gate, not a rejection. Fine-tuning may be the right answer, but 500 examples is on the low end and prompt engineering with few-shot examples from the same dataset might achieve comparable quality. Two days of prompt testing with quality measurement is the required step before committing to fine-tuning cost and infrastructure."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your PatternMatcher recommends a single LLM call for a ticket routing requirement. You start building. On day 3, you realize the routing logic needs to check whether the user's account is premium (which requires an API call to the CRM) before selecting the route.",
+      "question": "What should you do?",
+      "options": [
+        "A. Proceed with single LLM call: pass the account type as input from the calling system",
+        "B. Switch to an agent with tools so the LLM can call the CRM directly",
+        "C. Switch to multi-agent with a separate agent for CRM lookups",
+        "D. Stop the build and re-run the pattern matcher before making any change"
+      ],
+      "answer": "A",
+      "explanation": "The account type lookup can be handled upstream: the calling system fetches the CRM data and passes account_type as a field in the prompt input. This keeps the pattern as a single LLM call and avoids adding agent overhead. Agents earn their complexity when the LLM itself needs to decide which tools to call. Passing pre-fetched structured data as input does not require an agent."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your team is debating whether to use multi-agent or single-agent for a market research task. The single-agent approach produces good results 85% of the time. The multi-agent approach (adding a fact-checker agent) improves accuracy to 94%. The customer requirement says '90% accuracy.'",
+      "question": "Which pattern is correct given the requirement?",
+      "options": [
+        "A. Single agent: it is simpler and meets the spirit of the requirement",
+        "B. Multi-agent: 94% exceeds the requirement, and more accuracy is always better",
+        "C. Multi-agent: the requirement is 90% and single-agent delivers only 85%",
+        "D. Fine-tune the single agent to reach 90% without adding complexity"
+      ],
+      "answer": "C",
+      "explanation": "The success metric is 90% accuracy. Single-agent delivers 85%, which fails the spec. Multi-agent delivers 94%, which passes. In this case the complexity is justified by a measured gap against a confirmed requirement. This is the correct application of 'simplest pattern that meets requirements': you tried the simpler pattern, it failed the spec, and you moved to the next pattern."
+    }
+  ]
+}

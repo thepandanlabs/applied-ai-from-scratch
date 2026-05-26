@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "02-scoping-before-solving",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A customer says: 'We want AI to make our sales team more productive.' You have 30 minutes before the next meeting. Which question do you ask first?",
+      "question": "What is the correct first scoping question?",
+      "options": [
+        "A. What AI model do you want to use?",
+        "B. Walk me through the current manual sales process, step by step.",
+        "C. What data do you have available for training?",
+        "D. What is your budget for this system?"
+      ],
+      "answer": "B",
+      "explanation": "The first scoping question is always the current process. You cannot identify the failure point, the success metric, or the data requirements until you understand what the process looks like today. Jumping to data or model selection before understanding the process is the 'jumping to solution' anti-pattern."
+    },
+    {
+      "id": "c2",
+      "scenario": "You ask a customer: 'What does success look like in 90 days?' They answer: 'We just want the system to make our team more efficient.' You have 10 minutes left in the scoping call.",
+      "question": "What is the correct response?",
+      "options": [
+        "A. Accept this as the success metric and proceed to Q4",
+        "B. Note it as the success metric and ask the data question next",
+        "C. Flag the answer and ask: 'Can you put a number on that? For example: reduce time by X%, or handle Y more per day?'",
+        "D. End the call and schedule a follow-up when they have more specific goals"
+      ],
+      "answer": "C",
+      "explanation": "'More efficient' is not a measurable success metric. A system cannot be evaluated against it, which means the pilot cannot be declared a success or failure. The correct move is to flag it immediately and push for a number. Accepting vague metrics is the second most common scoping anti-pattern."
+    },
+    {
+      "id": "c3",
+      "scenario": "During scoping, the customer says: 'We have all our historical ticket data available.' You move on to the integration point question. Three days into the build, you discover the data is locked in a legacy system that requires a 2-week IT approval process.",
+      "question": "Which scoping failure caused this blocker?",
+      "options": [
+        "A. You did not ask the failure point question thoroughly enough",
+        "B. You accepted 'we have it available' without confirming owner, format, and access path",
+        "C. You should have requested data access before the scoping call",
+        "D. The customer gave incorrect information, which is not a scoping failure"
+      ],
+      "answer": "B",
+      "explanation": "'We have the data' is a common false positive. The correct Q4 requires three specifics: who owns it (named person), what format it is in, and can you get access this week (confirmed access path, not assumed). Confirming these prevents the classic week-2 data blocker."
+    },
+    {
+      "id": "c4",
+      "scenario": "You complete all 5 scoping questions. The success metric is 'reduce first-response time from 4 hours to 2 hours.' The integration point answer was: 'It should connect to our workflow.' You have what you need to start building.",
+      "question": "Is the scope complete? Why or why not?",
+      "options": [
+        "A. Yes, the success metric is specific and the integration is implied",
+        "B. No, the integration point answer is too vague to build against",
+        "C. Yes, you can figure out integration details once the prototype is ready",
+        "D. No, but only because you haven't confirmed the data source yet"
+      ],
+      "answer": "B",
+      "explanation": "The integration point answer 'connect to our workflow' tells you nothing about where the output lands. You don't know the tool, the interface, or who acts on the output. Building before this is confirmed is the most commonly skipped scoping question and the one that most often produces rework. Push for: 'Can you name the specific tool or screen where the output appears?'"
+    },
+    {
+      "id": "c5",
+      "scenario": "The ScopingInterview CLI flags your success metric answer with: '[FLAG] Your success metric may lack a specific measurable number.' You wrote: 'Cut the time agents spend on categorization by reducing it significantly in the first quarter.' You have 5 minutes to revise it.",
+      "question": "Which revision would clear the flag?",
+      "options": [
+        "A. 'Reduce categorization time significantly over the next few months'",
+        "B. 'Improve agent productivity by making categorization faster'",
+        "C. 'Reduce average categorization time per ticket from 8 minutes to under 3 minutes within 60 days, measured in Zendesk'",
+        "D. 'Make categorization faster than it is today, measured over Q1'"
+      ],
+      "answer": "C",
+      "explanation": "A valid success metric has four components: a specific number (from 8 min to 3 min), a baseline (8 minutes), a time horizon (60 days), and a measurement source (Zendesk). Option C is the only answer with all four. The flag is cleared when the metric can be evaluated objectively."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are two hours into a scoping session. The customer keeps suggesting features and expanding the scope. You're now discussing real-time integration, multilingual support, and an analytics dashboard. The original ask was a simple ticket classifier.",
+      "question": "What scoping question would you use to reset the conversation?",
+      "options": [
+        "A. 'What is your budget for this expanded scope?'",
+        "B. 'What should this system explicitly NOT do in version 1?'",
+        "C. 'Who owns the data for all these new features?'",
+        "D. 'What does success look like in 90 days for all of this combined?'"
+      ],
+      "answer": "B",
+      "explanation": "The out-of-scope question is specifically designed to contain scope creep. By asking what the system should NOT do, you create a boundary the customer participates in drawing. This shifts the framing from 'what can we add' to 'what is the focused version 1.' It also surfaces which features the customer actually cares about vs. which ones they mentioned speculatively."
+    },
+    {
+      "id": "c7",
+      "scenario": "You finish a scoping call and have answers to all 5 questions. The success metric is 'reduce SLA misses from 40% to under 10%.' The customer's CTO was not on the call. Two days later, the CTO emails: 'We actually need this to handle Tier 2 tickets too, which are much more complex.'",
+      "question": "How does a documented scope protect you here?",
+      "options": [
+        "A. It doesn't: the CTO outranks the person you scoped with, so you must comply",
+        "B. The scope document is a reference point for a new scoping conversation, not a binding contract",
+        "C. The scope document locks the requirements: you can reject the CTO's request",
+        "D. You should have included the CTO in the original call, making the document invalid"
+      ],
+      "answer": "B",
+      "explanation": "The scope document is a working tool, not a contract. Its value here is that it gives you a documented baseline to reference when new requirements emerge. You can say: 'Here is what we scoped and why. Adding Tier 2 changes the timeline and the data requirements. Can we do a 30-minute scoping session for the expanded ask?' This is far better than either blindly accepting the expansion or refusing it."
+    }
+  ]
+}

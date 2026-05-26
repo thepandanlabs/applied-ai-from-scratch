@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "10-communicating-with-stakeholders",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You send a weekly status update to the VP of Operations: 'RAGAS faithfulness improved from 0.82 to 0.89. Investigating occasional hallucinations on multi-hop edge cases. Latency p95 is 1.4s.' The VP forwards it to the CFO with the note: 'The AI system is occasionally hallucinating, should we be concerned?' The CFO schedules a meeting with the CEO.",
+      "question": "What was the root cause of this communication failure?",
+      "options": [
+        "A. The RAGAS score is too low and should be higher before sharing with stakeholders",
+        "B. The VP should not have forwarded the update without asking for clarification first",
+        "C. The update used technical terms ('hallucinations', 'RAGAS', 'p95') that a non-technical reader interpreted negatively without the context that these are normal and managed aspects of AI systems",
+        "D. The update was too long and should have been a single-sentence summary"
+      ],
+      "answer": "C",
+      "explanation": "The update was technically accurate but communicatively catastrophic. 'Hallucination' to a non-technical reader means 'the system lies in uncontrolled ways.' Without the context that this affects a small percentage of queries and is actively being resolved, the word alone triggers escalation. The correct update would have translated each metric to plain language, replaced 'hallucinations' with a concrete description and a percentage, and ended with a clear status statement."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are writing a pilot results summary for a CFO. The pilot showed: F1 score 0.85, escalation rate dropped from 34% to 18%, time-to-resolution improved from 185 seconds to 62 seconds. The CFO manages a team of 50 support agents.",
+      "question": "Which of these is the most effective opening sentence for the results summary?",
+      "options": [
+        "A. 'The AI system achieved an F1 score of 0.85 in the 4-week pilot.'",
+        "B. 'During the 4-week pilot, the AI system reduced the percentage of support tickets requiring escalation to senior agents from 34% to 18%, and cut average resolution time from 3 minutes to just over 1 minute.'",
+        "C. 'Pilot metrics show significant improvement across all measured dimensions with p-values below 0.05.'",
+        "D. 'Our model performed well in the pilot with strong precision and recall numbers.'"
+      ],
+      "answer": "B",
+      "explanation": "Option B leads with the operational metrics in business language that a CFO can act on: escalation rate and resolution time. These map directly to agent utilization and cost. Option A uses F1 (meaningless to a non-technical reader). Options C and D use technical language that requires explanation. The CFO's question at renewal time will be 'is this worth the cost?' - Option B gives them data to answer that question without any translation."
+    },
+    {
+      "id": "c3",
+      "scenario": "A VP asks in your weekly status meeting: 'I heard you say the AI sometimes makes mistakes. How often does that happen, and how do we know when it is wrong?' You are about to answer but realize the question requires careful framing.",
+      "question": "Which is the most effective response?",
+      "options": [
+        "A. 'The system has a 15% error rate on our test set, which is industry standard for this type of AI.'",
+        "B. 'All AI systems make mistakes. The important thing is that our error rate is low.'",
+        "C. 'The system answers with high confidence on 85% of queries. For the remaining 15%, it flags the answer for human review rather than guessing - so your team only sees answers the system is confident about. The unsure ones go to a queue for agent review.'",
+        "D. 'The hallucination rate is approximately 3% on edge cases, which is acceptable given the use case.'"
+      ],
+      "answer": "C",
+      "explanation": "Option C does three things correctly: it quantifies the confident and uncertain cases separately, it explains the system behavior in the uncertain case (flagging for review, not guessing), and it reassures the VP that the system is designed to manage uncertainty rather than hide it. Option A uses 'error rate' without context of what happens when it errors. Option B is dismissive. Option D uses 'hallucination rate' - an appropriate technical term but alarming to a non-technical listener."
+    },
+    {
+      "id": "c4",
+      "scenario": "You need to send a risk escalation to a VP about a data access problem. The technical version: 'Oracle CRM has no REST API. We need an ETL pipeline (nightly S3 export) which adds 8 engineering days and introduces T+1 data freshness latency.' The VP needs to decide whether to approve the timeline extension.",
+      "question": "Which element is most critical to include in the escalated version?",
+      "options": [
+        "A. A technical diagram of the ETL pipeline architecture",
+        "B. A specific ask with a deadline: the decision the VP needs to make, what their options are, and when you need the answer",
+        "C. The full technical explanation of why the Oracle CRM does not have an API",
+        "D. A comparison of ETL pipeline vendors and their costs"
+      ],
+      "answer": "B",
+      "explanation": "A risk escalation that does not end with a specific ask and a deadline does not enable a decision. The VP needs to know: (1) what is the risk and business impact in plain terms, (2) what options exist (approve the 8-day extension, or reduce scope to avoid the integration), (3) what happens if they do not decide, and (4) when you need the answer. Technical details (option A, C, D) are background information, not the decision request."
+    },
+    {
+      "id": "c5",
+      "scenario": "The StakeholderTranslator tool scores your translation: clarity 0.82, business relevance 0.75, jargon score 0.31. The overall quality is 0.75. What does this score pattern tell you?",
+      "question": "What is the most likely issue, and what should you revise?",
+      "options": [
+        "A. The translation is good enough to send as-is",
+        "B. The translation is clear but still contains some jargon and is not fully grounded in business outcomes; review for remaining technical terms and ensure every metric has a business consequence attached",
+        "C. The translation failed - a quality score of 0.75 means it should be discarded",
+        "D. The jargon score of 0.31 means 31% of the text is jargon, which is acceptable for a technical audience"
+      ],
+      "answer": "B",
+      "explanation": "A score of 0.75 is 'close but not ready.' The pattern (high clarity, moderate business relevance, remaining jargon) means the text is readable but still has technical terms and is not fully grounded in business outcomes. The jargon score of 0.31 means some technical language remains. Review the translation for any remaining metric terms (percentages without business context, technical names), ensure every number has a plain-language meaning, and verify the update ends with a status or specific ask."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your manager reviews your stakeholder communication and says: 'You are being too dumbed-down. These are smart executives, they can handle some technical terms.' You know from experience that the last update with RAGAS scores caused unnecessary escalation.",
+      "question": "How do you respond to your manager's feedback?",
+      "options": [
+        "A. Agree and restore the technical terms to show respect for the executives' intelligence",
+        "B. Explain that the issue is not intelligence but vocabulary and context: a CEO who does not know what RAGAS is will not ask for clarification, they will make decisions based on incomplete interpretation",
+        "C. Find a middle ground: use half the technical terms and translate the other half",
+        "D. Ask the executives directly whether they want technical updates"
+      ],
+      "answer": "B",
+      "explanation": "The problem with technical jargon in executive communication is not about intelligence. It is about vocabulary and incentives. An executive who sees 'RAGAS faithfulness: 0.89' and does not know what RAGAS is will not say 'I don't understand this metric' - they will nod and either ignore it or interpret it incorrectly. The cost of using plain language is zero (it takes 5 extra minutes to translate). The cost of a misinterpreted update is an unnecessary executive meeting about hallucinations. The argument is about risk, not about intelligence."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are preparing a launch readiness update. The system is on track but one integration has a dependency on a customer IT team that has a 3-week ticket queue. This could delay the launch by 1-2 weeks if the ticket is not expedited.",
+      "question": "What color should this update be, and what must it include?",
+      "options": [
+        "A. GREEN - the system itself is on track and the IT dependency is not your problem",
+        "B. YELLOW - a specific risk exists that may affect the launch date; the update must name the risk, the impact, what you are doing, and what you need from the stakeholder (likely: their help expediting the IT ticket)",
+        "C. RED - any dependency risk automatically makes a launch red status",
+        "D. YELLOW - but only mention it if the delay becomes certain"
+      ],
+      "answer": "B",
+      "explanation": "This is a YELLOW: a risk exists that may affect the date, but it is not yet a confirmed delay. The update must include: what the risk is (IT ticket queue may delay the integration), the impact if not resolved (1-2 week launch delay), what you are doing (submitted the ticket, following up), and what the stakeholder can do to help (the VP may be able to expedite the ticket through their IT relationship). Waiting until the delay is certain (option D) removes the stakeholder's ability to help prevent it."
+    },
+    {
+      "id": "c8",
+      "scenario": "A program manager sends you a draft stakeholder update that includes: 'The embedding model was retrained on the customer's domain-specific corpus, improving cosine similarity scores for in-domain queries while maintaining out-of-domain performance within acceptable thresholds.' You need to review it before it goes to the executive team.",
+      "question": "How would you rewrite the core of this sentence for a stakeholder audience?",
+      "options": [
+        "A. 'The AI's search component was updated to better understand your company's specific vocabulary and terminology, improving its ability to find relevant information from your documents.'",
+        "B. 'The embedding model was fine-tuned on your data, which improved performance metrics on domain-specific queries.'",
+        "C. 'Technical improvements were made to the AI system this week.'",
+        "D. 'The AI system is now smarter after we updated it with your company's data.'"
+      ],
+      "answer": "A",
+      "explanation": "Option A replaces 'embedding model' with 'search component', 'retrained on the customer's domain-specific corpus' with 'updated to better understand your vocabulary and terminology', and 'cosine similarity scores' with the user-visible outcome (finding relevant information). Option B still uses 'embedding model' and 'performance metrics'. Option C is too vague to be useful. Option D ('smarter') is imprecise and anthropomorphizes the system in a way that may set unrealistic expectations."
+    }
+  ]
+}

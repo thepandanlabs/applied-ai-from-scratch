@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-demos-that-survive-real-data",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You have a document extraction demo ready for tomorrow. You've tested it on 5 sample contracts you created yourself, and it works perfectly on all of them. The customer has 200 contracts in their system.",
+      "question": "What is the most critical action to take before the demo?",
+      "options": [
+        "A. Add more error handling to the code to cover edge cases",
+        "B. Request 20+ real contracts from the customer and run the DemoTester on them today",
+        "C. Test the demo one more time on your 5 samples to confirm it's stable",
+        "D. Prepare backup slides in case the demo doesn't work"
+      ],
+      "answer": "B",
+      "explanation": "Testing on 5 hand-picked examples is the 'hardcoded samples' failure mode. Your samples do not represent the distribution of real customer contracts. You need at least 20 real samples to measure actual failure rate and identify edge cases. The DemoTester needs to run on real data before the demo, not just your controlled examples."
+    },
+    {
+      "id": "c2",
+      "scenario": "You run DemoTester on 25 customer samples and get: failure rate 4%, p95 latency 2.1s, all required fields present in 96% of samples. One sample causes a crash with 'UnicodeDecodeError: codec can't decode byte.'",
+      "question": "Is the demo ready to run?",
+      "options": [
+        "A. Yes: failure rate is below 5% and latency is fine",
+        "B. No: you need to investigate the UnicodeDecodeError and fix it before the demo",
+        "C. Yes: one edge case failure is acceptable in a live demo",
+        "D. No: p95 latency should be under 2 seconds"
+      ],
+      "answer": "B",
+      "explanation": "A 4% failure rate is technically below the 5% threshold, but a UnicodeDecodeError is a known, specific, fixable failure. You know what causes it (encoding issue) and you know it will happen on some customer files. The correct action is to add encoding handling before the demo. 'Below the threshold' is a statistical floor, not an excuse to ship known bugs."
+    },
+    {
+      "id": "c3",
+      "scenario": "DemoTester reports: failure rate 2%, p50 latency 1.2s, p95 latency 4.8s, max latency 47s. Three samples exceed 10 seconds. These are the longest contracts in the dataset (80-120 pages).",
+      "question": "What does this tell you and what should you do before the demo?",
+      "options": [
+        "A. The demo is ready: p95 is under 5 seconds and failure rate is low",
+        "B. The latency cliff on long documents must be investigated before the demo",
+        "C. Remove the long documents from the demo to avoid the issue",
+        "D. The demo is not ready: p50 latency should be under 1 second"
+      ],
+      "answer": "B",
+      "explanation": "A 47-second maximum is a latency cliff. If the customer uploads a long contract during the demo, it will stall for 47 seconds. This looks like the system is broken. The fix is to investigate: test chunking long documents, add a progress indicator, or explicitly filter long documents from the demo with a note that long-document handling is in development. Removing them silently is wrong; addressing them is right."
+    },
+    {
+      "id": "c4",
+      "scenario": "You show the customer a sample output from your system. The output includes fields: 'contract_date', 'parties', 'amount', 'term'. The customer says: 'We expected it to output party_a and party_b separately, and we need it as ISO 8601 date format, not just a string.'",
+      "question": "At what step in the demo prep protocol should this have been caught?",
+      "options": [
+        "A. Step 2 (failure rate testing)",
+        "B. Step 4 (output format verification with the customer)",
+        "C. Step 5 (edge case testing)",
+        "D. Step 6 (demo rehearsal)"
+      ],
+      "answer": "B",
+      "explanation": "This is an output format mismatch. The customer had a specific expectation (party_a/party_b separate, ISO 8601 date) that was never confirmed. Step 4 is: share a sample output before the demo and ask 'does this match what you expected?' One email with a sample JSON before demo day would have caught both issues with time to fix them."
+    },
+    {
+      "id": "c5",
+      "scenario": "During a live demo, your extraction system returns an empty JSON object for the first contract the customer uploads. You investigate after the demo and find it fails on contracts from before 2020 because they use a different header format.",
+      "question": "What should you have done differently in demo prep?",
+      "options": [
+        "A. Nothing: edge cases are discovered in production, not in testing",
+        "B. Included contracts from different time periods and formats in the 20+ test samples",
+        "C. Used a more powerful model that handles format variations better",
+        "D. Added more error handling to return a default value instead of empty JSON"
+      ],
+      "answer": "B",
+      "explanation": "The test dataset should represent the full distribution of real customer data, including historical documents. If the customer's archive has contracts from 2015-2024 in multiple formats, your 20+ samples need to include that variation. A sample set of only recent contracts does not tell you how the system handles older formats. Representative sampling is the key."
+    },
+    {
+      "id": "c6",
+      "scenario": "The customer cannot share real contract data before the demo due to legal restrictions. You have two options: delay the demo by 2 weeks until legal approval, or demo on realistic synthetic contracts you created.",
+      "question": "What is the correct approach?",
+      "options": [
+        "A. Delay the demo until real data is approved",
+        "B. Demo on synthetic data with an explicit upfront statement that it is synthetic, and schedule a real-data validation session",
+        "C. Demo on synthetic data without mentioning it is synthetic",
+        "D. Cancel the demo and wait for a different customer engagement"
+      ],
+      "answer": "B",
+      "explanation": "When real data is unavailable, synthetic data is acceptable with explicit transparency. Say: 'We're demonstrating on representative synthetic contracts today because legal review of your real data is pending. We'll run a real-data validation session once that's approved.' This sets honest expectations. What is never acceptable is demoing synthetic data as if it were real: the customer will find out, and it damages trust."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your DemoTester reports all checks passing: 3% failure rate, p95 latency 2.3s, 98% format pass rate. On demo day, you open the demo on a different laptop for the first time. The API key is set as an environment variable on your development machine but not on the demo laptop. The demo fails immediately.",
+      "question": "Which step in the demo prep protocol was skipped?",
+      "options": [
+        "A. Step 2 (failure rate testing)",
+        "B. Step 3 (latency testing)",
+        "C. Step 6 (demo rehearsal on the actual demo machine)",
+        "D. Step 5 (edge case testing)"
+      ],
+      "answer": "C",
+      "explanation": "Step 6 requires running the full demo on the same laptop (and network) you will use in the demo. Environment configuration (API keys, dependencies, ports) differs between machines. A full rehearsal on the demo machine would have caught the missing environment variable 24 hours before the demo, not 30 seconds into it."
+    },
+    {
+      "id": "c8",
+      "scenario": "After a successful demo, the customer says: 'That was great! Could we get the system to also flag contracts that have non-standard payment terms?' This was not in the original spec.",
+      "question": "What is the most appropriate immediate response?",
+      "options": [
+        "A. 'Yes, we can add that. We'll have it in the next version.'",
+        "B. 'That's outside our current scope, so we can't do that.'",
+        "C. 'Great feedback. Let me add it to the backlog and we can scope it in the next session.'",
+        "D. 'The demo is done, so new requests go through formal change management.'"
+      ],
+      "answer": "C",
+      "explanation": "Post-demo feature requests are common and valuable. The right response acknowledges the request positively, does not over-commit on timeline, and routes it to a scoping conversation. 'Add it to the backlog and scope it in the next session' is the FDE move: it captures the requirement, doesn't promise a delivery date, and keeps the engagement moving forward. Making an on-the-spot promise is a scope commitment you haven't evaluated."
+    }
+  ]
+}
