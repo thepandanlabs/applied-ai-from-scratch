@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "02-document-ai",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team is processing insurance claim forms. Half the forms are uploaded as scanned images of paper documents; the other half are filled out digitally and exported as PDFs. Their pipeline currently sends all PDFs through the vision path (page-as-image). A senior engineer suggests adding path detection.",
+      "question": "What is the primary business reason to implement born-digital vs scanned detection?",
+      "options": [
+        "A. The vision path fails entirely for born-digital PDFs",
+        "B. The text extraction path is 10-20x cheaper per page and typically produces better accuracy for born-digital PDFs",
+        "C. Vision models cannot process born-digital PDFs due to PDF rendering issues",
+        "D. Text extraction is faster but less accurate than vision for all document types"
+      ],
+      "answer": "B",
+      "explanation": "Text extraction from born-digital PDFs is 10-20x cheaper per page (2,000-6,000 tokens vs 37,000+ tokens for vision) and typically produces better accuracy because there is no OCR noise. The vision path works for born-digital PDFs but wastes significant cost. The born-digital path is both cheaper AND more accurate for PDFs with embedded text."
+    },
+    {
+      "id": "c2",
+      "scenario": "A team is extracting fields from 40-page construction contracts. They try sending all 40 pages as images in a single API call and hit token limit errors. They need a chunking strategy.",
+      "question": "Which chunking strategy is best suited for extracting specific contract fields (parties, dates, governing law) from a 40-page born-digital contract?",
+      "options": [
+        "A. Process pages one at a time and stop when all required fields are populated",
+        "B. Always send only page 1 since all contract fields appear on the first page",
+        "C. Split the document into 10-page batches and send each batch separately",
+        "D. Use summarization to compress each page before extraction"
+      ],
+      "answer": "A",
+      "explanation": "An accumulation strategy that processes pages sequentially and stops when all required fields are found is the most efficient approach. Contracts typically have party names and effective dates on page 1, with termination clauses and governing law later. Processing pages until all fields are found avoids sending the entire document while still finding all fields. Option B is wrong because not all fields appear on page 1. Batching (C) sends more pages than needed. Summarization (D) risks losing specific field values."
+    },
+    {
+      "id": "c3",
+      "scenario": "After deploying a document extraction pipeline, the team measures overall accuracy at 91%. The legal team reports that party name extraction is nearly perfect but termination clause extraction is only 78% accurate.",
+      "question": "Why is per-field accuracy tracking more useful than overall document accuracy?",
+      "options": [
+        "A. Per-field tracking is required by GDPR for legal document processing",
+        "B. Different fields have different difficulty profiles; tracking them separately reveals which fields need prompt improvements or human review routing",
+        "C. Overall accuracy cannot be computed without per-field accuracy",
+        "D. Per-field tracking reduces the number of documents needed in the golden set"
+      ],
+      "answer": "B",
+      "explanation": "Party names are discrete, frequently in a predictable location, and the model extracts them reliably. Termination clauses require multi-sentence reasoning and often span multiple paragraphs - a fundamentally harder extraction task. Knowing the 78% accuracy is concentrated in one field lets the team direct prompt engineering effort (or route that specific field to human review) rather than spending time optimizing fields that are already working well."
+    },
+    {
+      "id": "c4",
+      "scenario": "A confidence field in the extraction schema returns 'high' for 80% of processed contracts. The team checks a sample of 'high confidence' results against ground truth and finds 30% have at least one incorrect field.",
+      "question": "What does this finding indicate, and what should the team do?",
+      "options": [
+        "A. The Pydantic validation is broken; fix the schema",
+        "B. The confidence label in the prompt is not well-calibrated; revise the prompt to make 'high' criteria more strict",
+        "C. 30% error rate is acceptable for AI extraction; no action needed",
+        "D. Switch to a larger model to improve confidence accuracy"
+      ],
+      "answer": "B",
+      "explanation": "The confidence field is only useful if it predicts actual accuracy. If 'high confidence' results have a 30% error rate, the label is not calibrated correctly - the model is overconfident. The fix is to revise the prompt to define 'high' more strictly (e.g., require all 5 fields to be present with unambiguous values, no hedging language in the extraction). The goal is for 'high confidence' to correspond to >95% field accuracy so routing decisions are reliable."
+    },
+    {
+      "id": "c5",
+      "scenario": "A legal team that reviews flagged documents reports that even 'medium confidence' results take them 10+ minutes to verify because they have to re-read the entire contract to confirm the extracted fields.",
+      "question": "What design change would reduce review time most effectively?",
+      "options": [
+        "A. Show the reviewer only the extracted JSON and the original PDF, side by side",
+        "B. Include page number and surrounding text snippet for each extracted field so reviewers can jump directly to the relevant passage",
+        "C. Increase the confidence threshold so fewer documents go to review",
+        "D. Add a second LLM call to double-check all extracted fields before routing"
+      ],
+      "answer": "B",
+      "explanation": "If the extraction result includes not just the field value but also the source location (page number, surrounding text), reviewers can verify a specific field in seconds rather than re-reading the whole document. This is the 'citations' pattern - extracted fields should link back to the source passage. Options C and D reduce the review queue size or improve accuracy, but they do not address the 10-minute review time for documents that do reach humans."
+    },
+    {
+      "id": "c6",
+      "scenario": "A startup is deciding between using pdfplumber for text extraction and PyMuPDF. They need to process 500 contracts per day and have one junior engineer maintaining the pipeline.",
+      "question": "For this use case, which library choice matters most and why?",
+      "options": [
+        "A. PyMuPDF is strictly required because pdfplumber cannot handle multi-page PDFs",
+        "B. pdfplumber is strictly required because PyMuPDF does not support text extraction",
+        "C. Both work for text extraction; the choice depends on license requirements and how the library handles complex layouts like tables",
+        "D. Neither works; only Docling can extract text from contracts reliably"
+      ],
+      "answer": "C",
+      "explanation": "Both pdfplumber and PyMuPDF handle text extraction from born-digital PDFs. The practical differences are: PyMuPDF (AGPL license, also available commercially) is faster; pdfplumber is MIT-licensed and handles table detection better via its built-in table extraction. For contracts with pricing tables, pdfplumber's table detection may be more useful. For pure text extraction speed, PyMuPDF wins. The right choice depends on the specific document types and license constraints."
+    },
+    {
+      "id": "c7",
+      "scenario": "A team adds Docling to their pipeline for processing invoices that contain complex tables with payment schedules. They compare Docling output to pdfplumber output for 20 sample invoices.",
+      "question": "In what specific scenario does Docling add clear value over pdfplumber for structured extraction?",
+      "options": [
+        "A. Docling adds value for any PDF type since it uses a larger AI model",
+        "B. Docling preserves table structure as markdown tables, which improves extraction of cell-aligned data like payment schedules and SLA tables",
+        "C. Docling is required for all scanned documents since pdfplumber cannot handle images",
+        "D. Docling reduces token costs compared to pdfplumber because its output is shorter"
+      ],
+      "answer": "B",
+      "explanation": "When pdfplumber extracts text from a table, it serializes rows as plain text, losing the column alignment that makes tabular data meaningful. A payment schedule with 'Month | Amount | Status' columns becomes a flat string where the model must infer the relationships. Docling converts tables to markdown tables, preserving cell-to-column relationships. This directly improves extraction accuracy for structured tabular data. It does not help with scanned documents (C) - it uses computer vision models for that. It does not guarantee shorter output (D)."
+    }
+  ]
+}

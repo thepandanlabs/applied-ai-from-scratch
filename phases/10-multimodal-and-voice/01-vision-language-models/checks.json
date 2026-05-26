@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "01-vision-language-models",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your support app needs to analyze user-uploaded screenshots. The images are never publicly accessible - they are uploaded directly to your backend. Which encoding approach must you use?",
+      "question": "Which image source type is required for images that are not reachable via a public URL?",
+      "options": [
+        "A. source type: url, pointing to a signed S3 URL that expires in 60 seconds",
+        "B. source type: base64, encoding the image bytes as a base64 string in the request body",
+        "C. source type: file, uploading via the Files API before every request",
+        "D. source type: stream, sending raw bytes over a WebSocket"
+      ],
+      "answer": "B",
+      "explanation": "Base64 encoding is required for images that are not publicly accessible via HTTPS. The URL source type requires a stable, publicly reachable URL. Signed URLs can work if they are valid at request time, but the cleanest solution for private uploads is base64. The Files API (option C) is valid for reuse scenarios but requires a prior upload step."
+    },
+    {
+      "id": "c2",
+      "scenario": "A user uploads a 3840x2160 screenshot of their desktop to your support chat. Your team's monthly API budget is $50. You are currently processing 500 such images per day.",
+      "question": "What is the single most impactful change you can make to reduce vision API costs without losing answer quality?",
+      "options": [
+        "A. Switch from JPEG to PNG to reduce image size",
+        "B. Resize images to 768px on the longest edge before encoding",
+        "C. Reduce max_tokens from 512 to 256",
+        "D. Use claude-3-haiku instead of claude-3-5-haiku-20241022"
+      ],
+      "answer": "B",
+      "explanation": "Vision token cost is determined by image dimensions via the tile formula (ceil(w/32) * ceil(h/32) * 65). A 3840x2160 image costs ~530k tokens vs ~37k tokens at 768x432 - a 14x reduction. For a support chat showing error dialogs or UI issues, 768px wide is fully readable and the extra resolution adds no information. Reducing output tokens (C) saves far less. Format (A) affects file bytes but not API token count. Model choice (D) affects per-token price but not the token count itself."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your document processing pipeline analyzes the same contract PDF (converted to images) with three different prompts: one for party names, one for dates, one for termination clauses. Each page is 512x512 pixels.",
+      "question": "Which approach minimizes API cost for this multi-prompt pattern?",
+      "options": [
+        "A. Base64-encode the image in each of the three separate requests",
+        "B. Use the Files API to upload once and reference the file ID in all three requests",
+        "C. Combine all three prompts into a single request to reuse the image encoding",
+        "D. Cache the base64 string in Redis and reuse it across requests"
+      ],
+      "answer": "B",
+      "explanation": "The Files API lets you upload an image once and reference it by file ID in multiple requests. This avoids transmitting the image bytes three times. Option C (combining prompts) also works and is often better for simple cases - one request instead of three. Option D caches the base64 string but you still transmit it in every request. For repeated analysis of the same image, Files API (B) or combined prompts (C) are both valid; Files API is the better answer here because it also reduces network overhead."
+    },
+    {
+      "id": "c4",
+      "scenario": "A product team wants to use vision AI to extract the exact pixel coordinates of a 'Submit' button in a UI screenshot, so an automated test can click it.",
+      "question": "Why is this use case unsuitable for vision LLMs, and what is the better approach?",
+      "options": [
+        "A. Vision models cannot see buttons; use an OCR library instead",
+        "B. Vision models return pixel coordinates in a proprietary format that requires post-processing",
+        "C. Vision models are unreliable at precise pixel-level spatial reasoning; use a UI testing framework with DOM access instead",
+        "D. Vision models only support images up to 512x512, which is too small for most UI screenshots"
+      ],
+      "answer": "C",
+      "explanation": "Vision LLMs describe what they see in natural language and can estimate positions loosely ('bottom right corner'), but they are not reliable for precise pixel coordinate extraction. For automated UI testing, use tools with direct DOM access (Playwright, Selenium) or accessibility tree traversal. Vision models excel at understanding UI layout and purpose, not at measuring exact positions."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are adding vision to a text-only integration. Your existing code sends messages as a single string: messages=[{'role': 'user', 'content': 'help me'}]. You need to add an image.",
+      "question": "What is the minimal structural change to the messages format?",
+      "options": [
+        "A. Add an 'image' key at the top level of the request alongside 'messages'",
+        "B. Change 'content' from a string to an array of typed blocks: one image block and one text block",
+        "C. Create a separate 'vision' endpoint request and merge the results",
+        "D. Base64-encode the image and concatenate it to the content string with a separator"
+      ],
+      "answer": "B",
+      "explanation": "The Anthropic API accepts content as either a string (text-only shorthand) or an array of typed content blocks. To include an image, change content to an array: [{type: 'image', source: {...}}, {type: 'text', text: '...'}]. No new endpoint or top-level key is needed - the same /messages endpoint handles multimodal requests."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your vision pipeline processes receipts and invoices. After a month in production, you review a sample of outputs and find that 15% have missing or null values for the 'total_amount' field.",
+      "question": "Which investigation step should you do first?",
+      "options": [
+        "A. Switch to a larger model immediately - the current model lacks capacity",
+        "B. Examine the actual images in the failure cases to categorize why extraction failed",
+        "C. Increase max_tokens to allow longer responses",
+        "D. Add retry logic to re-send failed extractions three times"
+      ],
+      "answer": "B",
+      "explanation": "Before changing anything, look at the actual failures. The 15% failure rate could have multiple causes: the total amount field is printed in a hard-to-read font, some receipts are photographed at an angle, some totals are handwritten, or the prompt does not handle receipts without a clear 'total' label. Each cause has a different fix. Retrying (D) just wastes tokens on already-failed inputs. Switching models (A) or increasing tokens (C) might help some cases but is expensive and untargeted without knowing the root cause."
+    },
+    {
+      "id": "c7",
+      "scenario": "A team is building a product feature that needs to count the exact number of people in crowd photos. The feature description says the count must be accurate to within 2 people for crowds up to 50.",
+      "question": "Should you use a vision LLM for this counting task? Why or why not?",
+      "options": [
+        "A. Yes; vision LLMs count objects with pixel-perfect accuracy for groups up to 100",
+        "B. No; vision LLMs are unreliable at counting more than 8-10 distinct items and should not be used for precise counting tasks",
+        "C. Yes, but only if you use chain-of-thought prompting to force the model to count systematically",
+        "D. No; vision LLMs cannot process photos with more than 10 people due to resolution limits"
+      ],
+      "answer": "B",
+      "explanation": "Counting exact quantities is a known weak point for vision LLMs, especially when the count exceeds roughly 8-10 items. For crowd counting requiring accuracy to within 2 people out of 50, a dedicated computer vision model (object detection/counting) is the appropriate tool. Vision LLMs can approximate ('about 30-40 people') but cannot reliably deliver the precision this feature requires."
+    }
+  ]
+}

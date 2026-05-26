@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "07-multimodal-rag",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team has 50,000 technical manual pages, of which 8,000 contain diagrams. Their text-only RAG system is already deployed with a text embedding index. They want to add visual retrieval with minimum infrastructure changes.",
+      "question": "Which multimodal RAG architecture best fits this situation?",
+      "options": [
+        "A. Native multimodal embedding (ColPali) - embeds all 50,000 pages as images, replaces the existing text index",
+        "B. Early fusion - generate VLM descriptions for the 8,000 image pages and add them to the existing text index",
+        "C. Late fusion - build a separate caption index and retrieve from both indexes at query time",
+        "D. Text-only RAG is sufficient - images can be looked up separately"
+      ],
+      "answer": "B",
+      "explanation": "Early fusion extends the existing text index with image descriptions. No new vector infrastructure is needed. Only the 8,000 pages with images require VLM indexing (~$20 at Haiku pricing). ColPali would require replacing the entire existing index. Late fusion adds operational complexity of two separate indexes. Early fusion is the minimum-change path."
+    },
+    {
+      "id": "c2",
+      "scenario": "A company indexes 10,000 images using Claude Haiku for descriptions. Each image requires approximately 1,600 input tokens and produces 300 output tokens. Claude Haiku pricing is $0.80/M input and $4.00/M output tokens.",
+      "question": "What is the approximate total cost to index the 10,000-image corpus?",
+      "options": [
+        "A. ~$2.50",
+        "B. ~$25",
+        "C. ~$250",
+        "D. ~$2,500"
+      ],
+      "answer": "B",
+      "explanation": "Per image: (1600 * $0.00000080) + (300 * $0.000004) = $0.00128 + $0.00120 = $0.00248. For 10,000 images: 10,000 * $0.00248 = ~$24.80, approximately $25. This is a one-time cost. With prompt caching on the instruction text, this drops to approximately $15."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your multimodal RAG system retrieves 5 chunks: 3 text chunks and 2 page images. The images are 1024x768px each, costing approximately 3,200 tokens per image. You have a 200K token context window.",
+      "question": "What is the primary concern with the current setup and what should you do?",
+      "options": [
+        "A. No concern - 6,400 tokens for 2 images is well within the 200K window",
+        "B. The context is fine for single queries but will overflow with conversation history",
+        "C. Resize images to a maximum of 1024px on the long edge; 3 images at full resolution can degrade reasoning quality even within window limits",
+        "D. Switch to a text-only retrieval system to avoid token costs"
+      ],
+      "answer": "C",
+      "explanation": "While 6,400 tokens fits within 200K, including many large images degrades reasoning quality even when they fit. The practical recommendation is to resize to max 1024px long edge (sufficient for detail) and limit to 3-5 images per query. Conversation history plus multiple large images adds up quickly. A is technically true but misses the quality concern."
+    },
+    {
+      "id": "c4",
+      "scenario": "An engineer queries the multimodal RAG system: 'What does the pressure gauge assembly look like?' The top-3 retrieved chunks are: (1) text chunk about torque specs, (2) image chunk with PRV diagram description, (3) text chunk about installation procedure. The PRV diagram image is included in the context.",
+      "question": "What is the correct behavior of the context assembly step?",
+      "options": [
+        "A. Pass only the text chunks to Claude and provide image links separately",
+        "B. Pass text descriptions of images only - never send actual images",
+        "C. Interleave text blocks and image blocks in source-page order so Claude can reason about both together",
+        "D. Concatenate all text into one block and append all images at the end"
+      ],
+      "answer": "C",
+      "explanation": "Interleaved context preserves the spatial relationship between text and diagrams. When text says 'see Figure 4.3' and the image immediately follows, Claude can connect them. Appending all images at the end loses this connection. The lesson's context assembly pattern explicitly sorts by source and interleaves text+image blocks per page."
+    },
+    {
+      "id": "c5",
+      "scenario": "A team evaluates their multimodal RAG system on a visual golden set of 30 queries. Text-only RAG achieves hit@3 of 45% on visual queries. After adding early fusion with image descriptions, hit@3 rises to 78% on visual queries and drops from 82% to 79% on text-only queries.",
+      "question": "How should the team interpret these results?",
+      "options": [
+        "A. Reject multimodal RAG - it hurts text-only query quality",
+        "B. The improvement on visual queries (+33%) significantly outweighs the minor regression on text queries (-3%). Deploy multimodal RAG.",
+        "C. The results are inconclusive - need to re-run on a larger test set before drawing conclusions",
+        "D. Only enable multimodal retrieval for queries that contain the word 'image' or 'diagram'"
+      ],
+      "answer": "B",
+      "explanation": "A 33-percentage-point improvement on visual queries with only a 3-percentage-point regression on text queries is a strong positive result. The typical expected outcome from the lesson is +20-40% visual query improvement with -2-5% text query regression. These results are within expectations and represent a clear net benefit."
+    },
+    {
+      "id": "c6",
+      "scenario": "After deploying multimodal RAG, the team notices that image descriptions generated for assembly diagrams consistently miss part numbers visible in the images. Users asking for specific part numbers via visual queries still get wrong results.",
+      "question": "What is the correct fix?",
+      "options": [
+        "A. Switch to native multimodal embedding (ColPali) - text descriptions cannot capture part numbers",
+        "B. Improve the description generation prompt to explicitly ask for numbers, labels, and part numbers visible in diagrams",
+        "C. Add a separate OCR pipeline to extract text from images and store it alongside the description",
+        "D. Part number queries should not use the RAG system - use a separate database lookup"
+      ],
+      "answer": "B",
+      "explanation": "The VLM can see and describe part numbers - the failure is in the prompt not asking for them. Adding explicit instructions ('Include any numbers, labels, part numbers, or codes visible in the image') to the description generation prompt is the simplest and most effective fix. This is a prompt engineering problem, not an architecture problem."
+    },
+    {
+      "id": "c7",
+      "scenario": "A company processes scanned historical technical documents from the 1970s. OCR produces garbled output because of paper degradation, faded text, and unusual typefaces. They want to build a RAG system over 5,000 of these documents.",
+      "question": "Which multimodal RAG architecture is most appropriate and why?",
+      "options": [
+        "A. Early fusion - use Claude to describe images, which is more robust than OCR",
+        "B. Late fusion - build a caption index from manually-entered captions",
+        "C. Native multimodal embedding (ColPali) - it embeds page images directly, bypassing unreliable OCR entirely",
+        "D. Text-only RAG after manual re-typing of all documents"
+      ],
+      "answer": "C",
+      "explanation": "When OCR is unreliable, any approach that depends on text extraction (including early fusion's description quality) degrades. ColPali embeds the raw page image directly into a shared text-image embedding space. Queries can match against visual page representations without any OCR or text extraction step. This is exactly the use case described in the lesson as 'Scanned docs, image-first retrieval.'"
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "04-speech-to-text-and-tts",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A customer service team transcribes 3-hour meeting recordings. They send the full audio file to the Whisper API and receive 400 errors with the message 'file too large'. The maximum Whisper file size is 25MB. A 3-hour call encoded at 128kbps MP3 is approximately 180MB.",
+      "question": "What is the correct chunking strategy to handle this file size constraint?",
+      "options": [
+        "A. Compress the audio to a lower bitrate until the whole file fits under 25MB",
+        "B. Split the audio on silence boundaries into ~10-minute chunks, transcribe each chunk separately, and concatenate the results",
+        "C. Use a different API endpoint that accepts larger files",
+        "D. Split the audio into exactly 25 equal segments regardless of where speech occurs"
+      ],
+      "answer": "B",
+      "explanation": "Splitting on silence boundaries (using pydub's split_on_silence) avoids cutting words mid-sentence, which causes transcription errors at chunk boundaries. Merging the resulting small chunks into ~10-minute segments keeps the API call count manageable. Option A (heavy compression) degrades audio quality and increases WER. Option D (equal splits) will cut through words, causing dropped words and errors at boundaries."
+    },
+    {
+      "id": "c2",
+      "scenario": "A legal team needs transcripts of depositions where they must know exactly which lawyer and which witness said each sentence. They evaluate Whisper API, Deepgram Nova-2, and AssemblyAI.",
+      "question": "Which provider should they choose and why?",
+      "options": [
+        "A. Whisper API, because it has the lowest WER of the three",
+        "B. Deepgram Nova-2 or AssemblyAI, because these providers include built-in speaker diarization while Whisper does not natively support it",
+        "C. Whisper API, because it supports more audio formats than the alternatives",
+        "D. AssemblyAI, because it is the only provider with HIPAA compliance"
+      ],
+      "answer": "B",
+      "explanation": "Speaker diarization ('who said what') is not available in the base Whisper API. Deepgram Nova-2 and AssemblyAI both include speaker diarization as a built-in feature. AssemblyAI has the best-in-class diarization quality, especially for overlapping speech, which makes it a strong choice for depositions with multiple speakers. Whisper can be combined with pyannote.audio for diarization, but this requires significant additional engineering."
+    },
+    {
+      "id": "c3",
+      "scenario": "A team measures WER on their Whisper transcription pipeline using a golden set of 20 customer service calls. The overall WER is 8%. The product owner says this is acceptable for search indexing but not for billing dispute resolution, which requires accurate amounts and dates.",
+      "question": "What is the most appropriate response to the product owner's concern?",
+      "options": [
+        "A. WER of 8% is industry standard; the product owner's expectations are unrealistic",
+        "B. Implement a human review step specifically for billing dispute transcripts, and consider a specialized model or prompt that focuses on extracting numerical amounts and dates accurately",
+        "C. Reduce the audio sample rate to 8kHz to improve Whisper's accuracy",
+        "D. Switch to a larger Whisper model that will reduce WER to near zero"
+      ],
+      "answer": "B",
+      "explanation": "The product owner is right that 8% WER is problematic for billing disputes where amounts and dates must be exact. The appropriate response is to implement different handling for different transcript use cases: a human review step for billing disputes (where accuracy has financial/legal consequences), and potentially a specialized extraction step that uses an LLM to pull out specific fields (amounts, dates) from the transcript with explicit verification. No STT system produces zero errors."
+    },
+    {
+      "id": "c4",
+      "scenario": "A web app records audio through the browser using the MediaRecorder API. When the engineering team sends the resulting audio file to the Whisper API, they get format errors. They assumed MP3, but the browser produced a different format.",
+      "question": "What format does Chrome's MediaRecorder produce by default, and how should the team handle it?",
+      "options": [
+        "A. Chrome produces WAV files; switch to MP3 encoding before sending to Whisper",
+        "B. Chrome produces WebM/Opus files; the Whisper API accepts WebM directly, so no conversion is needed",
+        "C. Chrome produces FLAC files; transcode to MP3 with ffmpeg before sending",
+        "D. Chrome produces raw PCM; base64-encode before sending to the API"
+      ],
+      "answer": "B",
+      "explanation": "Chrome's MediaRecorder produces WebM/Opus by default (Firefox also produces WebM). The Whisper API explicitly supports WebM as an accepted format, so no conversion step is needed. The team should check the MIME type returned by MediaRecorder.mimeType to confirm the format, but in most cases WebM can be sent directly."
+    },
+    {
+      "id": "c5",
+      "scenario": "A team is choosing a TTS voice for their customer service follow-up message system. The follow-up messages are sent to customers after support calls to confirm resolution. The product manager wants the voice to feel warm and professional, not robotic.",
+      "question": "Which OpenAI TTS voice and model combination is most appropriate for this use case?",
+      "options": [
+        "A. onyx voice, tts-1 model - authoritative and clear for business communication",
+        "B. nova voice, tts-1 model - warm and friendly, appropriate for customer-facing messages",
+        "C. echo voice, tts-1-hd model - masculine and clear for professional contexts",
+        "D. alloy voice, tts-1 model - neutral balance between warmth and professionalism"
+      ],
+      "answer": "B",
+      "explanation": "The nova voice is described as warm and friendly, making it well-suited for customer-facing applications where the goal is a helpful, approachable tone. tts-1 (standard quality) is sufficient for voice messages sent via audio file. tts-1-hd is worth the additional cost only when the audio is played in a context where listeners will notice subtle quality differences (e.g., phone calls where the customer is listening closely). For automated follow-up messages, tts-1 at half the cost is the right default."
+    },
+    {
+      "id": "c6",
+      "scenario": "A team wants to automate quality testing for their TTS pipeline. They generate 100 audio messages with OpenAI TTS and want to verify that the words are being synthesized correctly without human listening to each file.",
+      "question": "What automated proxy metric can they use instead of human evaluation?",
+      "options": [
+        "A. Measure the file size in kilobytes and flag files that are unexpectedly small",
+        "B. Re-transcribe the TTS output with Whisper and compute character error rate (CER) between the original text and the re-transcription",
+        "C. Count the number of phonemes in the synthesized audio and compare to the input text length",
+        "D. Measure the average silence duration in the audio file"
+      ],
+      "answer": "B",
+      "explanation": "Re-transcribing TTS output with Whisper provides an automated proxy for audio quality. If the TTS synthesizes words correctly, Whisper should transcribe them back with low error. A character error rate (CER) above 3% suggests the TTS is distorting or dropping words. This is not a perfect quality metric (it does not capture naturalness or prosody), but it catches egregious synthesis errors in an automated pipeline."
+    },
+    {
+      "id": "c7",
+      "scenario": "A startup is choosing between AssemblyAI ($0.012/min) and Deepgram Nova-2 ($0.004/min) for transcribing 10,000 minutes of customer call audio per month. They need speaker diarization but do not need real-time transcription.",
+      "question": "What is the monthly cost difference, and what factor should drive the decision beyond cost?",
+      "options": [
+        "A. $80/month difference; always choose the cheapest option for batch workloads",
+        "B. $80/month difference; evaluate actual diarization quality on your specific call audio since AssemblyAI's diarization is better for overlapping speech",
+        "C. The cost is identical since both charge per minute processed",
+        "D. $120/month difference; Deepgram should always be chosen since it offers streaming"
+      ],
+      "answer": "B",
+      "explanation": "Deepgram: $40/month. AssemblyAI: $120/month. Difference: $80/month. For batch workloads without real-time needs, the $80/month premium for AssemblyAI is only worth it if diarization quality actually matters for the use case. AssemblyAI's diarization is notably better for overlapping speech and cross-talk, which is common in customer service calls. The team should test both on a sample of their actual call recordings and measure diarization accuracy before committing to either."
+    }
+  ]
+}

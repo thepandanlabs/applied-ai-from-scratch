@@ -209,19 +209,19 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 10: Beyond Text: Multimodal & Voice [⬚] (~10 hours)
+## Phase 10: Beyond Text: Multimodal & Voice [✅] (~10 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | Vision-Language Models in Apps | ⬚ | ~45 min |
-| 02 | Document AI: OCR to Structured Pipelines | ⬚ | ~60 min |
-| 03 | Image Generation in Products | ⬚ | ~45 min |
-| 04 | Speech-to-Text & Text-to-Speech | ⬚ | ~45 min |
-| 05 | Building a Voice Agent | ⬚ | ~75 min |
-| 06 | Realtime APIs & Voice Latency | ⬚ | ~60 min |
-| 07 | Multimodal RAG | ⬚ | ~60 min |
-| 08 | Multimodal Evals & Cross-Modal Injection | ⬚ | ~45 min |
-| 09 | Capstone: A Multimodal Feature | ⬚ | ~75 min |
+| 01 | Vision-Language Models in Apps | ✅ | ~45 min |
+| 02 | Document AI: OCR to Structured Pipelines | ✅ | ~60 min |
+| 03 | Image Generation in Products | ✅ | ~45 min |
+| 04 | Speech-to-Text & Text-to-Speech | ✅ | ~45 min |
+| 05 | Building a Voice Agent | ✅ | ~75 min |
+| 06 | Realtime APIs & Voice Latency | ✅ | ~60 min |
+| 07 | Multimodal RAG | ✅ | ~60 min |
+| 08 | Multimodal Evals & Cross-Modal Injection | ✅ | ~45 min |
+| 09 | Capstone: A Multimodal Feature | ✅ | ~75 min |
 
 ---
 

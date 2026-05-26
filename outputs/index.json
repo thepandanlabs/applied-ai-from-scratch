@@ -1483,6 +1483,129 @@
         "roi",
         "production"
       ]
+    },
+    {
+      "name": "skill-vision-api-integration",
+      "description": "Reference for adding vision to an existing text API integration with encoding patterns and cost formula",
+      "phase": "10",
+      "lesson": "01",
+      "file": "phases/10-multimodal-and-voice/01-vision-language-models/outputs/skill-vision-api-integration.md",
+      "tags": [
+        "vision",
+        "multimodal",
+        "images",
+        "base64"
+      ]
+    },
+    {
+      "name": "skill-document-extraction-pipeline",
+      "description": "Pattern for production document AI with born-digital vs scanned detection and structured extraction",
+      "phase": "10",
+      "lesson": "02",
+      "file": "phases/10-multimodal-and-voice/02-document-ai/outputs/skill-document-extraction-pipeline.md",
+      "tags": [
+        "document-ai",
+        "pdf",
+        "extraction",
+        "ocr"
+      ]
+    },
+    {
+      "name": "skill-image-generation-patterns",
+      "description": "Provider comparison and async generation service pattern for image generation in products",
+      "phase": "10",
+      "lesson": "03",
+      "file": "phases/10-multimodal-and-voice/03-image-generation/outputs/skill-image-generation-patterns.md",
+      "tags": [
+        "image-generation",
+        "dall-e",
+        "stable-diffusion",
+        "async"
+      ]
+    },
+    {
+      "name": "skill-audio-pipeline",
+      "description": "Reference for production audio pipelines covering STT provider selection, chunking, and TTS integration",
+      "phase": "10",
+      "lesson": "04",
+      "file": "phases/10-multimodal-and-voice/04-speech-to-text-and-tts/outputs/skill-audio-pipeline.md",
+      "tags": [
+        "speech",
+        "stt",
+        "tts",
+        "whisper",
+        "audio"
+      ]
+    },
+    {
+      "name": "skill-voice-agent-architecture",
+      "description": "Architecture reference for production voice agents with latency budget and barge-in state machine",
+      "phase": "10",
+      "lesson": "05",
+      "file": "phases/10-multimodal-and-voice/05-voice-agent-loop/outputs/skill-voice-agent-architecture.md",
+      "tags": [
+        "voice-agent",
+        "stt",
+        "tts",
+        "latency",
+        "pipecat"
+      ]
+    },
+    {
+      "name": "skill-realtime-latency-tuning",
+      "description": "Latency budget reference and per-stage optimization techniques for real-time voice pipelines",
+      "phase": "10",
+      "lesson": "06",
+      "file": "phases/10-multimodal-and-voice/06-realtime-apis-and-latency/outputs/skill-realtime-latency-tuning.md",
+      "tags": [
+        "voice",
+        "latency",
+        "realtime",
+        "slo",
+        "streaming"
+      ]
+    },
+    {
+      "name": "skill-multimodal-rag-pipeline",
+      "description": "Architecture decision guide for multimodal RAG with early fusion, late fusion, and native embedding approaches",
+      "phase": "10",
+      "lesson": "07",
+      "file": "phases/10-multimodal-and-voice/07-multimodal-rag/outputs/skill-multimodal-rag-pipeline.md",
+      "tags": [
+        "rag",
+        "multimodal",
+        "vision",
+        "retrieval",
+        "images"
+      ]
+    },
+    {
+      "name": "skill-multimodal-safety-checklist",
+      "description": "Multimodal threat model with cross-modal injection attack patterns and defense matrix",
+      "phase": "10",
+      "lesson": "08",
+      "file": "phases/10-multimodal-and-voice/08-multimodal-evals-and-security/outputs/skill-multimodal-safety-checklist.md",
+      "tags": [
+        "security",
+        "multimodal",
+        "prompt-injection",
+        "vision",
+        "safety"
+      ]
+    },
+    {
+      "name": "runbook-multimodal-feature-deploy",
+      "description": "Full deployment runbook for a multimodal document-support service with FastAPI and Docker",
+      "phase": "10",
+      "lesson": "09",
+      "file": "phases/10-multimodal-and-voice/09-capstone-multimodal-feature/outputs/runbook-multimodal-feature-deploy.md",
+      "tags": [
+        "multimodal",
+        "capstone",
+        "runbook",
+        "fastapi",
+        "docker"
+      ]
     }
   ]
 }

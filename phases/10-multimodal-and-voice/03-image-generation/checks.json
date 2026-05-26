@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "03-image-generation",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A marketing team's platform generates 500 images per day for social campaigns. The team is choosing between DALL-E 3 ($0.040/image) and Replicate SDXL ($0.0023/image). The PM wants the highest quality images. The engineering team wants the most cost-effective option.",
+      "question": "At 500 images/day, what is the monthly cost difference between DALL-E 3 and Replicate SDXL, and what factor should drive the final decision?",
+      "options": [
+        "A. $576/month difference; DALL-E 3 should always win because it is from OpenAI",
+        "B. About $576/month difference; the decision should be driven by actual output quality for your specific use case, not vendor reputation",
+        "C. The cost is identical because Replicate charges by compute time, not per image",
+        "D. $576/month difference; Replicate SDXL should always win because it is open-weight"
+      ],
+      "answer": "B",
+      "explanation": "500 images/day * 30 days = 15,000 images/month. DALL-E 3: $600/month. Replicate SDXL: $34.50/month. Difference: ~$565/month. The right decision depends on which provider's output quality actually serves the use case - marketing campaign images, product photos, and abstract backgrounds may favor different providers. Run a human evaluation with your actual prompt types before committing to a provider."
+    },
+    {
+      "id": "c2",
+      "scenario": "A developer ships an image generation feature. The first week in production, a user submits a prompt that triggers a content policy violation. The UI shows a generic 500 error and the user's browser session times out after 20 seconds of waiting.",
+      "question": "Which two design flaws caused this experience?",
+      "options": [
+        "A. No content policy retry logic, and using a synchronous HTTP handler for a 5-20 second operation",
+        "B. Using DALL-E 3 instead of Stable Diffusion, and not enough max_tokens in the generation call",
+        "C. Missing authentication middleware and too-short request timeout",
+        "D. Content policy violation was not caught as an exception, and the image was not resized before serving"
+      ],
+      "answer": "A",
+      "explanation": "Two problems: (1) a content policy violation was treated as an unhandled error instead of an expected event with a defined retry flow; (2) the generation was called synchronously in a web request, causing a 20-second hang. Image generation should use an async pattern: return generation_id immediately, run generation in the background, let the client poll for status. Content policy violations should trigger a sanitized retry or a user-friendly error message."
+    },
+    {
+      "id": "c3",
+      "scenario": "An engineer builds an image generation feature and stores the DALL-E 3 response URL in the database. One week later, users report that all images generated last week now show a broken link.",
+      "question": "Why are the images broken, and what is the correct storage pattern?",
+      "options": [
+        "A. The database connection timed out; use a connection pool",
+        "B. DALL-E response URLs are temporary and expire in roughly 1 hour; images must be downloaded and stored in your own object storage (S3/GCS) immediately after generation",
+        "C. The OpenAI API changed the URL format; update the URL parsing code",
+        "D. Images expire because DALL-E 3 has a rate limit on serving stored images"
+      ],
+      "answer": "B",
+      "explanation": "OpenAI's image generation response returns a temporary URL hosted by OpenAI that expires in approximately 1 hour. To serve images reliably, you must download the image bytes immediately after generation and upload them to your own object storage (S3, GCS, Azure Blob). Never store the DALL-E URL directly as a permanent reference."
+    },
+    {
+      "id": "c4",
+      "scenario": "A team's marketing image generation platform has a content policy violation rate of 35% for prompts about alcoholic beverage brands. The PM wants to reduce this rate without changing the product's allowed use cases.",
+      "question": "Which approach is most likely to reduce content policy violations for alcohol marketing prompts?",
+      "options": [
+        "A. Switch to a provider with more permissive content filters (Replicate with uncensored model)",
+        "B. Pre-process prompts to reframe the content contextually (e.g., 'premium craft beer in a social setting' instead of 'beer commercial') and avoid trigger keywords",
+        "C. Increase the max resolution to 1792x1024 so the model has more room to express the concept",
+        "D. Add a negative prompt specifying what not to include"
+      ],
+      "answer": "B",
+      "explanation": "Content policy systems respond to specific keywords and contextual framing. Rewriting prompts to describe the visual concept rather than the literal product category often bypasses filters while generating the same intended image. 'A sophisticated evening gathering with artisan beverages' may generate an appropriate marketing image while 'beer advertisement with bottle' may trigger a filter. Prompt engineering is the right first lever before switching providers or bypassing safety systems."
+    },
+    {
+      "id": "c5",
+      "scenario": "A startup wants to use Ideogram v2 for their product's image generation feature, which creates text-heavy promotional graphics with product names and slogans embedded in the image.",
+      "question": "Why is Ideogram v2 better suited for this use case than DALL-E 3?",
+      "options": [
+        "A. Ideogram is cheaper per image than DALL-E 3",
+        "B. Ideogram v2 is specifically optimized for accurate text rendering within images, making it better for graphics that embed product names and slogans",
+        "C. DALL-E 3 cannot generate images larger than 512x512",
+        "D. Ideogram has no content policy restrictions"
+      ],
+      "answer": "B",
+      "explanation": "Text rendering within generated images is a known weakness of diffusion models, including DALL-E 3 - letters are often garbled or misspelled. Ideogram was specifically designed with accurate text rendering as a core capability. For use cases where product names, slogans, or other text must appear correctly in the generated image, Ideogram is the appropriate provider despite its higher per-image cost."
+    },
+    {
+      "id": "c6",
+      "scenario": "A product team wants to add human approval before any AI-generated image goes live on their e-commerce site. They have a volume of 200 image generations per day.",
+      "question": "What information should the approval queue surface to reviewers to make their job efficient?",
+      "options": [
+        "A. Only the generated image, without the original prompt, to avoid biasing the reviewer",
+        "B. The original user prompt, the revised_prompt (what DALL-E 3 actually used), and the generated image side by side",
+        "C. The generated image and the generation cost, so reviewers can reject expensive images",
+        "D. Only the revised_prompt and the image, because the original prompt is irrelevant after rewriting"
+      ],
+      "answer": "B",
+      "explanation": "Reviewers need three pieces of information: (1) the original prompt to understand user intent, (2) the DALL-E revised_prompt to see what the model actually generated from, and (3) the image itself. When a reviewer sees an unexpected image, the revised_prompt often explains why - DALL-E rewrites prompts in ways that can change the output significantly. Seeing all three together allows reviewers to assess both the image quality and whether the generation faithfully represents what the user intended."
+    },
+    {
+      "id": "c7",
+      "scenario": "A team is measuring the quality of their image generation feature. The product owner asks for a monthly quality report. The engineering team proposes measuring generation latency P95 and cost per successful image. The product owner says these are not the right metrics.",
+      "question": "What additional metric would best capture whether the image generation feature is actually valuable to the business?",
+      "options": [
+        "A. Average image file size in kilobytes",
+        "B. Number of images generated per day",
+        "C. Downstream product metric: CTR or conversion rate for content using AI-generated images vs. stock images",
+        "D. Model version number of the generation API"
+      ],
+      "answer": "C",
+      "explanation": "Latency and cost are engineering metrics that matter for reliability and budget, but they do not tell you whether the feature creates business value. For a marketing platform, the relevant question is whether AI-generated images perform better or worse than the alternatives (stock photos, designer-created images). CTR on campaigns using AI-generated images vs. stock photos is a direct measure of business value. If CTR is lower, the feature may not be worth the cost regardless of technical efficiency."
+    }
+  ]
+}
