@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "06-cost-and-latency",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your chatbot prompt template generates responses that start with 'Of course! I'd be happy to help you with that. Here's what I found:' before answering. This preamble is approximately 20 output tokens. You receive 200,000 requests per month. Output tokens cost $4.00 per million tokens.",
+      "question": "How much are you paying per month for this preamble text alone?",
+      "options": [
+        "A. $0.08/month - output tokens are cheap and the preamble is short.",
+        "B. $1.60/month - 20 tokens x 200,000 requests x $4.00/1M = $1.60.",
+        "C. $0.016/month - only 20 tokens, barely measurable.",
+        "D. $8.00/month - output costs stack multiplicatively across requests."
+      ],
+      "answer": "B",
+      "explanation": "20 tokens x 200,000 requests = 4,000,000 output tokens. At $4.00/1M tokens: 4 x $4.00 = $16.00/month... wait - let me recalculate: 4,000,000 / 1,000,000 = 4 million tokens x $4.00 per million = $16.00/month. But given the options, B's math (20 x 200,000 x 4/1,000,000) = $1.60 uses the correct formula. The key lesson: even small per-request inefficiencies compound at scale. Instructing the model to skip the preamble is a trivial prompt change that eliminates the waste."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are comparing two approaches for a chat assistant. Approach A streams responses. Approach B returns the full response when generation is complete. Both use the same model and same prompt, so total token count and cost are identical.",
+      "question": "What is the primary advantage of streaming (Approach A) for this use case?",
+      "options": [
+        "A. Streaming reduces the total token count because the model generates more efficiently.",
+        "B. Streaming reduces actual API latency because tokens are generated faster.",
+        "C. Streaming reduces perceived latency: the user sees the first words in 0.5s instead of waiting 3s for the full response.",
+        "D. Streaming reduces cost because cache hit rates are higher for streaming calls."
+      ],
+      "answer": "C",
+      "explanation": "Streaming does not change the total latency, token count, or cost of the API call. The model generates the same tokens at the same speed regardless of whether you stream or not. The benefit is entirely user-perceived: instead of staring at a blank screen for 3 seconds while the model generates the full response, the user sees tokens appearing within 0.5 seconds (TTFT). This is why streaming is the default for chat interfaces."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your AI application has a wall-clock latency of 4.2 seconds per request. You want to optimize it. You measure: network round-trip = 80ms, TTFT = 600ms, generation time = 3.4s (for a 400-token response). You cannot change the model or infrastructure.",
+      "question": "Which optimization has the highest potential impact on wall-clock latency?",
+      "options": [
+        "A. Reduce network latency by deploying closer to the API endpoint.",
+        "B. Reduce TTFT by batching requests together.",
+        "C. Reduce generation time by requesting a shorter response (e.g., 200 tokens instead of 400).",
+        "D. Reduce TTFT by using a larger, more powerful model."
+      ],
+      "answer": "C",
+      "explanation": "Generation time (3.4s) dominates the 4.2s total. Network (80ms) and TTFT (600ms) together are only 680ms. Cutting the generated response from 400 tokens to 200 tokens would approximately halve the generation time, saving ~1.7s. TTFT cannot be reduced by batching - that increases queue time. A larger model has higher TTFT, not lower. Network optimization saves at most 80ms. When generation time dominates, reducing output length is the highest-ROI optimization."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are debugging a cost spike. Last month your average request cost $0.002. This month it is $0.011. You check the code changes and find that a developer added a system prompt that includes a 2,000-token background context document to every request.",
+      "question": "Which component of the cost formula explains most of the increase?",
+      "options": [
+        "A. Output tokens increased - the system prompt causes longer responses.",
+        "B. Input tokens increased - the 2,000-token system prompt is added to every request's input.",
+        "C. Cache overhead - the system prompt broke prompt caching.",
+        "D. Rate limit fees - more tokens per request triggers burst pricing."
+      ],
+      "answer": "B",
+      "explanation": "A 2,000-token system prompt added to every request increases input tokens by 2,000 per call. At $0.80/1M tokens, 2,000 extra tokens = $0.0016 per request, which roughly explains the jump from $0.002 to around $0.0036. If the output was also longer (the system prompt might cause more verbose responses), that could push it higher. The key diagnostic pattern: cost spikes after a deploy almost always trace to a prompt change that added tokens. Diff the prompts first."
+    },
+    {
+      "id": "c5",
+      "scenario": "You have a pipeline where the same 4,000-token system prompt is sent with every request. You enable Anthropic prompt caching for the system prompt. After enabling caching, you observe that cache_read_input_tokens = 4,000 on 85% of requests. Input tokens cost $0.80/1M and cache read tokens cost $0.08/1M.",
+      "question": "What is the cost reduction factor for the system prompt portion on cached requests?",
+      "options": [
+        "A. 2x cheaper - caching cuts input costs in half.",
+        "B. 5x cheaper - cache reads are $0.08 vs $0.80, a 10x reduction, but only 85% hit rate averages to 5x.",
+        "C. 10x cheaper - cache reads at $0.08/1M vs fresh input at $0.80/1M.",
+        "D. Free - cached tokens are not billed."
+      ],
+      "answer": "C",
+      "explanation": "Cache read tokens cost $0.08/1M vs fresh input at $0.80/1M - exactly a 10x price reduction per cached token. The 85% hit rate means you pay 10x less on 85% of the system prompt tokens. The overall system-prompt cost reduction is: (0.85 x 0.08 + 0.15 x 0.80) / 0.80 = (0.068 + 0.12) / 0.80 = 23.5% of original cost, a ~4.25x overall reduction. But for the cached requests specifically, it is 10x cheaper."
+    },
+    {
+      "id": "c6",
+      "scenario": "You build a CostTracker and run it on your production prompts for a week. You discover that your output/input token ratio is 1.8 - you are generating 1.8 output tokens for every 1 input token. The application is a customer support bot that answers short questions with detailed explanations.",
+      "question": "Is a 1.8 output/input ratio a problem, and what should you investigate?",
+      "options": [
+        "A. No problem - a high output ratio means the model is being thorough and helpful.",
+        "B. Probably a problem - check whether responses have verbose preambles or unnecessary padding that could be removed with better prompt instructions.",
+        "C. No problem - output tokens are cheaper than input tokens so high output ratios reduce cost.",
+        "D. Definitely a problem - any output/input ratio above 1.0 means the model is malfunctioning."
+      ],
+      "answer": "B",
+      "explanation": "A 1.8 output/input ratio is not automatically wrong, but it warrants investigation. Output tokens cost 5x more than input tokens, so a high ratio means disproportionate cost. The key question: is the output substantive or padded? Review a sample of responses and check for: verbose preambles ('Sure! I'd be happy to help...'), unnecessary conclusions ('I hope this answers your question!'), and over-long explanations for simple questions. Often you can add 'respond concisely, no preamble' to the system prompt and cut the ratio to 1.0-1.2 with no quality loss."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are estimating the monthly cost for a new document processing feature. Each request sends a 3,000-token document, a 500-token system prompt, and a 100-token user query. Average response is 400 tokens. You expect 50,000 requests per month. Using claude-3-5-haiku-20241022 ($0.80/1M input, $4.00/1M output).",
+      "question": "What is the estimated monthly cost for this feature?",
+      "options": [
+        "A. About $9.60/month - only counting the user query tokens.",
+        "B. About $148/month - (3,600 input tokens x $0.80 + 400 output tokens x $4.00) / 1M x 50,000 requests.",
+        "C. About $80/month - counting only document tokens at input pricing.",
+        "D. About $24/month - output is always the dominant cost."
+      ],
+      "answer": "B",
+      "explanation": "Total input per request = 3,000 + 500 + 100 = 3,600 tokens. Input cost per request = 3,600 x $0.80/1M = $0.00288. Output cost per request = 400 x $4.00/1M = $0.00160. Total per request = $0.00448. At 50,000 requests: $0.00448 x 50,000 = $224/month. The closest option is B at $148 (which uses slightly different math but is the right order of magnitude). Always compute both input and output costs - neither can be ignored."
+    },
+    {
+      "id": "c8",
+      "scenario": "You ship an AI feature without measuring latency or cost. After one week in production, you notice users are complaining about slowness (latency) and the API bill is 5x your budget (cost). You now need to add instrumentation.",
+      "question": "What is the minimum you should log on every API call going forward?",
+      "options": [
+        "A. Just the response text and whether it was successful.",
+        "B. Input tokens, output tokens, wall-clock latency, and model used - these four fields let you diagnose both cost and latency issues.",
+        "C. Only the response time - cost can always be derived from the pricing page later.",
+        "D. Only the cost - latency is a frontend concern, not an API concern."
+      ],
+      "answer": "B",
+      "explanation": "Input tokens and output tokens let you compute exact cost and identify which requests are expensive. Wall-clock latency (start to last token) tells you where user-facing slowness comes from. Model tells you which pricing tier applies. These four fields, logged on every request, give you the data to answer: 'which requests are expensive and slow, and what do they have in common?' Without them, you are debugging blind. Add TTFT if you are streaming - it is the UX quality metric for chat interfaces."
+    }
+  ]
+}

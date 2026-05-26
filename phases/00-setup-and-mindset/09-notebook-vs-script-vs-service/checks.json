@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "09-notebook-vs-script-vs-service",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A data scientist built an AI pipeline in a Jupyter notebook over three weeks. The notebook has 40 cells, runs in sequence, and produces correct output. A backend engineer asks: 'Can I call this from our Node.js API?'",
+      "question": "What is the most accurate description of the work needed?",
+      "options": [
+        "A. Minor: just export the notebook as a Python file and import it.",
+        "B. Significant: the notebook needs to be rewritten as a service with an HTTP interface, error handling, and runtime secret injection.",
+        "C. None: Node.js can execute Jupyter notebooks directly via a subprocess call.",
+        "D. Minor: add a REST framework as a new cell at the bottom of the notebook."
+      ],
+      "answer": "B",
+      "explanation": "A Jupyter notebook is not an HTTP service. It requires Jupyter to run, cells execute in a stateful order that is not reproducible from a CLI, hardcoded values need to be replaced with env vars, and there is no request/response contract. Rewriting as a FastAPI service is the correct path: it produces a proper HTTP endpoint, handles concurrency, and can be containerized."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your team has a Python script that calls the Claude API to classify customer support tickets. It runs correctly. The product team now wants all support engineers (12 people across 3 time zones) to be able to classify tickets from the web app in real time.",
+      "question": "Which promotion is appropriate, and what is the primary trigger?",
+      "options": [
+        "A. No change needed; the script can handle 12 concurrent users.",
+        "B. Promote to service: multiple users need simultaneous access via HTTP.",
+        "C. Promote to notebook: product teams prefer Jupyter for demos.",
+        "D. Promote to script: add argparse for multi-user support."
+      ],
+      "answer": "B",
+      "explanation": "The script is single-process and sequential. Twelve concurrent users calling it simultaneously would require separate processes for each, which is fragile. A FastAPI service handles concurrency natively via async, runs persistently, and exposes an HTTP endpoint the web app can call. The trigger is: multiple users, simultaneous access, integration into a web system."
+    },
+    {
+      "id": "c3",
+      "scenario": "An engineer says: 'I'll just write the whole thing as a service from day one. Notebooks are for data scientists.' They open a FastAPI project template and start building a prompt comparison feature they haven't tested yet.",
+      "question": "What is the risk of skipping the notebook/exploration phase here?",
+      "options": [
+        "A. There is no risk; writing a service from scratch is always the correct approach.",
+        "B. They may build a complete service around a prompt approach that turns out to produce poor results, requiring a full rewrite after they discover this.",
+        "C. FastAPI does not support Claude API calls, so the service will fail at runtime.",
+        "D. Services are harder to debug than notebooks, so bugs will be harder to find."
+      ],
+      "answer": "B",
+      "explanation": "Notebooks earn their place when you don't yet know what approach works. Prompt comparison (testing multiple system prompts, temperatures, or model versions) is exploratory work. Building a full service before validating the core approach means you engineer around a hypothesis that may be wrong. The correct sequence: validate in a notebook, then promote to script or service once the approach is confirmed."
+    },
+    {
+      "id": "c4",
+      "scenario": "A script processes legal documents using Claude. It runs correctly from the command line. You want to add it to a GitHub Actions workflow that runs every night at midnight on new documents in an S3 bucket.",
+      "question": "What is the appropriate format for this use case?",
+      "options": [
+        "A. Service: cron jobs require an HTTP endpoint to trigger.",
+        "B. Notebook: GitHub Actions supports Jupyter notebooks natively.",
+        "C. Script: it can be called from a shell command in the workflow YAML.",
+        "D. Service: scheduled jobs always need persistent state between runs."
+      ],
+      "answer": "C",
+      "explanation": "A GitHub Actions workflow runs shell commands. A Python script with a proper `main()` entry point can be called directly: `python process_docs.py --input s3://bucket/new/`. No HTTP endpoint is needed. Services solve the wrong problem here: a service adds always-on infrastructure for a job that only needs to run once a night. The script is the correct form."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your notebook works perfectly. You 'export as Python' in Jupyter and run `python exported.py`. It throws a NameError on a variable that was defined in a cell you ran out of order during development.",
+      "question": "What does this failure reveal about the notebook?",
+      "options": [
+        "A. Python 3 has a bug with exported notebooks.",
+        "B. The notebook has hidden state: cells were run in a non-linear order that is not reproducible by executing top to bottom.",
+        "C. The export function is broken and should not be used.",
+        "D. The variable naming convention is wrong and needs to be fixed."
+      ],
+      "answer": "B",
+      "explanation": "Jupyter notebooks maintain a kernel state that persists across cell runs. A cell at the top can reference a variable defined in a cell at the bottom if that bottom cell was run first during the session. When exported as a script, cells execute top-to-bottom only. NameErrors in exported notebooks almost always mean a cell execution order dependency that was invisible in the notebook session."
+    },
+    {
+      "id": "c6",
+      "scenario": "A manager asks: 'Why do we need a /health endpoint on the service? We can just check if the server process is running.'",
+      "question": "What does a /health endpoint provide that a process check does NOT?",
+      "options": [
+        "A. Nothing; process checks and health endpoints are equivalent.",
+        "B. A health endpoint can verify that the API key is valid and the model is reachable, not just that the Python process started.",
+        "C. Health endpoints are required by HTTP spec; process checks are not valid for web services.",
+        "D. A health endpoint prevents the server from crashing under load."
+      ],
+      "answer": "B",
+      "explanation": "A process check confirms the web server is running. A /health endpoint can test the full dependency chain: is the API key valid? Can we reach the Anthropic API? Is the database connected? A service where the process is up but the API key expired returns 503 from /health, which is actionable. A process check returns 'running', which is misleading. Load balancers, Kubernetes liveness probes, and monitoring systems all use /health."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are asked to evaluate whether a team's AI feature is 'production-ready'. They show you a notebook that produces correct output when run by the original author. What questions do you ask?",
+      "question": "Which question is the MOST diagnostic for production readiness?",
+      "options": [
+        "A. How many parameters does the Claude model have?",
+        "B. Can a new engineer run this from scratch with only a README and an API key, without opening Jupyter?",
+        "C. Is the notebook saved with output cells so we can see the last run?",
+        "D. Does the notebook use the latest version of the anthropic SDK?"
+      ],
+      "answer": "B",
+      "explanation": "Production readiness requires that the system can be run, debugged, and maintained by someone who was not the original author, without specialized local setup. If the answer to 'can a new engineer run this?' is 'only if they open Jupyter and run cells in the right order', the feature is not production-ready. This question cuts through all other concerns: reproducibility, environment isolation, and operational handoff."
+    }
+  ]
+}

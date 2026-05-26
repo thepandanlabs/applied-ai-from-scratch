@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "lesson": "10-debugging-non-deterministic-systems",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your AI summarizer works correctly on Monday. On Tuesday, a user reports it returned a wrong answer. You run the same query on Wednesday and it works again. There are no logs.",
+      "question": "What is the correct first step?",
+      "options": [
+        "A. Change the prompt based on the user's description of the wrong answer.",
+        "B. Add a DebugLogger that captures every call before doing any other investigation.",
+        "C. Upgrade to a larger model; wrong answers are always caused by underpowered models.",
+        "D. Roll back the code to Monday's version since it was working then."
+      ],
+      "answer": "B",
+      "explanation": "Without a log, you have no evidence. You don't know what the exact prompt was on Tuesday, what temperature was used, whether the failure was a one-in-ten event or a one-in-thousand event, or whether it has been happening for weeks. Adding the logger before continuing means you will have evidence for the next failure. Changing the prompt based on a user's recollection is guessing. The code did not change between Monday and Tuesday, so there is nothing to roll back."
+    },
+    {
+      "id": "c2",
+      "scenario": "You have a log of 200 API calls. You notice the model returned 'I cannot help with that' 4 times. You change the system prompt and make 200 more calls. The refusals drop to 1.",
+      "question": "Did the prompt change fix the problem?",
+      "options": [
+        "A. Yes: refusals dropped from 4 to 1, which is a clear improvement.",
+        "B. Unclear: you need to compare failure rates: 4/200 = 2% vs 1/200 = 0.5%. The improvement is real but you need to set an acceptable threshold to know if it is enough.",
+        "C. No: you need zero refusals to confirm a fix.",
+        "D. Yes: any reduction in failures confirms the fix."
+      ],
+      "answer": "B",
+      "explanation": "Debugging non-deterministic systems requires thinking in rates, not counts. 4/200 = 2%, 1/200 = 0.5%. The rate dropped significantly, which is evidence the change helped. But whether 0.5% is acceptable depends on your use case: for a medical summary tool, even 0.5% might be unacceptable. For a casual summarizer, 0.5% is fine. The key insight: measure the rate, then compare it against your defined threshold. Do not stop at 'it got better.'"
+    },
+    {
+      "id": "c3",
+      "scenario": "A production AI service returns HTTP 429 errors to 3% of requests. Your teammate says 'the model is struggling with these prompts, rewrite them.'",
+      "question": "What type of failure is this, and is your teammate's diagnosis correct?",
+      "options": [
+        "A. Model failure. The teammate is correct; the prompt needs to be rewritten.",
+        "B. Integration failure. HTTP 429 is a rate limit error from the API provider, not a model quality issue. Fix it with retry logic and backoff.",
+        "C. Unknown failure. 429 could mean either a prompt problem or a rate limit problem.",
+        "D. Model failure. 429 means the model rejected the prompt content."
+      ],
+      "answer": "B",
+      "explanation": "HTTP 429 means 'Too Many Requests': a rate limit enforced by the API provider, not a model quality signal. It has nothing to do with the content of the prompts. The fix is infrastructure: add exponential backoff, retry logic, or request throttling. Rewriting the prompt will not reduce a rate limit. This is the failure-source separation principle: integration failures (network, rate limits, auth) are fixed in your code; model failures (wrong answers, refusals, format errors) are fixed in your prompts."
+    },
+    {
+      "id": "c4",
+      "scenario": "You find a record in your log where the AI returned a wrong answer. You re-run the exact same prompt with temperature=0.0 and get the correct answer.",
+      "question": "What does this tell you?",
+      "options": [
+        "A. The original failure was a bug in your logging code.",
+        "B. The failure is probabilistic: it occurred at some probability, not systematically. You need to measure the failure rate across many runs.",
+        "C. The failure was caused by a high temperature, and setting temperature=0 permanently will fix it.",
+        "D. The model was updated between the original call and your reproduction attempt."
+      ],
+      "answer": "B",
+      "explanation": "When temperature=0 (deterministic) gives the correct answer but the original call (with temperature>0) gave the wrong answer, the failure was a probabilistic event: a low-probability wrong token sequence that the model selected due to sampling randomness. This is common and expected. The question is now: at what rate does this happen? Run the prompt 100 times at the original temperature and count failures. If it fails 1/100 times, decide if that is acceptable. Do not simply set temperature=0 permanently; it changes all outputs and may reduce quality on other inputs."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your AI pipeline processes 1,000 documents per day. You have no logging. After two weeks, a stakeholder reports that summaries of financial documents seem wrong. They have 3 examples.",
+      "question": "What is the minimum you need to determine whether this is a real systematic problem?",
+      "options": [
+        "A. 3 examples are sufficient; they prove the bug exists.",
+        "B. The failure rate across all financial documents over the two-week period. Without logs, you cannot determine this.",
+        "C. A manual review of 10 random financial documents from today.",
+        "D. Re-running the 3 failing examples with temperature=0 to confirm they still fail."
+      ],
+      "answer": "B",
+      "explanation": "3 examples prove the failure happened at least 3 times in 14,000 calls (1,000/day * 14 days). That could be a 0.02% rate (noise) or a 30% rate (disaster). Without logs, you cannot tell. The 3 examples do not tell you whether this affects 3 documents or 3,000. Logs with failure rates would immediately answer: 'financial documents fail at 4%, non-financial at 0.3%, something in the prompt breaks on financial vocabulary.' Without logs, you spend weeks guessing."
+    },
+    {
+      "id": "c6",
+      "scenario": "You add a DebugLogger to your app. After a week, the log shows: 850 successful calls, 50 calls with error='Connection timeout', 30 calls where response length < 5 characters.",
+      "question": "Which failures should be addressed first, and with what type of fix?",
+      "options": [
+        "A. The short responses (30 calls) first; model quality issues are harder to fix than timeouts.",
+        "B. Both are equal priority. Fix them at the same time.",
+        "C. The timeouts (50 calls) first via retry/backoff logic (integration fix), then investigate short responses by examining the prompts that triggered them (model fix).",
+        "D. Neither needs fixing; 80 failures out of 930 total (8.6%) is within acceptable range."
+      ],
+      "answer": "C",
+      "explanation": "Timeouts are integration failures with a known fix: add retry logic with exponential backoff. This is straightforward and will reduce that error category to near zero. Short responses are model failures that require investigation: retrieve the exact prompts that produced them, classify whether they are refusals or truncations (check max_tokens setting), and fix accordingly. Handling them together conflates two different root causes with different fixes. 8.6% total failure rate is also above the typical 5% threshold that should block deployment."
+    },
+    {
+      "id": "c7",
+      "scenario": "A colleague says: 'Our Datadog dashboard shows p99 latency and error rate. We have full observability. We don't need to log individual prompts and responses.'",
+      "question": "What does the JSONL prompt log provide that the Datadog dashboard does NOT?",
+      "options": [
+        "A. Nothing; dashboards and logs are equivalent observability tools.",
+        "B. The exact prompt and response for the specific call that failed, enabling root-cause reproduction and analysis.",
+        "C. Cost tracking; Datadog cannot track per-call API costs.",
+        "D. Latency data; Datadog only tracks HTTP response times, not AI model latency."
+      ],
+      "answer": "B",
+      "explanation": "Dashboards aggregate metrics: p99 latency means 1% of calls were slower than this number, but not which calls or why. An error rate of 2% tells you 2% of calls failed but not what was in those calls. The JSONL log stores the exact prompt text and exact response text for every call. When a failure appears in Datadog, you look up the corresponding log record, retrieve the exact prompt, and reproduce it at temperature=0. Without the per-call log, the dashboard tells you something is wrong but gives you nothing to debug with. Both serve different, complementary purposes."
+    },
+    {
+      "id": "c8",
+      "scenario": "You need to verify that a prompt change actually improved your AI system. Before the change you have 500 logged calls, after the change you have 500 more. How do you verify improvement?",
+      "options": [
+        "A. Ask several users if they noticed an improvement.",
+        "B. Count total errors before and after: if before > after, the change helped.",
+        "C. Compare failure rates: failures/total for each period. Also compare rates by failure type to confirm the specific type you targeted decreased.",
+        "D. Run the 5 worst-performing prompts from before and check if they are better after."
+      ],
+      "answer": "C",
+      "explanation": "Comparing rates (not counts) normalizes for different call volumes. Comparing by failure type confirms your change actually targeted the right problem: if you changed the prompt to reduce refusals, the refusal rate should drop specifically, not just the overall error rate. If overall errors dropped because timeouts improved (unrelated to your change), that is noise, not signal. Testing only 5 prompts is not statistically meaningful. Rate comparison across typed failure categories is the correct measurement."
+    }
+  ]
+}

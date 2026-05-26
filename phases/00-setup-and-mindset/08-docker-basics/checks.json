@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "08-docker-basics",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A team member builds a Docker image for an AI app, adds `ENV ANTHROPIC_API_KEY=sk-abc123` inside the Dockerfile so it 'just works', and pushes the image to Docker Hub as a public repo.",
+      "question": "What is the security problem with this approach?",
+      "options": [
+        "A. The API key will be ignored because containers don't support ENV variables.",
+        "B. The API key is embedded in the image layer history and is visible to anyone who pulls the image.",
+        "C. Docker Hub automatically strips ENV variables from public images.",
+        "D. The key will work but docker run will override it with an empty value."
+      ],
+      "answer": "B",
+      "explanation": "Every ENV instruction creates a permanent image layer. `docker history --no-trunc` reveals all layer commands including the key value. Even if you added a later layer that deleted the key, the original layer is still readable. Always inject secrets at runtime via `docker run -e`: they never enter the image."
+    },
+    {
+      "id": "c2",
+      "scenario": "You have a Dockerfile with this order: FROM python:3.12-slim, WORKDIR /app, COPY . ., RUN pip install -r requirements.txt, CMD. You change a single line in main.py and rebuild.",
+      "question": "What will Docker do during the rebuild?",
+      "options": [
+        "A. Reuse all cached layers because the base image hasn't changed.",
+        "B. Reinstall all packages because COPY . . (which includes requirements.txt) comes before pip install.",
+        "C. Only rebuild the CMD layer because CMD is always rebuilt.",
+        "D. Skip the rebuild entirely since main.py is a small change."
+      ],
+      "answer": "B",
+      "explanation": "Docker invalidates the cache starting from the first changed layer. COPY . . copies both main.py and requirements.txt. Any change to any file in the directory invalidates that layer, which in turn invalidates the pip install layer below it. Every code change forces a full package reinstall. Fix: COPY requirements.txt first, RUN pip install, then COPY the rest of the code."
+    },
+    {
+      "id": "c3",
+      "scenario": "You run `docker run ai-summarizer` and get: `KeyError: 'ANTHROPIC_API_KEY'`. The key is set in your terminal: `echo $ANTHROPIC_API_KEY` prints the correct value.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. The Dockerfile is missing a COPY instruction for the .env file.",
+        "B. The -e flag was not included in the docker run command.",
+        "C. The Python code uses os.getenv() instead of os.environ[].",
+        "D. The ANTHROPIC_API_KEY needs to be defined in requirements.txt."
+      ],
+      "answer": "B",
+      "explanation": "Container environment variables are isolated from the host by default. Even if ANTHROPIC_API_KEY is set in your shell, the container cannot see it unless you explicitly pass it with `docker run -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY`. The variable is in your shell, not in the container."
+    },
+    {
+      "id": "c4",
+      "scenario": "You build a Docker image for a simple Anthropic API script. The base image `python:3.12` produces a 1.2 GB image. Your colleague suggests switching to `python:3.12-slim`.",
+      "question": "When is the slim variant the right choice for an AI API app?",
+      "options": [
+        "A. Only when the app runs on machines with less than 4 GB of RAM.",
+        "B. When the app uses only pure-Python packages and does not compile C extensions during pip install.",
+        "C. When the app needs to import numpy or pandas.",
+        "D. Slim images are never appropriate for production; always use the full image."
+      ],
+      "answer": "B",
+      "explanation": "python:3.12-slim removes development headers, compilers, and system documentation. For apps that install pure-Python packages (like the anthropic SDK), this is safe and cuts image size by 70-80%. If a package needs to compile C extensions (some ML packages do), pip install may fail on slim because build tools are missing. Test slim first; fall back to full only if pip fails."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your AI app works fine locally. You containerize it with Docker and ship the image to a colleague who runs it on a different OS. They see the same output you do.",
+      "question": "Which problem does Docker solve that a Python virtual environment does NOT?",
+      "options": [
+        "A. Docker ensures the same model weights are used on both machines.",
+        "B. Docker isolates the entire OS, Python version, and system libraries, not just Python packages.",
+        "C. Docker prevents API rate limits from affecting one machine more than another.",
+        "D. Docker compiles Python to native code so it runs faster on any machine."
+      ],
+      "answer": "B",
+      "explanation": "Virtual environments isolate Python packages within a single Python installation. They do not isolate the Python version itself, system libraries (like libssl or libffi), or OS-level dependencies. Docker packages all of these together. If a dependency needs a specific glibc version or a system package, the container guarantees it is present, regardless of what the host machine has installed."
+    },
+    {
+      "id": "c6",
+      "scenario": "You run `docker build -t ai-app .` twice without changing any files. The second build takes 0.3 seconds instead of 45 seconds.",
+      "question": "Why is the second build so fast?",
+      "options": [
+        "A. Docker pre-downloads base images in the background.",
+        "B. Docker's layer cache reused every layer because no files changed.",
+        "C. Docker skipped the CMD instruction on repeated builds.",
+        "D. pip install is skipped on second run because packages are already in the container."
+      ],
+      "answer": "B",
+      "explanation": "Docker computes a hash of each instruction and its inputs. If neither the instruction nor the inputs (files it reads) have changed since the last build, Docker reuses the cached layer. On the second build with no file changes, every layer is a cache hit. The build output shows CACHED next to each step. This is also why correct COPY ordering matters: you want pip install to be a cache hit on code-only changes."
+    },
+    {
+      "id": "c7",
+      "scenario": "A colleague runs a containerized AI service with `docker run ai-service` and nothing appears in the terminal. They ask you how to see what the service is doing.",
+      "question": "Which command shows the output from a running container?",
+      "options": [
+        "A. `docker inspect ai-service`",
+        "B. `docker logs <container_id>` or `docker logs $(docker ps -lq)`",
+        "C. `docker exec ai-service print`",
+        "D. `docker attach --stdout ai-service`"
+      ],
+      "answer": "B",
+      "explanation": "`docker logs <container_id>` streams stdout and stderr from the container process. Use `docker ps` to get the container ID. `docker ps -lq` is a shortcut for the last-run container ID. Add `-f` to follow the log in real time, like `tail -f`. `docker inspect` returns configuration metadata, not application output."
+    },
+    {
+      "id": "c8",
+      "scenario": "You want to share a Docker image with a client whose environment has no internet access to pull from Docker Hub. You have the image on your laptop.",
+      "question": "What is the correct sequence to transfer the image?",
+      "options": [
+        "A. Copy the Dockerfile and run `docker build` on the client machine.",
+        "B. Run `docker save ai-app | gzip > ai-app.tar.gz`, transfer the file, then `docker load < ai-app.tar.gz` on the client machine.",
+        "C. Run `docker export ai-app > ai-app.tar.gz` and extract it with tar on the client machine.",
+        "D. Push to a private registry and give the client read credentials."
+      ],
+      "answer": "B",
+      "explanation": "`docker save` serializes the full image including all layers and metadata into a tar archive. `docker load` restores it exactly. The client machine can then `docker run` immediately with no rebuild and no internet required. `docker export` exports a running container's filesystem, not the image; it loses layer history and metadata. Option D works but requires internet access."
+    }
+  ]
+}

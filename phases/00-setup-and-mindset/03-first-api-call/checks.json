@@ -1,0 +1,96 @@
+{
+  "version": "1.0",
+  "lesson": "03-first-api-call",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You call the Anthropic API with `max_tokens=128` to summarize a document. The response comes back, but when you read the summary it cuts off mid-sentence. Users are seeing incomplete summaries in production.",
+      "question": "Which field in the response object tells you definitively that truncation occurred, and what value should it have?",
+      "options": [
+        "A. response.content[0].text ends with '...' to signal truncation",
+        "B. response.stop_reason equals 'max_tokens'",
+        "C. response.usage.output_tokens equals 128",
+        "D. response.id contains 'truncated' in the string"
+      ],
+      "answer": "B",
+      "explanation": "stop_reason='max_tokens' is the explicit signal that the model hit your limit before finishing. The text itself does not signal truncation -- it just stops wherever the model was. output_tokens equaling max_tokens is a symptom but not the authoritative check (the model could exactly reach the limit legitimately). Always check stop_reason in production code."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building a customer-facing chat feature. When a user asks a long question, they currently wait 6 seconds with a blank screen before any text appears. You want them to see the response start appearing immediately.",
+      "question": "What is the correct change to make in your API call code?",
+      "options": [
+        "A. Set a shorter timeout parameter on the API call to force faster responses",
+        "B. Switch from client.messages.create() to client.messages.stream() and yield chunks as they arrive",
+        "C. Use a smaller model (Haiku instead of Sonnet) to get faster responses",
+        "D. Reduce max_tokens to force shorter responses that arrive sooner"
+      ],
+      "answer": "B",
+      "explanation": "Streaming is the correct solution. client.messages.stream() returns chunks as they are generated, letting you forward them to the client immediately. The first token arrives within ~100-500ms instead of after the full generation. Switching to Haiku reduces latency but does not stream. Reducing max_tokens truncates the response. Timeout parameters control when to give up, not when to start receiving."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are using the streaming pattern and need the token usage counts (input_tokens and output_tokens) for cost accounting. Your code calls stream.text_stream in a loop. Where do you get the usage data?",
+      "options": [
+        "A. Read usage from each individual chunk in the stream loop",
+        "B. Call stream.get_final_message() after the `with` block exits to get usage from the final message",
+        "C. Usage is not available in streaming mode -- use non-streaming for cost accounting",
+        "D. Call client.messages.count_tokens() before and after the stream"
+      ],
+      "answer": "B",
+      "explanation": "stream.get_final_message() returns the completed Message object after the stream ends, including usage.input_tokens and usage.output_tokens. Token counts are emitted in the message_delta event near the end of the stream. The SDK accumulates this and makes it available via get_final_message(). Usage is absolutely available in streaming mode -- it just arrives at the end."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are logging every API call to a database. For each call you want to store: which exact model version was used, whether the response was complete or truncated, and the token counts. All of these fields exist in the response object.",
+      "question": "Which combination of fields covers all three requirements?",
+      "options": [
+        "A. response.model, response.stop_reason, response.usage",
+        "B. response.id, response.content[0].text, response.usage",
+        "C. response.model, response.id, response.usage.input_tokens",
+        "D. response.type, response.role, response.usage.output_tokens"
+      ],
+      "answer": "A",
+      "explanation": "response.model gives the exact model version string. response.stop_reason tells you 'end_turn' (complete) vs 'max_tokens' (truncated). response.usage gives both input_tokens and output_tokens. The other options either miss stop_reason (needed to detect truncation) or include irrelevant fields like response.id and response.role."
+    },
+    {
+      "id": "c5",
+      "scenario": "You need to process a user-submitted document that might be very long. Before sending the API call, you want to verify the document fits within the 200,000 token context window of claude-3-5-haiku-20241022.",
+      "question": "What is the correct way to count tokens without making a full API call?",
+      "options": [
+        "A. Estimate by dividing character count by 4 (approximately 4 chars per token)",
+        "B. Make a test API call with max_tokens=1 and read usage.input_tokens from the response",
+        "C. Use client.messages.count_tokens() with the model and messages parameters",
+        "D. Use the tiktoken library which works for all models including Claude"
+      ],
+      "answer": "C",
+      "explanation": "client.messages.count_tokens() is the official Anthropic API endpoint for counting tokens before sending a message. It returns the exact token count using the same tokenizer the model uses. The character/4 estimate is unreliable for non-English text and code. Making a test call with max_tokens=1 costs money and is unnecessary. tiktoken is OpenAI's tokenizer and does not work correctly for Claude."
+    },
+    {
+      "id": "c6",
+      "scenario": "In your production server, you have a FastAPI endpoint that calls the Anthropic API and returns the full response as JSON. Users report that the endpoint sometimes times out after 30 seconds on long requests. The model is generating 2,000+ token responses.",
+      "question": "What is the correct architectural fix?",
+      "options": [
+        "A. Increase the server timeout to 120 seconds",
+        "B. Reduce max_tokens to limit response length to under 500 tokens",
+        "C. Switch to streaming and return a Server-Sent Events (SSE) or chunked response from the endpoint",
+        "D. Move the API call to a background worker and poll for results"
+      ],
+      "answer": "C",
+      "explanation": "Streaming fixes the timeout problem at the architecture level: the server starts sending bytes to the client immediately and never holds a connection open waiting for a full response. The client sees results flowing in. Increasing timeout is a band-aid that does not improve user experience. Reducing max_tokens degrades quality. Background worker + polling adds latency and complexity without the user experience improvement of streaming."
+    },
+    {
+      "id": "c7",
+      "scenario": "You notice that the same prompt sent twice returns different token counts for input_tokens: first call returns 47 input tokens, second call returns 51 input tokens. Nothing in your code changed between calls.",
+      "question": "What is the most likely explanation?",
+      "options": [
+        "A. Token counting is non-deterministic and varies randomly",
+        "B. The model version was updated between calls and uses a slightly different tokenizer",
+        "C. Your system prompt or conversation history grew between the two calls",
+        "D. Input token counts include a random sampling component"
+      ],
+      "answer": "C",
+      "explanation": "Input token counts are deterministic for the same input. If they differ between calls, the actual input changed. The most common cause is that the messages list grew (e.g., you are maintaining conversation history and the second call includes both the first turn and the second turn). Check whether your messages array is accumulating history. Token counting is not random."
+    }
+  ]
+}

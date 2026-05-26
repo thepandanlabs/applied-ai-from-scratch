@@ -8,20 +8,20 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 00: Setup & the Applied AI Mindset [⬚] (~8 hours)
+## Phase 00: Setup & the Applied AI Mindset [✅] (~8 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | Dev Environment (uv, Node/TS) | ⬚ | ~45 min |
-| 02 | API Keys, Providers & the 2026 Model Landscape | ⬚ | ~45 min |
-| 03 | First API Call: Python + TypeScript, Streaming, Tokens | ⬚ | ~45 min |
-| 04 | The Probabilistic Mindset: Why Deterministic Thinking Breaks | ⬚ | ~45 min |
-| 05 | Reading Model Docs: Context Windows, Pricing, Limits | ⬚ | ~30 min |
-| 06 | Cost & Latency from Line One | ⬚ | ~45 min |
-| 07 | Git + Running the Lesson Repo | ⬚ | ~30 min |
-| 08 | Docker Basics for AI Apps | ⬚ | ~45 min |
-| 09 | Notebook vs Script vs Service | ⬚ | ~30 min |
-| 10 | Debugging Non-Deterministic Systems | ⬚ | ~45 min |
+| 01 | Dev Environment (uv, Node/TS) | ✅ | ~45 min |
+| 02 | API Keys, Providers & the 2026 Model Landscape | ✅ | ~45 min |
+| 03 | First API Call: Python + TypeScript, Streaming, Tokens | ✅ | ~45 min |
+| 04 | The Probabilistic Mindset: Why Deterministic Thinking Breaks | ✅ | ~45 min |
+| 05 | Reading Model Docs: Context Windows, Pricing, Limits | ✅ | ~30 min |
+| 06 | Cost & Latency from Line One | ✅ | ~45 min |
+| 07 | Git + Running the Lesson Repo | ✅ | ~30 min |
+| 08 | Docker Basics for AI Apps | ✅ | ~45 min |
+| 09 | Notebook vs Script vs Service | ✅ | ~30 min |
+| 10 | Debugging Non-Deterministic Systems | ✅ | ~45 min |
 
 ---
 

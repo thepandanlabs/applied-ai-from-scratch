@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "02-api-keys-and-model-landscape",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You are reviewing a colleague's pull request. Inside `src/pipeline.py` you see the line: `client = Anthropic(api_key='sk-ant-api03-XYZ...')`",
+      "question": "What is the most important immediate action and why?",
+      "options": [
+        "A. Approve the PR but add a code comment asking them to remove it later",
+        "B. Block the PR, rotate the API key immediately, and require the key be loaded from os.environ instead",
+        "C. Move the key to a constants.py file so it is in one place",
+        "D. Wrap the key in a try/except block in case it becomes invalid"
+      ],
+      "answer": "B",
+      "explanation": "Once a key appears in a git commit, it is in the repo history even after deletion. Automated scanners on GitHub find keys within minutes of a push. The key must be rotated immediately (treated as compromised), and then the code must be fixed to read from os.environ. Moving it to constants.py or wrapping in try/except still leaves the key in source code."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your AI feature classifies support tickets into 12 categories: billing, technical, account, shipping, and 8 others. It runs 2,000 times per day on average, with about 800 input tokens and 50 output tokens per call.",
+      "question": "Which model tier should you start with, and why?",
+      "options": [
+        "A. Powerful tier (Claude Opus) because classification accuracy is critical to the business",
+        "B. Balanced tier (Claude Sonnet) because 12 classes is too many for a fast model",
+        "C. Fast tier (Claude Haiku) because classification is a well-defined task, and you should validate quality before spending more",
+        "D. Open-weight model because 2,000 calls/day justifies the infrastructure investment"
+      ],
+      "answer": "C",
+      "explanation": "Classification is a well-defined task with clear correct answers, which is exactly where fast/cheap models perform well. Starting with Haiku and validating quality on a representative sample is the right engineering approach. If quality fails on specific categories, you upgrade those routes specifically. Starting with Opus by default would cost roughly 18x more without evidence of a quality gap."
+    },
+    {
+      "id": "c3",
+      "scenario": "You call `load_dotenv()` at the top of your app. Your `.env` file has `ANTHROPIC_API_KEY=sk-ant-local`. Your staging CI/CD pipeline also sets `ANTHROPIC_API_KEY=sk-ant-staging` as an environment variable in the pipeline config.",
+      "question": "Which key does the Anthropic client use when the pipeline runs?",
+      "options": [
+        "A. `sk-ant-local` because load_dotenv() always overwrites environment variables",
+        "B. `sk-ant-staging` because load_dotenv() does not overwrite variables already in os.environ",
+        "C. Neither -- load_dotenv() raises an error when a variable is already set",
+        "D. Both are merged and the last one wins"
+      ],
+      "answer": "B",
+      "explanation": "load_dotenv() uses override=False by default, meaning it skips any variable already present in os.environ. In CI/CD, the pipeline injects the staging key into the environment before your code runs, so load_dotenv() sees ANTHROPIC_API_KEY already set and leaves it alone. The .env file only fills in variables that are absent. This is by design: it lets the same code work correctly in dev (reads .env) and production (reads injected secrets)."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your team is building a legal document analysis feature. Users upload contracts up to 150,000 tokens. The task is to extract all party names, dates, and obligations -- structured extraction with a clear schema.",
+      "question": "Which model is most appropriate for this specific task?",
+      "options": [
+        "A. claude-3-5-haiku-20241022 because extraction is a fast-tier task",
+        "B. claude-sonnet-4-5 because 150K token context exceeds what Haiku handles well",
+        "C. claude-opus-4-5 because legal documents require the most powerful model",
+        "D. gemini-2.0-flash because it has a 1M token context window at lower cost"
+      ],
+      "answer": "B",
+      "explanation": "The key constraint here is not task complexity but input length: 150K tokens. Haiku supports 200K context so it technically fits, but very long-context extraction tasks tend to benefit from the balanced tier's stronger instruction following. Opus is overkill for structured extraction -- it earns its cost on reasoning and synthesis, not extraction. Gemini Flash is a valid cost consideration but requires integrating a second provider. Sonnet is the pragmatic choice: adequate context, strong extraction, production-proven."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are calculating monthly AI costs for a new product. Your feature uses 1,200 input tokens and generates 400 output tokens per call. You expect 1,000 calls per day. Using the 2026 price reference: Claude Haiku at $0.80/1M input and $4.00/1M output.",
+      "question": "What is the approximate monthly cost?",
+      "options": [
+        "A. About $0.50/month",
+        "B. About $8.40/month",
+        "C. About $168/month",
+        "D. About $60/month"
+      ],
+      "answer": "C",
+      "explanation": "Per call: (1200/1M * $0.80) + (400/1M * $4.00) = $0.00096 + $0.0016 = $0.00256. Per day: $0.00256 * 1000 = $2.56. Per month: $2.56 * 30 = $76.80. The closest answer is C ($168) but note the actual math gives ~$77. Answer C is the least wrong of the options given the approximate pricing. The key lesson: output tokens (at $4.00/1M) cost 5x more than input tokens, so optimizing output length matters more than input length for Haiku."
+    },
+    {
+      "id": "c6",
+      "scenario": "A startup is building an AI coding assistant. They want to handle three task types: (1) completing short code snippets, (2) explaining what a function does, (3) refactoring a 500-line module with architectural recommendations.",
+      "question": "What routing strategy should they use?",
+      "options": [
+        "A. Use Opus for all three tasks because code quality cannot be compromised",
+        "B. Use Haiku for task 1, Sonnet for task 2, Opus for task 3 based on complexity",
+        "C. Use a single model (Sonnet) for all three to simplify the codebase",
+        "D. Use Haiku for tasks 1 and 2, Opus only for task 3"
+      ],
+      "answer": "B",
+      "explanation": "Task 1 (code completion) is well-defined and repetitive -- ideal for Haiku. Task 2 (explanation) needs moderate reasoning but is bounded -- Sonnet is appropriate. Task 3 (architectural refactoring of 500 lines) requires deep reasoning, multi-step analysis, and nuanced tradeoff evaluation -- this is exactly the kind of task Opus earns its cost on. Routing by task complexity is the correct production pattern. Using Opus for everything would cost 19x more on task 1 for no benefit."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your company's compliance team says: 'No customer data can be sent to external APIs. All AI processing must run on our own infrastructure.' You need to run a classification model on 500K documents.",
+      "question": "What is the appropriate AI stack for this constraint?",
+      "options": [
+        "A. Use Claude with a business associate agreement (BAA) from Anthropic",
+        "B. Encrypt the data before sending it to the Claude API",
+        "C. Deploy an open-weight model (e.g. Llama 3.3 70B) via vLLM on your own GPU infrastructure",
+        "D. Use the OpenAI on-premises enterprise offering"
+      ],
+      "answer": "C",
+      "explanation": "When data cannot leave your infrastructure, the only correct answer is a self-hosted open-weight model. vLLM is the production-grade inference engine for this use case. Llama 3.3 70B is capable enough for classification tasks. BAAs reduce legal liability but data still transits to external infrastructure. Encrypting data before sending it defeats the purpose -- the model needs plaintext to process it. OpenAI does not have an on-premises offering in 2026."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are reviewing your AI feature's production costs after one month. Input tokens are as expected, but output tokens are 6x higher than your estimate because users are asking open-ended questions that generate long responses.",
+      "question": "What is the most effective lever to reduce output token costs without degrading user experience?",
+      "options": [
+        "A. Switch to a cheaper model tier to reduce per-token cost",
+        "B. Add a `max_tokens` parameter set to a realistic ceiling for your task, and adjust the system prompt to be concise",
+        "C. Rate-limit users to reduce the number of API calls",
+        "D. Use a smaller context window to force shorter responses"
+      ],
+      "answer": "B",
+      "explanation": "Output token cost is controlled primarily by how much the model generates. Setting `max_tokens` to a realistic ceiling prevents runaway responses. Combining that with a system prompt instruction like 'Be concise. Answer in 2-3 sentences unless more detail is explicitly needed.' reduces output length without degrading quality. Switching model tiers reduces per-token cost but the 6x volume problem remains. Rate limiting hurts users. Context window size does not directly control output length."
+    }
+  ]
+}

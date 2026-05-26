@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-reading-model-docs",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You are building a feature that ingests 150-page legal contracts (roughly 75,000 words / ~100,000 tokens) and returns a structured 3-page summary (~1,500 words / ~2,000 tokens). You are evaluating claude-3-5-haiku-20241022, which has a 200,000-token context window and an 8,192 max output tokens.",
+      "question": "Can this model handle the legal contract feature as described?",
+      "options": [
+        "A. No - the 100,000-token input exceeds the 200k context window.",
+        "B. Yes - the input fits the context window and the 2,000-token output fits the 8,192 max output.",
+        "C. No - context windows and max output are the same limit, so 100k input leaves only 100k for output.",
+        "D. Yes - but only if you enable prompt caching to fit the document."
+      ],
+      "answer": "B",
+      "explanation": "Context window (200k) and max output (8,192) are independent limits. The 100k-token input is well within the 200k context window. The ~2,000-token output is well within the 8,192 max output cap. Both checks pass. Prompt caching is useful for cost reduction but not required for feasibility here."
+    },
+    {
+      "id": "c2",
+      "scenario": "You want to use claude-3-5-haiku-20241022 to generate a 30-page technical report (roughly 7,500 words / ~10,000 tokens) from a short 200-word briefing document.",
+      "question": "What is the blocking constraint for this use case?",
+      "options": [
+        "A. The 200k context window - the briefing is too short to fill it properly.",
+        "B. The 8,192 max output tokens - the desired 10,000-token output exceeds this hard cap.",
+        "C. The RPM rate limit - long generation takes too long per request.",
+        "D. The knowledge cutoff - the model does not know recent enough information."
+      ],
+      "answer": "B",
+      "explanation": "The 30-page report requires ~10,000 output tokens, but the model's max output is 8,192 tokens. This is a hard cap - no amount of prompt engineering or context window size changes it. You would need a model with a higher max output (like claude-sonnet-4-5 with 64,000 max output tokens) or you would need to generate the report in multiple segments."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your feature sends requests with ~4,000 input tokens and ~300 output tokens. You are on a tier with 50 RPM and 50,000 TPM. During a traffic spike, you receive 40 requests in one minute, each using those token counts.",
+      "question": "Which rate limit is the binding constraint during this spike?",
+      "options": [
+        "A. RPM - 40 requests/min is close to the 50 RPM cap.",
+        "B. TPM - 40 requests x 4,300 tokens each = 172,000 tokens, which exceeds the 50,000 TPM cap.",
+        "C. Neither - 40 requests and 172,000 tokens are both within limits.",
+        "D. RPDAY - daily limits are always the binding constraint for spikes."
+      ],
+      "answer": "B",
+      "explanation": "40 requests x 4,300 tokens (4,000 input + 300 output) = 172,000 tokens per minute. This far exceeds the 50,000 TPM cap. The RPM limit (50) would not be hit at 40 requests, but the TPM limit is blown through. In document-heavy applications, TPM is almost always the binding constraint, not RPM."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are building a customer support chatbot. Each request has a 3,000-token system prompt that is identical across all requests. The user message averages 200 tokens. The response averages 400 tokens. You send 10,000 requests per day. The model charges $0.80/1M input tokens and $0.08/1M cache read tokens.",
+      "question": "What is the approximate daily cost reduction from enabling prompt caching on the system prompt, assuming a 90% cache hit rate?",
+      "options": [
+        "A. No reduction - prompt caching only works on the user message, not the system prompt.",
+        "B. About $0.20/day - a small amount not worth the implementation effort.",
+        "C. About $19.44/day - caching 2,700 of the 3,000 system prompt tokens at 10x cheaper rate saves significantly.",
+        "D. About $2.16/day - a modest savings worth considering at higher scale."
+      ],
+      "answer": "C",
+      "explanation": "Without caching: 10,000 requests x 3,000 tokens x ($0.80/1M) = $24.00/day just for system prompt tokens. With 90% cache hit: 10% fresh (3,000 tokens x $0.80/1M x 1,000 requests = $2.40) + 90% cached (3,000 tokens x $0.08/1M x 9,000 requests = $2.16) = $4.56/day. Savings = $24.00 - $4.56 = $19.44/day. At scale, prompt caching on repeated system prompts is one of the highest-ROI optimizations."
+    },
+    {
+      "id": "c5",
+      "scenario": "You ship a feature using claude-3-5-haiku-20241022 in November 2025. The model has a deprecation date of 2025-12-01. You did not add a migration milestone to your roadmap.",
+      "question": "What happens on 2025-12-01 if you have not migrated?",
+      "options": [
+        "A. The model returns lower-quality responses but continues working.",
+        "B. API calls to that model version begin failing with an error, causing an outage.",
+        "C. Anthropic automatically upgrades your calls to the latest Haiku version.",
+        "D. The model enters read-only mode and stops accepting new conversations."
+      ],
+      "answer": "B",
+      "explanation": "Deprecated model versions stop accepting requests. API calls return an error indicating the model is no longer available. There is no automatic upgrade - you must update your code to point to a supported model version. This is why the checklist includes deprecation date: a date within 12 months should immediately trigger a migration milestone on your team's roadmap."
+    },
+    {
+      "id": "c6",
+      "scenario": "A teammate argues that output tokens and input tokens cost the same amount per token, so you can optimize either one equally to reduce costs.",
+      "question": "Is this correct, and what is the typical ratio of output to input token pricing?",
+      "options": [
+        "A. Correct - most providers price input and output tokens identically.",
+        "B. Incorrect - output tokens typically cost 3-5x more than input tokens because generation is sequential while input processing is parallel.",
+        "C. Incorrect - input tokens typically cost 3-5x more than output tokens because embedding large contexts is compute-intensive.",
+        "D. Correct - the ratio is exactly 1:1 but varies by provider tier."
+      ],
+      "answer": "B",
+      "explanation": "Output tokens cost significantly more than input tokens. For claude-3-5-haiku-20241022, output is $4.00/1M vs input $0.80/1M - a 5x ratio. This is structural: the model generates output tokens one at a time (autoregressive), while input tokens are processed in parallel. Cutting unnecessary output tokens (like verbose preambles or padding) has a disproportionately large impact on cost compared to cutting the same number of input tokens."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are comparing two models: Model A has a 1M context window. Model B has a 200k context window but a 64k max output. Your task requires generating a 50,000-word technical document from a 500-word specification.",
+      "question": "Which model is the right choice, and why?",
+      "options": [
+        "A. Model A - the larger context window means it can handle larger outputs.",
+        "B. Model B - the 64k max output (roughly 48,000 words) is close enough for a 50,000-word document, while the context window is irrelevant for a 500-word input.",
+        "C. Model A - a larger context window always correlates with a larger max output.",
+        "D. Model B - a 200k context window is always more efficient than 1M for short inputs."
+      ],
+      "answer": "B",
+      "explanation": "The task has a tiny input (500 words, ~660 tokens) and a large required output (50,000 words, ~66,500 tokens). Context window size is irrelevant when the input is tiny. What matters is max output tokens. Model A's large context window tells you nothing about how long a response it can generate - that is a separate spec field. Model B's 64k max output (~48,000 words) is close to the 50,000-word requirement. Always check max output tokens when your use case requires long generation."
+    },
+    {
+      "id": "c8",
+      "scenario": "You find a model with excellent benchmark scores, reasonable pricing, and a 512k context window. The documentation page shows 'knowledge cutoff: 2022-01'. Your application needs to answer questions about events from 2023 and 2024.",
+      "question": "Is the knowledge cutoff a hard blocker for this use case?",
+      "options": [
+        "A. Yes, always - the model cannot answer any questions about events after 2022-01.",
+        "B. No, never - knowledge cutoff only affects general knowledge, not API behavior.",
+        "C. It depends - the model cannot answer from its training data alone, but if you provide relevant 2023-2024 content via RAG or in the context window, it can reason over that provided content.",
+        "D. No - knowledge cutoff applies only to non-English languages."
+      ],
+      "answer": "C",
+      "explanation": "A knowledge cutoff means the model's internal training data ends at that date - it cannot recall 2023-2024 events from memory. But it can still read and reason over text you provide in the context window. If you supply 2023-2024 information as part of the prompt (via RAG, tool calls, or direct paste), the model can use that provided content. This is exactly why RAG and context injection exist: to supply models with information beyond their training cutoff."
+    }
+  ]
+}

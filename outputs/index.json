@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated": "2026-05-26T08:23:08Z",
-  "total": 74,
+  "generated": "2026-05-26T08:48:05Z",
+  "total": 84,
   "artifacts": [
     {
       "phase": 2,
@@ -724,6 +724,116 @@
         "fastapi",
         "extraction",
         "runbook"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "01",
+      "name": "skill-dev-environment",
+      "file": "phases/00-setup-and-mindset/01-dev-environment/outputs/skill-dev-environment.md",
+      "tags": [
+        "setup",
+        "uv",
+        "typescript"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "02",
+      "name": "prompt-model-selection-guide",
+      "file": "phases/00-setup-and-mindset/02-api-keys-and-model-landscape/outputs/prompt-model-selection-guide.md",
+      "tags": [
+        "models",
+        "providers",
+        "cost"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "03",
+      "name": "skill-first-api-call",
+      "file": "phases/00-setup-and-mindset/03-first-api-call/outputs/skill-first-api-call.md",
+      "tags": [
+        "api",
+        "streaming",
+        "tokens"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "04",
+      "name": "prompt-probabilistic-mindset",
+      "file": "phases/00-setup-and-mindset/04-probabilistic-mindset/outputs/prompt-probabilistic-mindset.md",
+      "tags": [
+        "mindset",
+        "probabilistic",
+        "debugging"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "05",
+      "name": "prompt-model-doc-checklist",
+      "file": "phases/00-setup-and-mindset/05-reading-model-docs/outputs/prompt-model-doc-checklist.md",
+      "tags": [
+        "models",
+        "context-window",
+        "pricing"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "06",
+      "name": "skill-cost-latency-tracker",
+      "file": "phases/00-setup-and-mindset/06-cost-and-latency/outputs/skill-cost-latency-tracker.md",
+      "tags": [
+        "cost",
+        "latency",
+        "observability"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "07",
+      "name": "skill-ai-project-git-workflow",
+      "file": "phases/00-setup-and-mindset/07-git-and-repo/outputs/skill-ai-project-git-workflow.md",
+      "tags": [
+        "git",
+        "versioning",
+        "workflow"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "08",
+      "name": "skill-ai-dockerfile",
+      "file": "phases/00-setup-and-mindset/08-docker-basics/outputs/skill-ai-dockerfile.md",
+      "tags": [
+        "docker",
+        "deployment",
+        "security"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "09",
+      "name": "prompt-delivery-format-decision",
+      "file": "phases/00-setup-and-mindset/09-notebook-vs-script-vs-service/outputs/prompt-delivery-format-decision.md",
+      "tags": [
+        "architecture",
+        "notebook",
+        "service"
+      ]
+    },
+    {
+      "phase": "00",
+      "lesson": "10",
+      "name": "skill-ai-debug-playbook",
+      "file": "phases/00-setup-and-mindset/10-debugging-non-deterministic-systems/outputs/skill-ai-debug-playbook.md",
+      "tags": [
+        "debugging",
+        "logging",
+        "observability"
       ]
     }
   ]

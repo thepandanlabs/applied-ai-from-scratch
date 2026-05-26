@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "01-dev-environment",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You run `pip install anthropic` on your laptop to start a new AI project. Three weeks later, a teammate clones the repo and runs the same command. They get a different version of the SDK because a new release shipped overnight.",
+      "question": "Which uv workflow prevents this class of environment drift?",
+      "options": [
+        "A. Pin the version manually in requirements.txt with `anthropic==0.40.0`",
+        "B. Use `uv add anthropic` which generates uv.lock, then commit uv.lock to the repo",
+        "C. Use `uv sync --frozen` which prevents any package installation",
+        "D. Store .venv/ in the repository so teammates use your exact binaries"
+      ],
+      "answer": "B",
+      "explanation": "`uv add anthropic` updates pyproject.toml and regenerates uv.lock with every transitive dependency pinned exactly. When your teammate runs `uv sync`, they get bit-for-bit the same packages. requirements.txt pins only the direct dep, not transitive ones. --frozen prevents installs rather than enabling reproducibility. Committing .venv/ is bad practice and platform-specific."
+    },
+    {
+      "id": "c2",
+      "scenario": "You have three AI projects on your laptop: project-a (Python 3.11, anthropic 0.38), project-b (Python 3.12, anthropic 0.42), and project-c (Python 3.11, anthropic 0.40). You switch between them throughout the day.",
+      "question": "What is the correct way to run each project's scripts with uv?",
+      "options": [
+        "A. Activate the venv for each project with `source .venv/bin/activate` before running scripts",
+        "B. Use `uv run python script.py` from inside each project directory",
+        "C. Set PYTHONPATH to each project's .venv/lib directory before running",
+        "D. Install all three anthropic versions into a shared venv with `--target`"
+      ],
+      "answer": "B",
+      "explanation": "`uv run` automatically detects the nearest pyproject.toml and uv.lock, selects the correct Python version, and injects the right venv -- all without any manual activation. You just `cd` to the project and run. Activating venvs manually works but breaks silently if you forget to switch; PYTHONPATH manipulation is fragile; shared venvs cannot hold multiple versions of the same package."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are setting up CI/CD for your AI project on GitHub Actions. Your pipeline needs to install dependencies and run tests. The pipeline should fail if anyone committed changes to pyproject.toml without updating uv.lock.",
+      "question": "Which uv command should your CI pipeline use to install dependencies?",
+      "options": [
+        "A. `uv add -r requirements.txt`",
+        "B. `uv sync`",
+        "C. `uv sync --frozen`",
+        "D. `uv install --all`"
+      ],
+      "answer": "C",
+      "explanation": "`uv sync --frozen` installs exactly what is in uv.lock and errors if pyproject.toml and uv.lock are out of sync. This catches the case where a developer ran `uv add` but forgot to commit the updated lockfile. Plain `uv sync` would silently update the lockfile. There is no `uv add -r` or `uv install --all` command."
+    },
+    {
+      "id": "c4",
+      "scenario": "A new engineer joins your team and needs to run the project. They clone the repo and see `pyproject.toml`, `uv.lock`, and `.venv/` listed (the previous engineer accidentally committed .venv/). They ask you: which files should actually be committed and which should not?",
+      "question": "What is the correct answer?",
+      "options": [
+        "A. Commit pyproject.toml and .venv/; uv.lock is auto-generated and should be in .gitignore",
+        "B. Commit pyproject.toml and uv.lock; .venv/ should be in .gitignore",
+        "C. Commit all three: pyproject.toml, uv.lock, and .venv/ for maximum reproducibility",
+        "D. Commit only uv.lock; pyproject.toml is auto-generated from it"
+      ],
+      "answer": "B",
+      "explanation": "pyproject.toml is the human-edited dependency manifest. uv.lock is the machine-generated exact pin file -- it must be committed so teammates get reproducible installs. .venv/ contains platform-specific compiled binaries that are not portable across OS/architecture; it belongs in .gitignore. Anyone cloning the repo runs `uv sync` to recreate .venv/ locally."
+    },
+    {
+      "id": "c5",
+      "scenario": "You need to run a one-off script with ruff (a Python linter) to check your code, but you do not want to add ruff as a project dependency since it is only needed for CI.",
+      "question": "What is the idiomatic uv command for this?",
+      "options": [
+        "A. `pip install ruff && ruff check .`",
+        "B. `uv add --dev ruff && uv run ruff check .`",
+        "C. `uvx ruff check .`",
+        "D. `uv tool install ruff && ruff check .`"
+      ],
+      "answer": "C",
+      "explanation": "`uvx ruff check .` (shorthand for `uv tool run ruff check .`) runs ruff in an isolated temporary environment without adding it to pyproject.toml. It is the equivalent of `npx` for Node. `uv add --dev ruff` would add it to the project's dev dependencies, which is appropriate for team-wide linting but heavier than a one-off run. `uv tool install` makes it available globally, which is also valid but more permanent than needed here."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your project requires Python 3.11 specifically, but `uv run python --version` shows Python 3.12.3. The `.python-version` file contains `3.11`. You did not install Python 3.11 on your machine.",
+      "question": "What happens when you run `uv run python main.py`?",
+      "options": [
+        "A. uv uses the system Python 3.12 and ignores .python-version",
+        "B. uv raises an error and exits with a message about the version mismatch",
+        "C. uv automatically downloads and installs Python 3.11, then runs the script with it",
+        "D. uv creates a new virtual environment with Python 3.12 and warns about the mismatch"
+      ],
+      "answer": "C",
+      "explanation": "uv manages Python versions itself. When .python-version specifies a version not currently installed, uv fetches and installs it automatically before running the script. This is one of the key advantages over the old pyenv + pip stack: you do not need to separately install Python versions or run `pyenv install 3.11`."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are debugging a production AI issue and need to quickly test a hypothesis in a throwaway script. You want to use httpx for the HTTP call but do not want to add it permanently to your production project.",
+      "question": "What is the cleanest way to run a one-off script with httpx using uv?",
+      "options": [
+        "A. `uv add httpx`, run the script, then `uv remove httpx`",
+        "B. `uv run --with httpx python debug_script.py`",
+        "C. Create a new virtual environment, install httpx, run the script, delete the environment",
+        "D. `pip install httpx` into the system Python and run the script"
+      ],
+      "answer": "B",
+      "explanation": "`uv run --with httpx python debug_script.py` injects httpx into the run environment without modifying pyproject.toml or uv.lock. The project itself is unaffected. This is the correct pattern for debugging scripts and one-off tools. The add/remove approach works but is noisy (it updates version control files). Creating a new venv manually defeats the purpose of uv."
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "04-probabilistic-mindset",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You are reviewing a pull request. The test for an AI classification feature looks like this: `response = classify(test_text); assert response == 'POSITIVE'`. The test passes in CI. Your teammate says: 'The test passes, so we're good to ship.'",
+      "question": "What is the critical flaw in this testing approach, and what should it be replaced with?",
+      "options": [
+        "A. The test should use a different assertion library",
+        "B. A single-run assertion only captures one sample from the output distribution; it should run the classification 20+ times and assert a minimum pass rate",
+        "C. The test should use temperature=0.0 to make the result deterministic",
+        "D. The test text is too short to produce a reliable classification"
+      ],
+      "answer": "B",
+      "explanation": "One passing run tells you almost nothing about the distribution. If the model produces 'POSITIVE' 85% of the time and other outputs 15% of the time, a single-run test will pass most of the time and occasionally fail without revealing the real failure rate. Correct AI testing runs the case N times and asserts a minimum pass rate (e.g., 95% of 20 runs). Temperature=0.0 reduces variance but does not eliminate it."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your AI sentiment classifier works correctly in staging. On day one of production with 5,000 users, you get bug reports that the feature is returning wrong results. You pull one of the failing logs, re-run the exact same input manually, and it classifies correctly.",
+      "question": "What does 'cannot reproduce' actually indicate in this situation?",
+      "options": [
+        "A. The bug was transient and has fixed itself",
+        "B. The failing log was corrupted and does not represent a real failure",
+        "C. The failure is a property of the output distribution -- it occurs at some rate, not deterministically, so a single re-run is unlikely to reproduce it",
+        "D. The model was updated between the production run and your manual re-run"
+      ],
+      "answer": "C",
+      "explanation": "In probabilistic systems, 'cannot reproduce on a single re-run' does not mean the bug is gone. If the model fails 8% of the time, re-running once gives you a 92% chance of a successful result -- a high probability of false confidence. The correct investigation runs the same input 20-50 times and measures the failure rate. A 3-8% failure rate that was invisible in testing becomes 150-400 failures per day at 5,000 users."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are building a document routing system that classifies incoming documents as 'CONTRACT', 'INVOICE', 'REPORT', or 'OTHER'. You write: `if response.content[0].text == 'CONTRACT': route_to_contracts()`. In testing, the model sometimes returns 'Contract', 'A CONTRACT', or 'CONTRACT.'",
+      "question": "What is the correct pattern to fix this?",
+      "options": [
+        "A. Set temperature=0.0 to make the model always return exactly 'CONTRACT'",
+        "B. Normalize the output before comparing: `if 'CONTRACT' in response.content[0].text.upper(): route_to_contracts()`",
+        "C. Add all possible variants to the if/else: `if response == 'CONTRACT' or response == 'Contract'...`",
+        "D. Use a different model that follows formatting instructions more reliably"
+      ],
+      "answer": "B",
+      "explanation": "Normalization (uppercase + substring check) handles all observed and unobserved variants in one pattern. temperature=0.0 reduces but does not eliminate format variation -- the model may still add punctuation or wrap in a sentence. Enumerating all variants is brittle and incomplete -- you cannot enumerate variants you have not seen yet. Switching models does not solve the fundamental problem that output format will vary."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are building a creative writing assistant. Users click 'Regenerate' to get a different version when they don't like the current output. When you set temperature=0.0, users complain that regenerating always returns almost the same text.",
+      "question": "What temperature setting is appropriate here, and why?",
+      "options": [
+        "A. Keep temperature=0.0 because it produces the highest quality outputs",
+        "B. Set temperature=0.7-0.9 because higher variance produces more creative variation between regenerations",
+        "C. Set temperature=1.5 to maximize diversity",
+        "D. Temperature does not affect creative writing quality"
+      ],
+      "answer": "B",
+      "explanation": "Temperature controls the spread of the output distribution. For creative writing where users want variation between regenerations, temperature=0.7-0.9 is appropriate -- it gives meaningful variation while staying within coherent, high-quality outputs. Temperature=0.0 concentrates probability on the single most likely output, which is why regeneration returns nearly identical text. Temperature above 1.0 is not supported by the Anthropic API and may degrade coherence on other providers."
+    },
+    {
+      "id": "c5",
+      "scenario": "You evaluated your AI Q&A feature on 10 manually selected test questions. It answered 9 out of 10 correctly (90%). You report to your manager: 'The system is 90% accurate.' Three months after launch, user surveys show only 65% satisfaction with answer quality.",
+      "question": "What was the most likely flaw in the 10-question evaluation?",
+      "options": [
+        "A. The evaluation was done at temperature=1.0 instead of 0.0",
+        "B. 10 examples is too small to estimate production accuracy reliably, and manually selected examples likely did not capture the tail of difficult or unusual real user queries",
+        "C. The model was updated between evaluation and launch, changing its behavior",
+        "D. 90% accuracy on a Q&A system is an inherently unreliable metric"
+      ],
+      "answer": "B",
+      "explanation": "10 manually selected examples is not a statistically reliable sample. The variance in accuracy estimates from 10 examples is enormous -- 9/10 could represent true accuracy anywhere from 60-99% at typical confidence levels. More importantly, humans tend to select examples they think are representative but actually miss the difficult edge cases that real users hit. Production accuracy requires 100-500+ examples randomly sampled from real or realistic user queries."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are debugging a failing AI pipeline. Your colleague suggests: 'Just run it again -- it probably works most of the time and this was just a bad sample.' You want to understand whether this is a rare fluke or a systematic problem.",
+      "question": "What is the correct diagnostic approach?",
+      "options": [
+        "A. Run it 3 more times; if it passes 2 out of 3, it is working well enough",
+        "B. Run the failing input 20-50 times and measure the failure rate; separately, run a representative sample of other inputs to check whether this failure mode is specific to this input or widespread",
+        "C. Check the API response for error codes that indicate server-side problems",
+        "D. Compare the output distribution before and after the latest code deployment"
+      ],
+      "answer": "B",
+      "explanation": "Correct probabilistic debugging requires measuring failure rates, not binary pass/fail on a few re-runs. Running 20-50 times on the failing input tells you if this is a 5% problem (rare) or a 40% problem (systematic). Checking other inputs tells you if the failure is input-specific or a general regression. Three re-runs is statistically meaningless. API error codes do not appear for incorrect model outputs -- those are not errors from the API's perspective."
+    },
+    {
+      "id": "c7",
+      "scenario": "You want to generate 5 different marketing tagline options for a product. You call the API 5 times with the same prompt. The first 3 runs return very similar taglines; the last 2 return the same tagline as run 1.",
+      "question": "What is the most likely cause and how do you fix it?",
+      "options": [
+        "A. The model has a memory of previous calls and is repeating itself",
+        "B. The temperature is too low, concentrating probability on a few high-likelihood outputs; increase temperature to 0.7-1.0 to get more diverse options",
+        "C. You need to include previous outputs in the prompt to explicitly ask for different ones",
+        "D. API rate limiting is causing the model to fall back to cached responses"
+      ],
+      "answer": "B",
+      "explanation": "Getting near-identical outputs across multiple runs is the signature of low temperature (or default temperature on a task where the 'most likely' output is clear). Increasing temperature spreads probability mass across more of the output distribution, producing more diverse samples. The model has no memory between independent API calls -- each call is stateless. While option C (including previous outputs) is also a valid technique for diversity, option B addresses the root cause."
+    },
+    {
+      "id": "c8",
+      "scenario": "A senior engineer on your team says: 'We should add type checks to the model output before saving it to the database. If the model returns a string where we expect an integer, we should raise an exception.' You agree, but you also know that exceptions will cause dropped requests in production.",
+      "question": "What is the correct approach to handle unexpected model output types in a production system?",
+      "options": [
+        "A. Trust the model to always return the correct type and do not add type checks",
+        "B. Validate the output and raise an exception on type mismatch -- this forces the bug to be visible",
+        "C. Validate the output; on failure, log the raw output for review, return a safe default, and continue processing rather than dropping the request",
+        "D. Wrap the entire pipeline in a try/except that silently discards all errors"
+      ],
+      "answer": "C",
+      "explanation": "In probabilistic systems, unexpected output formats will occur at some rate no matter how good your prompt is. The production-correct pattern is: validate (to detect the failure), log the raw output (so you can analyze and improve the prompt), return a safe default (to keep the system running), and continue processing. Raising exceptions drops requests and creates outages. Silently ignoring errors hides failure rates. Trusting the model blindly creates silent data corruption. Log + default + continue is the correct pattern."
+    }
+  ]
+}
