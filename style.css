@@ -30,12 +30,12 @@
 
 /* ── Light Theme ──────────────────────────────────────────────────────── */
 [data-theme="light"] {
-  --bg:           #f7f6f2;
-  --surface:      #eeecea;
-  --surface-2:    #e5e3df;
-  --surface-3:    #dbd9d4;
-  --border:       #d8d6d0;
-  --border-hover: #bfbdb7;
+  --bg:           #f0ece3;
+  --surface:      #e6e1d6;
+  --surface-2:    #dbd5c8;
+  --surface-3:    #cfc8b9;
+  --border:       #cac3b2;
+  --border-hover: #b0a896;
   --text:         #0f0f0f;
   --text-muted:   #595959;
   --text-faint:   #d0d0d0;
@@ -50,7 +50,7 @@
 }
 
 [data-theme="light"] #nav {
-  background: rgba(247, 246, 242, 0.92);
+  background: rgba(240, 236, 227, 0.92);
 }
 
 [data-theme="light"] .hero h1 em {
