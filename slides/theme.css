@@ -1,24 +1,23 @@
 /* @theme applied-ai */
 /*
   Applied AI From Scratch — Marp Theme
-  Dark-first, minimal, modern AI company aesthetic.
-  Inspired by Anthropic/OpenAI internal deck style.
+  Warm dark: charcoal with amber undertones, high-contrast syntax.
 */
 
 @import 'default';
 
 :root {
-  --bg:         #0a0a0a;
-  --surface:    #141414;
-  --surface-2:  #1e1e1e;
-  --border:     #2a2a2a;
-  --accent:     #4f46e5;
-  --accent-2:   #a78bfa;
-  --green:      #10b981;
-  --amber:      #f59e0b;
-  --text:       #e8e8e8;
-  --text-muted: #8a8a8a;
-  --code-bg:    #111111;
+  --bg:         #1c1714;
+  --surface:    #252019;
+  --surface-2:  #2e2820;
+  --border:     #3d3428;
+  --accent:     #7c6af5;
+  --accent-2:   #c4aaf7;
+  --green:      #5dbf9e;
+  --amber:      #f5a840;
+  --text:       #e5ddd0;
+  --text-muted: #9a8e7e;
+  --code-bg:    #17130f;
   --font-head:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-body:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-code:  "JetBrains Mono", "Fira Code", "SF Mono", ui-monospace, monospace;
@@ -85,7 +84,7 @@ li::marker {
 }
 
 strong {
-  color: #ffffff;
+  color: #f0e8d8;
   font-weight: 600;
 }
 
@@ -94,7 +93,7 @@ em {
   font-style: normal;
 }
 
-/* ── Code ── */
+/* ── Code (inline) ── */
 code {
   font-family: var(--font-code);
   font-size: 0.85em;
@@ -104,10 +103,11 @@ code {
   border-radius: 4px;
 }
 
+/* ── Code blocks ── */
 pre {
   font-family: var(--font-code);
   font-size: 15px;
-  line-height: 1.55;
+  line-height: 1.6;
   background: var(--code-bg);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
@@ -119,10 +119,36 @@ pre {
 
 pre code {
   background: none;
-  color: #d4d4d4;
+  color: #d8cfc4;
   padding: 0;
   font-size: inherit;
 }
+
+/* ── Syntax highlighting (warm dark palette) ── */
+.hljs-string,
+.hljs-template-variable { color: #d4a870 !important; }   /* amber gold - strings */
+
+.hljs-keyword,
+.hljs-selector-tag      { color: #e07868 !important; }   /* coral - keywords */
+
+.hljs-comment           { color: #7a6e5e !important; font-style: italic; }
+
+.hljs-number,
+.hljs-literal           { color: #7ab8c4 !important; }   /* teal - numbers */
+
+.hljs-built_in,
+.hljs-type              { color: #c4aaf7 !important; }   /* lavender - builtins */
+
+.hljs-attr              { color: #8dbdd4 !important; }   /* sky blue - JSON keys */
+
+.hljs-title,
+.hljs-title.function_   { color: #c4aaf7 !important; }   /* lavender - function names */
+
+.hljs-title.class_      { color: #d4a870 !important; }   /* amber - class names */
+
+.hljs-params            { color: #d8cfc4 !important; }   /* default text - params */
+
+.hljs-meta              { color: #9a8e7e !important; }   /* muted - decorators */
 
 /* ── Blockquotes (callouts) ── */
 blockquote {
@@ -297,4 +323,14 @@ section.code pre {
   max-width: 100% !important;
   max-height: 360px !important;
   margin: 0 auto;
+}
+
+/* ── ASCII diagrams (pre.ascii) ── */
+pre.ascii {
+  background: var(--surface);
+  border-left: 3px solid var(--accent-2);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
 }

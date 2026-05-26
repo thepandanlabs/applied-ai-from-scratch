@@ -136,20 +136,49 @@ flowchart LR
     startOnLoad: true,
     theme: 'dark',
     themeVariables: {
-      primaryColor: '#4f46e5',
+      primaryColor: '#7c6af5',
       primaryTextColor: '#e8e8e8',
       primaryBorderColor: '#2a2a2a',
       lineColor: '#8a8a8a',
-      secondaryColor: '#141414',
-      tertiaryColor: '#1e1e1e',
-      background: '#0a0a0a',
-      mainBkg: '#141414',
+      secondaryColor: '#252019',
+      tertiaryColor: '#2e2820',
+      background: '#1c1714',
+      mainBkg: '#252019',
     }
   });
 </script>
 ```
 
+**Critical rule:** NEVER put a blank line inside a `<div class="mermaid">` block. markdown-it terminates HTML blocks on any blank line, which breaks mermaid's textContent and causes "Syntax error in text." Compress all diagram content to zero blank lines.
+
 **Requirement:** The deck must be built with `--html` flag (already in the build command). Diagrams require an internet connection to load mermaid from CDN. For offline use, convert to PDF first.
+
+### Diagram slide (ASCII)
+
+Use `pre.ascii` for 2D relationships, side-by-side comparisons, and anything mermaid makes ugly. ASCII diagrams work offline and never error.
+
+```markdown
+---
+
+## How data flows
+
+```ascii
+Input ──► Chunker ──► Embedder ──► Vector store
+                                        │
+Query ──────────────────────────► Retriever ──► LLM ──► Answer
+```
+```
+
+The `ascii` fence tag applies `.ascii` CSS class, giving it the warm surface background and accent-2 left border.
+
+**When to use mermaid vs ASCII:**
+
+| Use mermaid | Use ASCII |
+|-------------|-----------|
+| Pipelines and flows with branching | 2D grids, matrices, memory layouts |
+| State machines, decision trees | Side-by-side comparisons |
+| Multi-step sequences with labels | Request/response call stacks |
+| Architecture with clusters | Simple linear flows (ASCII is cleaner) |
 
 ### Two-column split
 ```markdown
@@ -175,7 +204,7 @@ flowchart LR
 2. **Code blocks: max 20 lines.** Strip imports, boilerplate, error handling unless it IS the point.
 3. **Every lesson gets a "The Problem" slide.** State the production pain before the solution.
 4. **No em dashes.** Use colons or commas.
-5. **Diagrams first, then explanation.** Show the mermaid diagram, then the bullets.
+5. **Diagrams first, then explanation.** Show the diagram (mermaid or ASCII), then the bullets. Use mermaid for flows and state machines; ASCII for 2D relationships and comparisons.
 6. **Speaker notes** go in HTML comments below the slide:
    ```
    <!-- 
