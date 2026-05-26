@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 80" width="520" height="80">
+  <rect width="520" height="80" rx="0" fill="transparent"/>
+  <text font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="52" font-weight="700" y="60">
+    <tspan fill="#e8e0d5">applied</tspan><tspan fill="#7c6af5">ai</tspan><tspan fill="#e8e0d5">fromscratch</tspan>
+  </text>
+</svg>
