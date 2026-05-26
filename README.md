@@ -1,4 +1,4 @@
-# Applied AI From Scratch
+<img src="assets/logo.svg" alt="appliedaifromscratch" width="480" />
 
 ![Lessons](https://img.shields.io/badge/lessons-157-blue) ![Phases](https://img.shields.io/badge/phases-13%2F13%20complete-brightgreen) ![Artifacts](https://img.shields.io/badge/artifacts-157-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Stack](https://img.shields.io/badge/stack-Python%20%2B%20TypeScript-yellow)
 
