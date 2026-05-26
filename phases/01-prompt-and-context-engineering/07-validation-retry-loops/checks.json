@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "07-validation-retry-loops",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your extraction pipeline uses tool_use (Lesson 06) and all outputs parse as valid JSON. However, you notice that 8% of extracted 'confidence_score' fields contain values like 87.5 instead of 0.875. Your downstream model comparison code breaks because it expects values in the range 0.0-1.0.",
+      "question": "Why does tool_use not prevent this problem, and what is the correct fix?",
+      "options": [
+        "A. tool_use guarantees JSON validity but not value correctness; add a Pydantic field_validator that rejects values > 1.0 and feeds the error back to the model",
+        "B. The problem is in the JSON Schema; change confidence_score type from number to integer",
+        "C. tool_use is not being used correctly; use prompt-only extraction instead for numeric fields",
+        "D. The downstream code needs to normalize the value by dividing by 100"
+      ],
+      "answer": "A",
+      "explanation": "tool_use guarantees that the output is valid JSON matching the schema's structural shape (object with these keys). It does not guarantee value ranges. A Pydantic validator that raises ValueError('value must be 0.0-1.0, got 87.5. Use decimal notation') gives the model a specific, actionable error to fix on the next retry attempt."
+    },
+    {
+      "id": "c2",
+      "scenario": "You implement validated_completion with max_retries=3. On a test document, attempt 1 fails with 'overall_risk_score: 85.0 is not <= 1.0'. You set up the retry by appending the assistant response and a user message saying 'Please try again.' Attempt 2 fails with the same error.",
+      "question": "What is wrong with your retry message?",
+      "options": [
+        "A. The assistant response should not be appended to the messages array",
+        "B. The retry message 'Please try again' does not tell the model what failed or how to fix it; it needs to include the validation error text",
+        "C. You should start a new conversation thread for each retry attempt",
+        "D. max_retries=3 is too low; increase it to 10"
+      ],
+      "answer": "B",
+      "explanation": "The model made the same mistake twice because it received no new information. A retry message that includes the specific error text - 'Validation failed: overall_risk_score=85.0 must be between 0.0 and 1.0. Use decimal notation (0.85 not 85.0)' - gives the model a concrete correction target. Blind retry without error context is no better than calling the API fresh."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your validated_completion function exhausts all 3 retries for 1.2% of documents. Your current code returns None and the calling function moves on. After 2 weeks, a data audit shows 240 missing records that correspond to those failed extractions.",
+      "question": "Which fallback strategy would have prevented this data loss while keeping the pipeline running?",
+      "options": [
+        "A. Increase max_retries to 10 so fewer documents exhaust retries",
+        "B. Return None but write the failed document to a dead-letter queue for manual review, and increment a monitoring counter",
+        "C. Return the raw unvalidated dict from the last attempt, marked with a 'validated: false' flag, and log a warning",
+        "D. Both B and C are reasonable fallback strategies depending on whether you need the partial data or can wait for manual review"
+      ],
+      "answer": "D",
+      "explanation": "Both strategies prevent silent data loss. Option B (dead-letter queue) is safer when data quality is critical and you have staff to review failures. Option C (unvalidated partial result) is useful when partial data is better than no data and the downstream system can handle a 'validated: false' flag. The key requirement either way is that the failure is not silent: log it, count it, and alert when the rate exceeds your threshold."
+    },
+    {
+      "id": "c4",
+      "scenario": "You run an experiment: 100 documents that fail on the first extraction attempt. For 50 of them, you use error-feedback retry. For the other 50, you use blind retry (same prompt, no error context). Results: error-feedback succeeds on attempt 2 for 38/50 (76%). Blind retry succeeds on attempt 2 for 11/50 (22%).",
+      "question": "What does this result tell you about the nature of the first-attempt failures?",
+      "options": [
+        "A. The model is unreliable and the results are too random to draw conclusions",
+        "B. Most first-attempt failures are formatting errors (percentage vs. decimal, wrong enum value) that the model can correct immediately when told what went wrong",
+        "C. The documents are genuinely ambiguous and the model needs more context, not just error feedback",
+        "D. The 76% success rate means error-feedback has a 24% fundamental failure rate and max_retries should be increased"
+      ],
+      "answer": "B",
+      "explanation": "A 76% vs 22% success rate on retry clearly shows that most failures are correctable formatting decisions, not fundamental extraction failures. The model wrote 85 instead of 0.85, or 'High' instead of 'high', because it had no constraint telling it otherwise. Once the error is explicit, it corrects immediately. The 24% that still fail are likely genuinely ambiguous extractions where the source document is unclear - those benefit from human review, not more retries."
+    },
+    {
+      "id": "c5",
+      "scenario": "You have a Pydantic model where status: Literal['active', 'closed', 'pending']. The model consistently returns 'Active' (capitalized) which fails the Literal constraint. You consider adding a field_validator that lowercases the value before validation.",
+      "question": "Should you add this normalizing validator, and what is the tradeoff?",
+      "options": [
+        "A. No: normalizing validators hide schema violations that should be fixed at the source (the extraction prompt/schema)",
+        "B. Yes: it is pragmatic to normalize casing since it does not affect meaning, and it reduces unnecessary retry calls",
+        "C. It depends: if 'Active' vs 'active' is a consistent capitalization pattern across all documents, normalize it; if it is a random model error, fix the schema description instead",
+        "D. Yes, but only for the status field: use normalizing validators only for enum fields, never for numeric fields"
+      ],
+      "answer": "C",
+      "explanation": "Normalizing validators are a judgment call. If every document uses capitalized status words (reflecting real-world document conventions), normalizing is pragmatic and reduces API calls. If the capitalization is random model behavior caused by an unclear schema description, normalizing masks the root cause. The better fix is adding 'must be lowercase: active, closed, or pending' to the field description. Reserve normalization for systematic document patterns you cannot control."
+    },
+    {
+      "id": "c6",
+      "scenario": "You adopt the instructor library and it handles your retry loop automatically. Three months later, an extraction starts silently returning wrong values. You need to debug the retry behavior but instructor's abstraction hides the intermediate attempts.",
+      "question": "What is the main advantage of keeping the manual validated_completion implementation alongside instructor?",
+      "options": [
+        "A. The manual version is always faster because it has less overhead",
+        "B. The manual version gives you full visibility into each attempt's messages and errors, making it easier to debug schema and retry issues that instructor obscures",
+        "C. instructor has bugs in its retry logic that the manual version avoids",
+        "D. The manual version can use different models for each retry attempt"
+      ],
+      "answer": "B",
+      "explanation": "instructor is excellent for greenfield work when everything is working. When something breaks, the abstraction becomes an obstacle. The manual implementation lets you log every attempt's input and output, inspect exactly what error message was sent back to the model, and verify that the retry messages are correctly constructed. Understanding the manual pattern (which you built in this lesson) is what makes instructor debuggable when it misbehaves."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your extraction pipeline handles medical records. Validation failures on fields like 'diagnosis_code' and 'dosage_mg' result in None returns, which you send to a dead-letter queue. After 3 months, the queue has 4,000 unreviewed documents because the review team is understaffed.",
+      "question": "What systemic change to the pipeline would reduce queue backlog without increasing manual review capacity?",
+      "options": [
+        "A. Increase max_retries from 3 to 10 to reduce the number of documents that reach the dead-letter queue",
+        "B. Audit the most common validation errors in the failed documents and improve the extraction schema and descriptions to fix the root causes",
+        "C. Accept all None results as 'missing data' and move on without logging",
+        "D. Switch from Pydantic validation to runtime type checking which is more permissive"
+      ],
+      "answer": "B",
+      "explanation": "If 4,000 documents are failing the same validators, those validators are catching systematic extraction errors caused by schema or description gaps. Auditing the error messages will likely reveal 2-3 common patterns (percent vs. decimal, code format mismatches). Fixing the root cause in the schema reduces the incoming queue rate far more effectively than increasing retries or adding staff. Retries do not fix structural schema problems."
+    },
+    {
+      "id": "c8",
+      "scenario": "You implement validated_completion and notice that on a multi-field validation failure (3 fields fail simultaneously), the model's second attempt fixes 2 of the 3 fields but still fails the third. On the third attempt it fixes everything.",
+      "question": "This 3-attempt pattern is working correctly, but you want to optimize to reduce the chance of needing a third attempt. What is the most effective change?",
+      "options": [
+        "A. Run three parallel extraction calls and take the first one that validates",
+        "B. Make the validation error message more specific: list each failing field separately with the exact value and the constraint it violated",
+        "C. Break the schema into smaller sub-schemas and validate each independently",
+        "D. Use a more powerful model for attempt 2 and 3 to increase the chance of full correction"
+      ],
+      "answer": "B",
+      "explanation": "When three fields fail, a vague error like 'validation failed for fields: A, B, C' is less useful than 'field A: got 85.0, must be <= 1.0 (use decimal); field B: got High, must be one of [low, medium, high, critical] (lowercase); field C: required field is null'. Specific, per-field errors with the actual value and the violated constraint allow the model to make all corrections in one pass instead of fixing them one by one across multiple attempts."
+    }
+  ]
+}

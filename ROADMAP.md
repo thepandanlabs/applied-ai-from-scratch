@@ -25,24 +25,24 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 01: Prompt & Context Engineering [⬚] (~15 hours)
+## Phase 01: Prompt & Context Engineering [✅] (~15 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | Request Anatomy: System, User, Assistant | ⬚ | ~45 min |
-| 02 | Prompt Fundamentals | ⬚ | ~45 min |
-| 03 | Few-Shot & Chain-of-Thought | ⬚ | ~60 min |
-| 04 | Context Engineering | ⬚ | ~60 min |
-| 05 | Context-Window Management | ⬚ | ~45 min |
-| 06 | Structured Outputs: JSON Schema, Constrained Decoding | ⬚ | ~60 min |
-| 07 | Validation + Retry Loops: Pydantic / Zod | ⬚ | ~60 min |
-| 08 | Prompt Templates & Versioning | ⬚ | ~45 min |
-| 09 | Programmatic Prompt Optimization: DSPy | ⬚ | ~60 min |
-| 10 | Multi-Turn Conversations & State | ⬚ | ~45 min |
-| 11 | System Prompt Design | ⬚ | ~45 min |
-| 12 | Handling Refusals & Edge Cases | ⬚ | ~45 min |
-| 13 | Prompt Caching: Cost and Latency | ⬚ | ~45 min |
-| 14 | Capstone: Structured-Extraction Service + Prompt Library | ⬚ | ~90 min |
+| 01 | Request Anatomy: System, User, Assistant | ✅ | ~45 min |
+| 02 | Prompt Fundamentals | ✅ | ~45 min |
+| 03 | Few-Shot & Chain-of-Thought | ✅ | ~60 min |
+| 04 | Context Engineering | ✅ | ~60 min |
+| 05 | Context-Window Management | ✅ | ~45 min |
+| 06 | Structured Outputs: JSON Schema, Constrained Decoding | ✅ | ~60 min |
+| 07 | Validation + Retry Loops: Pydantic / Zod | ✅ | ~60 min |
+| 08 | Prompt Templates & Versioning | ✅ | ~45 min |
+| 09 | Programmatic Prompt Optimization: DSPy | ✅ | ~60 min |
+| 10 | Multi-Turn Conversations & State | ✅ | ~45 min |
+| 11 | System Prompt Design | ✅ | ~45 min |
+| 12 | Handling Refusals & Edge Cases | ✅ | ~45 min |
+| 13 | Prompt Caching: Cost and Latency | ✅ | ~45 min |
+| 14 | Capstone: Structured-Extraction Service + Prompt Library | ✅ | ~90 min |
 
 ---
 

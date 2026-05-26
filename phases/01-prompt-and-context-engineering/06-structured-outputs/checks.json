@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "06-structured-outputs",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your document processing pipeline uses prompt-only JSON extraction. In testing with 50 clean documents, it works 100% of the time. After deploying to production, about 3% of documents cause JSON parse errors and the pipeline crashes.",
+      "question": "What is the most likely cause of the production failures that did not appear in testing?",
+      "options": [
+        "A. The production model version is different from the test version",
+        "B. Production documents have unusual formatting, special characters, or edge cases not present in the clean test set",
+        "C. The JSON schema is too strict and rejects valid documents",
+        "D. The API is returning truncated responses under production load"
+      ],
+      "answer": "B",
+      "explanation": "Prompt-only extraction is sensitive to document formatting. Clean test documents rarely expose the edge cases that appear in real production data: unusual date formats, non-ASCII characters, long line items, or documents where the model decides to add a preamble. Tool use eliminates this class of failures because the model generates JSON structurally, not as free text."
+    },
+    {
+      "id": "c2",
+      "scenario": "You switch from prompt-only extraction to tool_use with tool_choice={'type': 'any'}. A teammate reviews your code and asks: 'Why do you need tool_choice=any? The model should just call the tool since it is the only option.'",
+      "question": "What does tool_choice={'type': 'any'} actually enforce?",
+      "options": [
+        "A. It limits the model to calling only the first tool in the tools list",
+        "B. It forces the model to call at least one tool rather than responding with plain text",
+        "C. It allows the model to call any number of tools in parallel",
+        "D. It disables the model's ability to use its own reasoning and forces direct tool invocation"
+      ],
+      "answer": "B",
+      "explanation": "Without tool_choice=any (or tool_choice={'type': 'tool', 'name': 'extract_invoice'}), the model can choose to respond with plain text instead of calling the tool, even when the tool is defined. tool_choice={'type': 'any'} is the guarantee that a tool call will occur. This is what makes stop_reason='tool_use' reliable."
+    },
+    {
+      "id": "c3",
+      "scenario": "You define an invoice extraction tool with 'subtotal': {'type': 'number'}. After running 200 extractions, you notice that 8% of results have subtotal as the string '$13,250.00' instead of the number 13250.0.",
+      "question": "What is the most effective fix?",
+      "options": [
+        "A. Switch to prompt-only extraction since tool use is not enforcing the type correctly",
+        "B. Add a post-extraction step that strips currency symbols and casts to float, and improve the field description to say 'numeric value only, no currency symbols'",
+        "C. Add a retry loop that calls the API again if the type is wrong",
+        "D. Change the type to string and parse it in your application code"
+      ],
+      "answer": "B",
+      "explanation": "JSON Schema type annotations are hints that guide the model, but they are not always enforced at the token level for every field. Adding a clear description ('numeric value only, no $ symbols') reduces the type error rate significantly. A post-extraction cast handles the remaining cases. This two-layer approach is more reliable than retrying the entire API call."
+    },
+    {
+      "id": "c4",
+      "scenario": "You have a pipeline that extracts data from customer emails. Some emails are complaints, some are order inquiries, and some are shipping questions. Each type needs different fields. You are considering whether to use one schema with all possible fields marked optional, or three separate schemas.",
+      "question": "Which approach is more suitable for production and why?",
+      "options": [
+        "A. One schema: fewer API calls because you only need to classify and extract in one pass",
+        "B. One schema: simpler codebase since all data goes into the same data structure",
+        "C. Three separate schemas: the model performs better when the schema matches the document type, and you avoid sparse records full of null fields",
+        "D. Three separate schemas: the API requires separate tool definitions for each document type"
+      ],
+      "answer": "C",
+      "explanation": "A schema with 20 optional fields, most of which are null for any given document, is harder for the model to fill correctly than a focused 5-field schema. Separate schemas also produce cleaner data models and clearer validation rules. The tradeoff is that you need a classification step first, but classification is cheap compared to the cost of incorrect extractions with a bloated schema."
+    },
+    {
+      "id": "c5",
+      "scenario": "You check the stop_reason for 1,000 extraction calls using tool_choice={'type': 'any'}. You find that 997 have stop_reason='tool_use' and 3 have stop_reason='end_turn'.",
+      "question": "What do the 3 end_turn responses indicate, and what should your code do with them?",
+      "options": [
+        "A. The model ran out of tokens and could not finish the tool call; increase max_tokens",
+        "B. The model chose to respond in plain text instead of calling the tool despite tool_choice=any; treat these as extraction failures and log them for investigation",
+        "C. The tool call succeeded but the model also generated a text response after it",
+        "D. These are normal and expected when the document has no extractable fields"
+      ],
+      "answer": "B",
+      "explanation": "stop_reason='end_turn' means the model generated a text response and did not call any tool. With tool_choice={'type': 'any'}, this should not happen, but it can occur on edge cases (very short documents, documents in unexpected languages, or API anomalies). These are failures: your code should catch them, return an error or a sentinel, and log the document for investigation. Do not silently pass them as successes."
+    },
+    {
+      "id": "c6",
+      "scenario": "A colleague argues: 'Tool use and prompt-only extraction cost roughly the same tokens, so there is no financial reason to prefer one over the other. Just use prompt-only and add error handling.' You want to push back with a concrete production scenario.",
+      "question": "Which production scenario most clearly demonstrates why reliability justifies any marginal overhead?",
+      "options": [
+        "A. A report generation system where a human reviews every output before it is used",
+        "B. An automated invoice ingestion pipeline that writes directly to a billing database, processing 5,000 invoices per day",
+        "C. A chatbot that summarizes documents for internal teams who can re-ask if the summary is wrong",
+        "D. A prototype that extracts data from 20 test documents to evaluate feasibility"
+      ],
+      "answer": "B",
+      "explanation": "In a billing database pipeline, a 3% parse failure rate means 150 corrupted or missing records per day. At 5,000/day those build up quickly, require reconciliation, and can cause financial errors. There is no human in the loop to catch them. The reliability guarantee of tool use is not a marginal improvement in this context; it is the difference between a pipeline you can trust and one that requires constant babysitting."
+    },
+    {
+      "id": "c7",
+      "scenario": "You extract data from contracts using a tool schema. The model consistently sets the 'termination_date' field to null even when the contract clearly states an end date. All other fields extract correctly.",
+      "question": "What is the most likely cause and how do you fix it?",
+      "options": [
+        "A. The field name 'termination_date' is a reserved word in JSON Schema",
+        "B. The tool schema description for this field is unclear or missing, so the model does not know how to map contract language like 'expires on' or 'end date' to this field",
+        "C. Dates require a special JSON Schema format annotation and the model ignores fields without it",
+        "D. The model has a safety filter that prevents extracting dates from legal documents"
+      ],
+      "answer": "B",
+      "explanation": "The model reads field descriptions to understand how to map document content to schema fields. A field named 'termination_date' with no description may not match contract language like 'contract expires', 'end of term', or 'expiration date'. Adding a description like 'The date the contract ends or expires; may appear as end date, expiration date, or contract term end' significantly improves extraction accuracy for this field."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are adding Pydantic validation on top of tool_use extraction. You call Invoice(**raw) and get a ValidationError: '14,376.25 is not a valid number'. The tool schema specifies subtotal as type: number.",
+      "question": "What happened and what is the correct fix?",
+      "options": [
+        "A. Pydantic and JSON Schema have incompatible number types; switch to a dict instead of a Pydantic model",
+        "B. The model returned the number as the string '14,376.25' with a comma separator despite the type annotation; add a Pydantic field_validator to strip commas and cast to float before validation",
+        "C. The max_tokens was too low and the number was truncated; increase max_tokens",
+        "D. tool_use block.input returns strings for all values regardless of schema type"
+      ],
+      "answer": "B",
+      "explanation": "The model sometimes returns formatted numbers like '14,376.25' (with comma separators) even when the schema says 'number'. The JSON spec does not allow commas in numbers, so this is technically invalid JSON - but the Anthropic SDK parses tool inputs permissively and passes the string through. Add a Pydantic validator: @field_validator('subtotal', 'tax', 'total', mode='before') that calls float(str(v).replace(',', '')) to handle this case."
+    }
+  ]
+}

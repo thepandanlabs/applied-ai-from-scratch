@@ -1,0 +1,86 @@
+[
+  {
+    "id": "10-q1",
+    "question": "A user has a 10-turn conversation with your chatbot. On Turn 11 they ask a follow-up question and the model responds as if it has no context from the earlier turns. What is the root cause?",
+    "options": [
+      "The model's context window was exceeded and it dropped all history",
+      "The conversation history was not included in the messages list sent to the API on Turn 11",
+      "The system prompt was too long and overrode the conversation history",
+      "The API has a maximum of 10 turns per session before resetting"
+    ],
+    "answer": 1,
+    "explanation": "The Anthropic API is stateless. If the model responds without knowledge of previous turns, the history was not sent in the messages list. The API processes exactly what you send, no more and no less. Every turn requires you to resend the full prior history."
+  },
+  {
+    "id": "10-q2",
+    "question": "You are building a long-running support chatbot. After 50 turns, the API returns a 400 error about exceeding the context window. What is the correct preventive measure?",
+    "options": [
+      "Increase max_tokens in the API call to allow more output",
+      "Start a new session after every 10 turns automatically",
+      "Implement history truncation: keep only the last N turns or summarize old turns before sending",
+      "Switch to a different model with a smaller context window"
+    ],
+    "answer": 2,
+    "explanation": "The context window limit applies to the total input tokens (system prompt + all messages). As history grows, you must truncate or compress it before it hits the limit. max_tokens controls output length, not input length. Starting a new session loses all context. Truncating or summarizing preserves UX while staying within limits."
+  },
+  {
+    "id": "10-q3",
+    "question": "You save a conversation session to JSON after Turn 5 and reload it later. The user sends a Turn 6 message and the model gives a generic response with no reference to the earlier turns. What is the most likely bug in your load code?",
+    "options": [
+      "The JSON file was corrupted during save",
+      "The messages list was loaded but not passed to the API call on Turn 6",
+      "The model cannot use reloaded history; only in-memory history works",
+      "The session_id changed between save and load"
+    ],
+    "answer": 1,
+    "explanation": "The most common load bug is restoring the messages list into a variable but then calling the API with an empty or new messages list instead of the loaded one. The JSON save/load is correct; the bug is in wiring the loaded messages into the API call. Always verify that the loaded messages variable is the one passed to client.messages.create()."
+  },
+  {
+    "id": "10-q4",
+    "question": "Where does the system prompt belong in an Anthropic API call?",
+    "options": [
+      "As the first message in the messages list with role='system'",
+      "As the last message in the messages list with role='system'",
+      "As a separate 'system' parameter in the API call, outside the messages list",
+      "Embedded inside the first user message as a special prefix"
+    ],
+    "answer": 2,
+    "explanation": "The Anthropic API takes the system prompt as a dedicated 'system' parameter separate from the messages list. The messages list contains only 'user' and 'assistant' roles. Adding a system-role message to the messages list will cause an API validation error."
+  },
+  {
+    "id": "10-q5",
+    "question": "After a sliding window truncation, your messages list starts with an assistant message instead of a user message. What will happen when you send this to the API?",
+    "options": [
+      "The API will accept it and prepend a dummy user message automatically",
+      "The API will return a 400 validation error because messages must start with a user role",
+      "The model will treat the assistant message as context but ignore its role",
+      "The API will reverse the message order to start with the user"
+    ],
+    "answer": 1,
+    "explanation": "The Anthropic API requires the first message in the messages list to have role='user'. If sliding window truncation cuts the list mid-pair, the first remaining message may be an assistant response. You must check for this and drop the orphaned assistant message so the list starts with a user message."
+  },
+  {
+    "id": "10-q6",
+    "question": "You implement a sliding window that keeps the last 20 turns. A critical constraint ('never discuss competitor products') was stated by the user in Turn 2, but the window drops it at Turn 22. What is the right fix?",
+    "options": [
+      "Increase the window to 40 turns to keep Turn 2 in scope",
+      "Move critical constraints into the system prompt, not the conversation history",
+      "Ask the user to repeat the constraint every 20 turns",
+      "Use a vector store to retrieve the constraint when needed"
+    ],
+    "answer": 1,
+    "explanation": "Instructions and constraints that must persist for the entire conversation belong in the system prompt, not in user messages. The system prompt is always sent and never truncated. User messages are conversation content, not configuration. If a constraint is stated in the conversation ('please always respond in Spanish'), you should extract it and inject it into the system prompt rather than relying on it surviving truncation."
+  },
+  {
+    "id": "10-q7",
+    "question": "A user's conversation is 40 turns long. You need to compress it to fit within the context window but also keep the full context of what was discussed. Which strategy is most appropriate?",
+    "options": [
+      "Sliding window: drop the oldest 20 turns entirely",
+      "Summarize the first 30 turns into a bullet-point summary, inject it into the system prompt, keep only the last 10 turns in the messages list",
+      "Delete every other turn to halve the length",
+      "Truncate from the most recent turns, keeping only the oldest context"
+    ],
+    "answer": 1,
+    "explanation": "Summarize-and-compress preserves the semantic content of old turns (key facts, decisions, established context) while dramatically reducing token count. The summary goes into the system prompt where it is always visible to the model. The messages list then only contains the most recent turns. Sliding window drops context entirely. Deleting alternating turns breaks the user/assistant alternation requirement."
+  }
+]

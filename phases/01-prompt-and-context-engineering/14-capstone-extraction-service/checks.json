@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "14-capstone-extraction-service",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your extraction service returns status: 'refusal' with refusal_category: 'capability' even though you are using tool_choice: {'type': 'any'} to force tool use. The model is returning a text block saying 'I cannot access the uploaded file.'",
+      "question": "What is most likely wrong?",
+      "options": [
+        "A. tool_choice: any does not work with Haiku; switch to Sonnet.",
+        "B. The user message says 'extract from the attached document' but no document text is in the message body. The model is trying to access a file that was never sent.",
+        "C. The Pydantic schema has required fields that conflict with tool_choice enforcement.",
+        "D. You must use tool_choice: {'type': 'tool', 'name': 'extract_contact'} instead of 'any'."
+      ],
+      "answer": "B",
+      "explanation": "tool_choice: any forces a tool call, but the model is complaining about file access. The real problem is that the document text was not included in the API message body. The model received a message asking it to process a document that does not exist in the context. Fix: extract the document text server-side and embed it as a text block in the user message."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your extraction service processes 500 invoices per day. You notice the first request each day has latency of 1.8 seconds and shows cache_status: 'write'. All subsequent requests show cache_status: 'hit' at 0.9 seconds. But at 3am (low traffic), the cache_status goes back to 'write'.",
+      "question": "What is causing the cache miss at 3am and how do you address it?",
+      "options": [
+        "A. The 3am deployment pipeline invalidates the cache. Switch to blue-green deploys.",
+        "B. The 5-minute cache TTL expires during low-traffic windows. If request rate drops below one per 5 minutes, each request triggers a new cache write. This is expected behavior; no fix needed unless the cost impact is significant.",
+        "C. Rate limits are more aggressive at 3am. Implement exponential backoff.",
+        "D. The model rotates cache keys hourly. Set a custom cache TTL of 60 minutes."
+      ],
+      "answer": "B",
+      "explanation": "The cache TTL is 5 minutes. During low-traffic windows, the gap between requests exceeds 5 minutes, causing the cache entry to expire. The next request writes a new cache entry at slightly elevated cost, then any requests within the next 5 minutes get cache reads. This is expected behavior. If the 3am cost spike matters, consider a scheduled warm-up request that runs every 4 minutes to keep the cache alive during known low-traffic windows."
+    },
+    {
+      "id": "c3",
+      "scenario": "A new team member adds a timestamp to the system prompt: 'Current date: {current_date}' that is formatted with today's date on every request. They deploy this change. The next morning you notice cache_status is always 'write' and costs have increased 15%.",
+      "question": "What happened and how do you fix it?",
+      "options": [
+        "A. The timestamp increases the system prompt above the caching threshold, triggering a different caching tier.",
+        "B. The dynamic timestamp changes the cached prefix on every call (or at minimum every day), invalidating the cache. Remove the timestamp from the cached system prompt; put dynamic context in the user message after the cache breakpoint.",
+        "C. You need to pass the timestamp as a separate metadata field, not in the system prompt.",
+        "D. The date format is incompatible with the caching system. Use Unix timestamp instead."
+      ],
+      "answer": "B",
+      "explanation": "The cache key is the exact token sequence before the cache_control breakpoint. Adding a changing date to the system prompt means the prefix changes with every new day (or every call), guaranteeing a cache write on each request. The fix: keep the system prompt purely static, put any dynamic context (current date, user-specific data) in the user message, after the cache_control breakpoint."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your extraction service returns status: 'validation_error' with error: 'Retry also failed: 1 validation error for Invoice - total_amount: Input should be a valid number [type=float_parsing]'. The raw data field shows total_amount: '$110.00'.",
+      "question": "What is the root cause and the right long-term fix?",
+      "options": [
+        "A. Increase max_tokens so the model has more room to format the number correctly.",
+        "B. The model returned '$110.00' (a string with currency symbol) for a field typed as float. The Pydantic model expects a pure number. Update the system prompt to instruct the model to return numeric values without currency symbols, or add a Pydantic validator that strips the symbol before parsing.",
+        "C. Switch from tool_choice: any to tool_choice: auto so the model can choose the best output format.",
+        "D. The Invoice schema needs total_amount typed as str, not float."
+      ],
+      "answer": "B",
+      "explanation": "The model extracted '$110.00' as a string including the currency symbol, but the schema expects a float. The prompt instructs extraction of the 'numeric value', but the model did not comply. Two complementary fixes: (1) add an example to the system prompt showing the correct format: 'total_amount: 110.00 (not \"$110.00\")', and (2) add a Pydantic validator that strips common currency symbols before float parsing as a defensive fallback."
+    },
+    {
+      "id": "c5",
+      "scenario": "You deploy the extraction service to production. Within an hour, you receive an alert that /extract is returning 500 errors. The logs show: 'anthropic.APIStatusError: 529 Overloaded'. Your service has no retry logic for API errors.",
+      "question": "What is the correct way to handle Anthropic 529 errors in production?",
+      "options": [
+        "A. Switch to a different model when 529 occurs; 529 means the current model is permanently unavailable.",
+        "B. Implement exponential backoff with jitter for 529 errors. Return a 503 to the caller with a Retry-After header so upstream systems can queue and retry. Log the occurrence for rate/quota monitoring.",
+        "C. Increase max_tokens on retry; 529 errors indicate the response was too large.",
+        "D. 529 errors cannot be retried; return a 500 to the caller immediately."
+      ],
+      "answer": "B",
+      "explanation": "529 means the Anthropic API is temporarily overloaded. These errors are transient and retryable. The correct pattern: catch anthropic.APIStatusError with status 529, wait with exponential backoff (e.g., 1s, 2s, 4s), retry up to 3 times, and return a 503 to the caller if all retries fail. A 503 with Retry-After tells upstream clients to retry later. Returning a 500 is less informative and can cause retries that worsen the overload."
+    },
+    {
+      "id": "c6",
+      "scenario": "You add the extraction service to a document processing pipeline. Upstream sends batches of 50 documents at once. Each document is about 2,000 tokens. The pipeline sends all 50 requests concurrently. After 30 seconds, about 20 requests succeed and 30 fail with 429 rate limit errors.",
+      "question": "What is the right architecture change?",
+      "options": [
+        "A. Increase MAX_INPUT_TOKENS to process all 50 documents in a single API call.",
+        "B. Add a semaphore or queue in the service to limit concurrent API calls to fit within your rate limit tier. Process documents in controlled batches (e.g., 5 concurrent) with backpressure signaling to the upstream pipeline.",
+        "C. Cache all 50 documents in a single large prompt to reduce API call count.",
+        "D. Switch to a higher model tier; rate limits only apply to Haiku."
+      ],
+      "answer": "B",
+      "explanation": "50 concurrent requests exceed the rate limit for most Anthropic tiers. Sending them all at once produces rate limit errors for roughly half of them. The fix is concurrency control on the service side: a semaphore (e.g., asyncio.Semaphore) or a task queue (e.g., Celery, ARQ) that limits simultaneous API calls to a number your tier supports. Upstream gets a 202 Accepted response and polls for results, or the service returns a 429 with a Retry-After header."
+    },
+    {
+      "id": "c7",
+      "scenario": "A user sends a 95,000-character PDF converted to text to the extraction service. The service returns status: context_too_large with an estimated token count of 23,750. The user needs this document processed.",
+      "question": "What is the recommended approach for the user?",
+      "options": [
+        "A. Increase MAX_INPUT_TOKENS to 100,000 and resubmit.",
+        "B. Split the document into chunks of 10,000-12,000 characters, send each chunk as a separate /extract call, and merge the results. For invoice extraction, process the header section and each line item section separately.",
+        "C. Use the conversation history endpoint to send the document across multiple turns.",
+        "D. Base64-encode the document; encoded text uses fewer tokens."
+      ],
+      "answer": "B",
+      "explanation": "The context window limit exists for quality and cost reasons. Very long documents degrade extraction accuracy as attention gets diluted. The right approach is to pre-chunk the document before sending. For invoices, this means extracting the header (vendor, date, invoice number) from the first chunk and line items from subsequent chunks, then merging the results in application code. Some schemas (like contact) rarely need chunking; invoices with many line items often do."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your team wants to add a new 'contract' schema to the extraction service. A junior engineer suggests adding it by modifying the deployed Docker container and restarting it, without updating the image or the code repository.",
+      "question": "What is wrong with this approach?",
+      "options": [
+        "A. Docker containers cannot be modified after they are started.",
+        "B. Modifying a running container creates configuration drift: the running service no longer matches the source code or image. The change will be lost on the next deploy, restart, or scale-out event. All schema changes should go through code review, be committed to the repository, and deployed via the standard pipeline.",
+        "C. The Pydantic model cannot be added at runtime; it must be compiled into the image.",
+        "D. This approach is fine for development but requires a /reload endpoint in production."
+      ],
+      "answer": "B",
+      "explanation": "Modifying a running container without updating the source produces configuration drift. The next deployment, container restart, or horizontal scaling event will spin up a fresh container from the original image, reverting the change. The user will then report that the 'contract' schema that 'used to work' has disappeared. All changes must be in the code repository, reviewed, tested, and deployed through the standard pipeline so the image is the source of truth."
+    }
+  ]
+}

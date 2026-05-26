@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "08-prompt-templates-versioning",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team has a classification prompt stored as a Python string constant in a service file. A developer improves the prompt, edits the string in place, and deploys. The classification accuracy drops 15%. You want to roll back the prompt but the previous version is gone from the codebase.",
+      "question": "Which aspect of a prompt registry would have directly prevented this problem?",
+      "options": [
+        "A. Variable substitution with named placeholders instead of positional arguments",
+        "B. Version history: each version is stored separately, so the previous version can be retrieved without reverting the deployment",
+        "C. Fingerprint computation: would have detected that the string changed",
+        "D. Template descriptions: would have documented what the original prompt was intended to do"
+      ],
+      "answer": "B",
+      "explanation": "The root problem is that editing a string in place destroys the previous version. A registry stores each (name, version) pair as a separate entry. As long as the developer registers the new version as v1.1 rather than overwriting v1.0, both versions coexist and v1.0 can be retrieved immediately. The fingerprint and description are helpful for other problems, but the version history is what solves the rollback scenario."
+    },
+    {
+      "id": "c2",
+      "scenario": "You register PromptTemplate(name='summarizer', version='2.0', template='Summarize: {text}', author='alice'). Two days later a colleague runs the same registration with a slightly different template text but the same name and version. The registry raises a ValueError.",
+      "question": "What is the correct action when you receive this error?",
+      "options": [
+        "A. Increment the version to '2.1' for the new template, so both versions coexist in the registry",
+        "B. Force-overwrite the existing registration since the colleague's version is newer",
+        "C. Delete the registry and re-register all templates to resolve the conflict",
+        "D. Accept both versions under different author names"
+      ],
+      "answer": "A",
+      "explanation": "The ValueError is correct behavior: the registry detected that someone is trying to use the same version label for different content, which would cause ambiguity. The fix is to register the changed template under a new version (2.1). This preserves the original v2.0, makes the change explicit, and allows you to A/B test or rollback between them."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your team has a prompt template with variables {customer_name}, {product}, and {issue_description}. A developer refactors the code and accidentally calls registry.render('support-prompt', customer=customer_name, product=product, issue_description=issue_description) with 'customer' instead of 'customer_name'.",
+      "question": "When will this error be caught with a PromptTemplate, and when would it be caught with a raw f-string?",
+      "options": [
+        "A. Both would catch it at the same point: when render() or format() is called",
+        "B. PromptTemplate catches it immediately at render() with a descriptive ValueError listing the unexpected variable; f-string raises a KeyError at format() time but without indicating which call site is wrong",
+        "C. PromptTemplate catches it at registration time; f-string never catches it",
+        "D. Neither catches it at runtime; both silently substitute an empty string"
+      ],
+      "answer": "B",
+      "explanation": "Both raise an error at render/format time. The difference is in the error quality. PromptTemplate.render() explicitly validates expected vs. received variable names and raises 'unexpected variables: [customer], expected: [customer_name, product, issue_description]'. A raw f-string raises a generic KeyError with just the missing key name, without context about which template was being rendered or what the correct variable names are."
+    },
+    {
+      "id": "c4",
+      "scenario": "You deploy prompt version 2.3 to production. Three hours later, a quality alert fires showing 8% regression in classification accuracy. You want to know if the regression started exactly when v2.3 deployed, or if it was gradual.",
+      "question": "What logging practice would let you answer this question immediately?",
+      "options": [
+        "A. Log the full rendered prompt text with every API call to reconstruct what was sent",
+        "B. Log prompt_name, prompt_version, and prompt_fingerprint alongside every API call, so you can correlate accuracy metrics to prompt version in your observability tool",
+        "C. Log the response latency for every call to identify when the slowdown started",
+        "D. Log the model temperature setting to confirm it did not change during the deployment"
+      ],
+      "answer": "B",
+      "explanation": "With prompt version metadata in every log entry, you can query your observability tool: 'show me classification accuracy grouped by prompt_version over the last 24 hours'. This immediately shows whether accuracy dropped exactly when v2.3 appeared in logs. Without this metadata, you can only correlate with deployment timestamps, which may not be accurate if deployments are gradual or rolled out by region."
+    },
+    {
+      "id": "c5",
+      "scenario": "You want to test whether prompt v1.1 improves over v1.0 before promoting it to production. You have 50 labeled (input, expected_output) pairs.",
+      "question": "How should you structure this comparison test?",
+      "options": [
+        "A. Run v1.1 on 25 inputs and v1.0 on the other 25 inputs, then compare accuracy",
+        "B. Run both versions on the same 50 inputs, compare outputs to expected labels, and promote v1.1 only if it does not regress any expected outputs",
+        "C. Run v1.1 on the 50 inputs and compare to v1.0 outputs generated earlier in a separate run",
+        "D. Visually inspect the template diff and promote if the changes look reasonable"
+      ],
+      "answer": "B",
+      "explanation": "Both versions must run on identical inputs to make a fair comparison. Running on different inputs (option A) introduces selection bias. Comparing against previously generated v1.0 outputs (option C) is invalid if the evaluation conditions or documents changed. Visual inspection (option D) does not catch output regressions. The correct approach is: same 50 inputs, both versions, compare each output to the ground truth label, flag any case where v1.0 was correct but v1.1 is wrong."
+    },
+    {
+      "id": "c6",
+      "scenario": "A colleague argues: 'We store our prompts in environment variables and inject them at startup. That gives us version control (env var per version) and easy rollback (change the env var). Why do we need a PromptTemplate class on top of that?'",
+      "question": "What capability does PromptTemplate provide that environment variables do not?",
+      "options": [
+        "A. Environment variables cannot store multi-line strings, which prompts typically are",
+        "B. PromptTemplate provides variable substitution with validation, fingerprint-based drift detection, and serializable metadata; environment variables are just strings with no structure",
+        "C. Environment variables require a service restart to change; PromptTemplate allows live updates",
+        "D. PromptTemplate encrypts the template content; environment variables are stored in plaintext"
+      ],
+      "answer": "B",
+      "explanation": "Environment variables can store prompts, and version-per-variable is better than hardcoded strings. But they are just strings: no variable validation (typo in a placeholder = silent wrong output), no fingerprinting (impossible to detect edits without comparing full text), no metadata (no author, description, or creation time), and no structured registry (no lookup by name+version, no list of available versions). PromptTemplate adds all of this on top of the string."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your CI pipeline runs tests that render every registered template with dummy values and assert no exceptions are raised. A new developer adds a template but does not add it to the test suite. The template has a typo: '{user_nme}' instead of '{user_name}'. This reaches production.",
+      "question": "What change to the test would catch all current and future templates without requiring manual updates?",
+      "options": [
+        "A. Read the template source files directly and check for common typos using regex",
+        "B. Load the registry at test time and iterate over all registered templates, rendering each with generated dummy values; new templates are automatically included",
+        "C. Require all templates to be declared in a separate config file that the CI pipeline validates",
+        "D. Add a pre-commit hook that runs spell-check on all template strings"
+      ],
+      "answer": "B",
+      "explanation": "If the test iterates over registry.list_versions() for every name and renders each template with dummy values for its declared variables, every registered template is automatically covered. No manual update needed when a new template is added. The typo '{user_nme}' would be detected because the auto-detected variable list would contain 'user_nme' but the dummy values dict would not have it."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are building a machine learning pipeline that uses DSPy to optimize prompts automatically. Your DSPy optimizer outputs an optimized prompt string after each training run. Your teammate says there is no point versioning machine-generated prompts since you did not write them manually.",
+      "question": "Why should machine-generated prompt strings still go through the registry?",
+      "options": [
+        "A. They should not: machine-generated prompts are temporary artifacts and do not need versioning",
+        "B. Machine-generated prompts should be registered because you still need to know which version is running in production, compare versions on eval sets, and roll back when an optimizer produces a regressed version",
+        "C. Machine-generated prompts require a different registry design because they may be too long for human-readable version labels",
+        "D. The registry is only useful for prompts that contain user-facing text"
+      ],
+      "answer": "B",
+      "explanation": "The registry solves deployment and debugging problems, not authorship problems. Whether a human or an optimizer wrote the prompt, you still need to: know which version is live, compare v_optimized_run_42 against v_optimized_run_41 on your eval set, and roll back to v_optimized_run_38 when run 42 regresses. Machine-generated prompts actually benefit more from fingerprinting because their text is harder for humans to diff visually."
+    }
+  ]
+}

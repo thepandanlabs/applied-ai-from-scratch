@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated": "2026-05-26T07:12:51Z",
-  "total": 60,
+  "generated": "2026-05-26T08:23:08Z",
+  "total": 74,
   "artifacts": [
     {
       "phase": 2,
@@ -568,6 +568,161 @@
       "tags": [
         "mcp",
         "capstone",
+        "runbook"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "01",
+      "name": "skill-request-anatomy",
+      "file": "phases/01-prompt-and-context-engineering/01-request-anatomy/outputs/skill-request-anatomy.md",
+      "tags": [
+        "prompt",
+        "request-anatomy",
+        "roles"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "02",
+      "name": "prompt-fundamentals-checklist",
+      "file": "phases/01-prompt-and-context-engineering/02-prompt-fundamentals/outputs/prompt-fundamentals-checklist.md",
+      "tags": [
+        "prompt",
+        "fundamentals",
+        "checklist"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "03",
+      "name": "skill-few-shot-cot",
+      "file": "phases/01-prompt-and-context-engineering/03-few-shot-and-chain-of-thought/outputs/skill-few-shot-cot.md",
+      "tags": [
+        "prompt",
+        "few-shot",
+        "chain-of-thought"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "04",
+      "name": "skill-context-engineering",
+      "file": "phases/01-prompt-and-context-engineering/04-context-engineering/outputs/skill-context-engineering.md",
+      "tags": [
+        "context",
+        "engineering",
+        "ordering"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "05",
+      "name": "skill-context-window-manager",
+      "file": "phases/01-prompt-and-context-engineering/05-context-window-management/outputs/skill-context-window-manager.md",
+      "tags": [
+        "context",
+        "tokens",
+        "truncation"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "06",
+      "name": "skill-structured-output",
+      "file": "phases/01-prompt-and-context-engineering/06-structured-outputs/outputs/skill-structured-output.md",
+      "tags": [
+        "structured-output",
+        "json",
+        "tool-use"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "07",
+      "name": "skill-validation-retry-loop",
+      "file": "phases/01-prompt-and-context-engineering/07-validation-retry-loops/outputs/skill-validation-retry-loop.md",
+      "tags": [
+        "validation",
+        "retry",
+        "pydantic"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "08",
+      "name": "skill-prompt-template-system",
+      "file": "phases/01-prompt-and-context-engineering/08-prompt-templates-versioning/outputs/skill-prompt-template-system.md",
+      "tags": [
+        "prompt",
+        "templates",
+        "versioning"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "09",
+      "name": "skill-dspy-optimizer",
+      "file": "phases/01-prompt-and-context-engineering/09-dspy-prompt-optimization/outputs/skill-dspy-optimizer.md",
+      "tags": [
+        "dspy",
+        "optimization",
+        "prompt"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "10",
+      "name": "skill-conversation-manager",
+      "file": "phases/01-prompt-and-context-engineering/10-multi-turn-conversations/outputs/skill-conversation-manager.md",
+      "tags": [
+        "multi-turn",
+        "state",
+        "conversation"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "11",
+      "name": "prompt-system-prompt-patterns",
+      "file": "phases/01-prompt-and-context-engineering/11-system-prompt-design/outputs/prompt-system-prompt-patterns.md",
+      "tags": [
+        "system-prompt",
+        "design",
+        "patterns"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "12",
+      "name": "skill-refusal-handler",
+      "file": "phases/01-prompt-and-context-engineering/12-handling-refusals-edge-cases/outputs/skill-refusal-handler.md",
+      "tags": [
+        "refusals",
+        "edge-cases",
+        "recovery"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "13",
+      "name": "skill-prompt-cache",
+      "file": "phases/01-prompt-and-context-engineering/13-prompt-caching-cost-and-latency/outputs/skill-prompt-cache.md",
+      "tags": [
+        "caching",
+        "cost",
+        "latency"
+      ]
+    },
+    {
+      "phase": "01",
+      "lesson": "14",
+      "name": "runbook-extraction-service",
+      "file": "phases/01-prompt-and-context-engineering/14-capstone-extraction-service/outputs/runbook-extraction-service.md",
+      "tags": [
+        "capstone",
+        "fastapi",
+        "extraction",
         "runbook"
       ]
     }

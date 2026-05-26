@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-context-window-management",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your chatbot works fine in QA with 5-turn conversations. In production, users with 30+ turn sessions start getting answers that ignore information they provided at the start of the conversation. The API is returning 200 with no errors.",
+      "question": "What is the most likely cause of this production bug?",
+      "options": [
+        "A. The model is getting confused by long conversations and lowering its accuracy",
+        "B. The context window filled silently and the oldest messages were dropped, removing the early context",
+        "C. The API is rate-limiting long-context requests and returning partial responses",
+        "D. The system prompt is overriding the user's early messages due to prompt priority rules"
+      ],
+      "answer": "B",
+      "explanation": "When a messages array exceeds the context limit, providers either error or silently truncate the oldest messages. A 200 response with no error does not mean all messages were used. The model answered correctly from what it received. The missing information was never included in the request."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building a ContextManager. The budget is 200,000 tokens with 4,000 reserved for output. Your current messages array counts to 198,000 tokens according to the token-counting API.",
+      "question": "What should the ContextManager do before sending this request?",
+      "options": [
+        "A. Send the request as-is because 198,000 is below the 200,000 model limit",
+        "B. Drop oldest messages until the count is below 196,000 (200,000 minus 4,000 output reserve)",
+        "C. Upgrade to a model with a larger context window automatically",
+        "D. Split the request into two separate API calls"
+      ],
+      "answer": "B",
+      "explanation": "The usable input budget is model_limit minus output_reserve: 200,000 - 4,000 = 196,000. At 198,000 tokens the request exceeds the input budget even though it is below the raw model limit. The output_reserve must always be protected to ensure the model has room to generate a response."
+    },
+    {
+      "id": "c3",
+      "scenario": "You implement token counting using len(text) // 4 as an estimate. A developer on your team argues this is 'close enough' and avoids an extra API call.",
+      "question": "When is this estimate most likely to be dangerously wrong?",
+      "options": [
+        "A. When the text is in English prose with simple vocabulary",
+        "B. When the text is short, under 100 characters",
+        "C. When the text contains code, JSON, or non-Latin scripts such as Japanese or Arabic",
+        "D. When the text contains many common words like 'the', 'is', and 'a'"
+      ],
+      "answer": "C",
+      "explanation": "The chars/4 heuristic is calibrated for average English prose. Code is tokenized differently (punctuation, brackets, and keywords each get their own tokens). Non-Latin scripts like Japanese often use one token per character, making the estimate off by 3-4x. The Anthropic SDK's count_tokens endpoint is exact and cheap to call."
+    },
+    {
+      "id": "c4",
+      "scenario": "A user starts a conversation with 'My project budget is $200,000 and must be completed by December.' After 25 more turns about project details, they ask 'What was the original budget?' The chatbot answers 'I don't have that information.'",
+      "question": "You want to fix this while keeping the sliding-window strategy. What is the correct approach?",
+      "options": [
+        "A. Switch to summarize_when_full=True so early critical facts are compressed into a summary rather than dropped",
+        "B. Increase the model_limit in ContextBudget to give more room",
+        "C. Set temperature=0 to make the model remember facts more reliably",
+        "D. Move the budget information to the system prompt since system prompts are always retained"
+      ],
+      "answer": "A",
+      "explanation": "The sliding window drops the oldest messages, which is exactly where critical setup facts live. Summarization compresses early messages into a summary that is kept in the history, preserving key facts like names, budgets, and constraints. Option D could work but requires knowing the facts at system-prompt authoring time, which is not always possible in a dynamic session."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are comparing two context management strategies. Strategy A drops the oldest 2 messages whenever the budget is exceeded. Strategy B makes an extra LLM call to summarize the oldest 4 messages before dropping them. You are building a customer support bot where conversation history from the first few turns (account details, issue description) is critical to resolve the ticket.",
+      "question": "Which strategy should you use, and what is the main tradeoff?",
+      "options": [
+        "A. Strategy A, because it is simpler and the first-turn context is rarely needed after 20 turns",
+        "B. Strategy B, because it preserves critical early context at the cost of an extra API call per compression event",
+        "C. Strategy A, because extra API calls add unacceptable latency to every message",
+        "D. Neither: compress all history into the system prompt on session start"
+      ],
+      "answer": "B",
+      "explanation": "For customer support, the issue description and account details from turn 1 are the most important facts in the conversation. Strategy A would drop them once the window fills. Strategy B pays the latency cost of one extra summarization call but preserves those facts. The compression events are infrequent (once per session when the window fills), so the latency hit is acceptable."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your ContextBudget has model_limit=200,000 and output_reserve=4,000. You log budget_utilization() after 10 turns and see 0.08 (8%). After 50 turns it is 0.72 (72%). Your alert threshold is 0.80.",
+      "question": "What does an average utilization of 72% after 50 turns tell you about your system design?",
+      "options": [
+        "A. The context window is being used efficiently and no changes are needed",
+        "B. The system prompt or injected documents are too large and dominating the budget",
+        "C. At this growth rate, the budget will be exceeded around 55-60 turns, which may be fine or may need tuning depending on expected session length",
+        "D. The model is generating outputs that are too long, consuming the input reserve"
+      ],
+      "answer": "C",
+      "explanation": "At 72% after 50 turns, the utilization is growing at roughly 1.3% per turn. At that rate, the 80% alert threshold is hit around turn 56-60 and the budget is exceeded near turn 77. If your typical session is under 50 turns, no action is needed. If sessions regularly reach 80+ turns, increase history_max or reduce the system prompt size. The point of tracking utilization is to act before the window fills, not after."
+    },
+    {
+      "id": "c7",
+      "scenario": "You deploy ContextManager with summarize_when_full=True. Over the first week, your monitoring shows summarization events happening on 40% of all sessions, and each summarization call costs about 500 tokens. Your total token cost is 15% higher than projected.",
+      "question": "What is the most direct fix to reduce summarization frequency without losing context quality?",
+      "options": [
+        "A. Disable summarization and switch to sliding-window to eliminate the extra API calls",
+        "B. Increase the history budget allocation so the window fills less often, reducing how frequently summarization triggers",
+        "C. Summarize more aggressively by compressing 10 messages at a time instead of 4",
+        "D. Switch to a cheaper model for all completions to offset the summarization cost"
+      ],
+      "answer": "B",
+      "explanation": "Summarization fires when the budget is exceeded. If you increase history_max (assuming you have room by trimming docs_max or system_max), the window fills less frequently, so summarization triggers less often. Option C would actually increase cost per event even if it reduces event frequency. Option A solves cost but breaks the design requirement of preserving early context."
+    },
+    {
+      "id": "c8",
+      "scenario": "A teammate proposes always calling count_tokens() after every add_user() call to update a running token display in the UI. You currently call it once inside complete() before enforcing the budget.",
+      "question": "What is the main concern with calling count_tokens() after every message addition?",
+      "options": [
+        "A. count_tokens() modifies the messages array, so calling it frequently could corrupt state",
+        "B. Each count_tokens() call is a network request; calling it after every user message doubles the number of API calls per conversation turn",
+        "C. count_tokens() returns approximate values, so frequent calls would compound the error",
+        "D. The Anthropic API rate-limits count_tokens() calls more aggressively than completion calls"
+      ],
+      "answer": "B",
+      "explanation": "count_tokens() is a real API call with network latency. If you call it after every add_user(), you are making one extra API call per turn just to update the display. For a high-traffic system that is a significant overhead. Call count_tokens() once inside complete() where it matters for budget enforcement. For a UI display, either show an estimate or accept a slight delay."
+    }
+  ]
+}

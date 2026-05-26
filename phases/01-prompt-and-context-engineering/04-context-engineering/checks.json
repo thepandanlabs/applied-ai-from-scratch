@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "04-context-engineering",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You build a support chatbot backed by a product manual. You include 8 retrieved documents in your prompt. The model correctly answers questions about topics in documents 1 and 8, but consistently misses or misquotes information from documents 3-6.",
+      "question": "What is the most likely cause, and what is the engineering fix?",
+      "options": [
+        "A. Documents 3-6 are lower quality. Improve the retrieval step to return better documents.",
+        "B. The model is experiencing the lost-in-middle effect: content in the middle of a long context receives less attention. Move the most critical documents to the start or end of the document block.",
+        "C. The prompt is too long for the model to process accurately. Reduce max_tokens.",
+        "D. The system prompt instructions are overriding the document content. Remove the system prompt."
+      ],
+      "answer": "B",
+      "explanation": "The lost-in-middle effect is a well-documented property of transformer attention: documents at position 1 (primacy) and position N (recency) receive more attention than documents in the middle. When documents 1 and 8 are well-used but 3-6 are not, this is the signature. The fix: put the most critical documents first or last. For long document lists, consider restructuring so the most relevant doc is always adjacent to the query."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building context assembly for a RAG chatbot. A new engineer puts the task instructions at the end of the user message, after the documents and the user's question. 'It's all in the same message anyway,' they argue.",
+      "question": "What problem does this create?",
+      "options": [
+        "A. No problem. The model reads the full message before generating its response.",
+        "B. Instructions after the question may be partially overridden by the question's framing. Instructions work best at the start of the context (system prompt) where primacy bias ensures they establish the authoritative frame before any content is encountered.",
+        "C. The API will reject messages with instructions in the user role.",
+        "D. Instructions at the end waste tokens because the model has already committed to a response style by then."
+      ],
+      "answer": "B",
+      "explanation": "The system prompt (or the beginning of the context) is where behavioral instructions are most reliably applied. Placing instructions after documents and the question means the model reads and begins framing its response based on the documents and question before it encounters the instructions. Primacy bias means early content establishes the interpretive frame. Instructions buried after the main content are less likely to be consistently applied."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your RAG chatbot is running at 50,000 API calls per day. Your current context assembly includes all 10 retrieved documents and the full 30-turn conversation history for every call. Average input tokens: 12,000. You need to reduce costs by 40% without reducing answer quality.",
+      "question": "What is the most targeted approach?",
+      "options": [
+        "A. Switch to a smaller model.",
+        "B. Reduce max_tokens to limit output length.",
+        "C. Implement token budgeting: include only the top 3-4 documents (by relevance score) and trim conversation history to the last 8-10 turns. These two changes typically account for 50%+ of unnecessary tokens.",
+        "D. Compress the documents by summarizing them before including them."
+      ],
+      "answer": "C",
+      "explanation": "Naive RAG implementations often include all retrieved documents and full history regardless of relevance or recency, inflating token counts significantly. Targeted budgeting: limit to the top 3-4 documents by relevance score (document quality matters more than quantity) and trim history to recent turns (older turns contribute diminishing marginal value). These changes typically reduce input tokens by 40-60% with minimal accuracy impact, especially if the retrieval step is already returning high-quality documents."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your chatbot has a 30-turn conversation. The user mentioned their enterprise subscription in turn 2. Your history truncation keeps only the last 10 turns. Now in turn 28, the user asks about enterprise features and the model says 'I don't know your subscription tier.'",
+      "question": "What is the correct fix?",
+      "options": [
+        "A. Increase the history budget to include all 30 turns.",
+        "B. Store structured user facts (subscription tier, account type) separately and inject them into the system prompt or as a dedicated context block, independent of history truncation.",
+        "C. Tell the user to re-state their subscription tier in every message.",
+        "D. Use a larger model with a longer context window."
+      ],
+      "answer": "B",
+      "explanation": "Critical user facts (subscription, role, account type, stated preferences) should not rely on appearing in the conversation history. History truncation will eventually remove them. The correct pattern is to extract these facts when they are first stated, store them as structured data, and include them in the system prompt or a dedicated 'user context' block on every call. This gives facts permanent presence in the context regardless of conversation length."
+    },
+    {
+      "id": "c5",
+      "scenario": "You run a lost-in-middle test: you ask the same question with the relevant document at position 1 (of 10) and position 5 (of 10). Position 1 gets a correct detailed answer. Position 5 gets a vague answer that falls back to general knowledge. You need to fix this without reducing the number of documents.",
+      "question": "Which context arrangement change would most directly address this?",
+      "options": [
+        "A. Switch the ordering so that documents are sorted by ID rather than relevance.",
+        "B. Reorder so the highest-relevance document is either first (primacy) or last (recency, adjacent to the query). Middle positions are most affected by the attention trough.",
+        "C. Repeat the most important document in both the first and last positions.",
+        "D. Move all document content into the system prompt."
+      ],
+      "answer": "B",
+      "explanation": "The lost-in-middle effect is a function of position. Moving the most relevant document to position 1 (primacy) or position 10/last (recency, adjacent to the query) gives it the attention benefit. Duplicating the document (option C) wastes tokens. Moving all documents to the system prompt (option D) puts filler content in the high-attention slot rather than behavioral instructions. Reordering by attention position is the targeted fix."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are designing a context assembly function for a code review tool. Each review call includes: the code being reviewed (2,000 tokens), the review checklist/instructions (200 tokens), and the reviewer's previous comments on earlier files (300 tokens). Total budget: 4,000 tokens.",
+      "question": "What layer ordering is most appropriate for this tool?",
+      "options": [
+        "A. Code first, then instructions, then previous comments, then current request.",
+        "B. Instructions in system prompt, previous comments as history turns, code + current request in the final user message (code first, request last for recency).",
+        "C. All content in a single user message in alphabetical order by content type.",
+        "D. Previous comments first, then code, then instructions, then current request."
+      ],
+      "answer": "B",
+      "explanation": "The optimal arrangement: instructions in system prompt (primacy, establishes the review frame), previous comments as history (structural context), code + request in the final user message with code first and the specific request last (recency on the specific question). This arrangement means the model reads instructions as the authoritative frame, has the code as the main content block, and ends on the specific review question it needs to answer. The previous comments as history maintain conversational coherence."
+    },
+    {
+      "id": "c7",
+      "scenario": "You track input token counts across 1,000 production calls. The average is 8,400 tokens but the 90th percentile is 22,000 tokens. Your budget target is 10,000 tokens per call. Most calls are within budget but the long-tail ones are costing 3x more.",
+      "question": "What does this distribution tell you about your context assembly, and what is the targeted fix?",
+      "options": [
+        "A. The model is generating too many output tokens on complex queries. Reduce max_tokens.",
+        "B. A small subset of queries is triggering much longer context assembly, likely because they retrieve many documents or have long conversation histories. Add hard caps per layer: max 5 documents regardless of retrieval count, max 15 history turns regardless of conversation length.",
+        "C. The token spikes are caused by users asking long questions. Add input validation to reject long user messages.",
+        "D. Switch to batch processing for high-token calls."
+      ],
+      "answer": "B",
+      "explanation": "A bimodal distribution (most calls at 8,400, long tail at 22,000+) indicates that certain inputs cause runaway context growth. The most common culprits: queries that retrieve many documents (10+ instead of 3-5) and long conversations that don't truncate. The targeted fix is hard caps per layer: max N documents regardless of what retrieval returns, max M history turns regardless of conversation length. This bounds worst-case token usage. Soft percentage budgets allow the tail to grow; hard caps prevent it."
+    },
+    {
+      "id": "c8",
+      "scenario": "A colleague proposes: 'Instead of ordering context by layer priority, just put everything in a single user message and rely on the model to figure out what's important.' They argue modern large context models can handle this.",
+      "question": "Under what conditions would this approach produce measurably worse results?",
+      "options": [
+        "A. Never. Modern models with large context windows are not affected by content position.",
+        "B. When the relevant information is in the middle of a long context (lost-in-middle effect), when instructions are mixed with content (reducing their authority), and when the user's actual question is not the last thing the model reads before generating.",
+        "C. Only when the context exceeds 32k tokens.",
+        "D. Only when the model has not been instruction-tuned."
+      ],
+      "answer": "B",
+      "explanation": "Large context windows do not eliminate position effects. Research shows lost-in-middle degradation even in models with 128k+ context windows. Mixing instructions with content reduces instruction authority. Ending the context on document content rather than the user's question means recency bias works against you (the model is most primed to continue the last thing it read, which is a document, not the question). Layer ordering is not about context length. It is about leveraging known attention properties to put critical information in high-attention positions."
+    }
+  ]
+}

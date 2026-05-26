@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "02-prompt-fundamentals",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your prompt says: 'Summarize this document.' You run it against 20 documents and get outputs ranging from 2 sentences to 4 paragraphs, sometimes as bullets, sometimes as prose. The content is usually correct but the format is unpredictable.",
+      "question": "Which principle is most clearly missing, and what is the minimal fix?",
+      "options": [
+        "A. Role/Persona: add 'You are a summarization assistant.'",
+        "B. Output Format: specify length and structure explicitly, e.g., 'Summarize in exactly 3 bullet points, one sentence each.'",
+        "C. Constraints: add 'Do not use markdown.'",
+        "D. Tone: specify 'Use formal language.'"
+      ],
+      "answer": "B",
+      "explanation": "Output format is the most clearly missing principle. The prompt does not specify length, structure, or format, so the model fills the gap with training priors, producing high variance. Adding an explicit format specification ('3 bullet points, one sentence each') is the minimal fix. The other principles may also be missing, but format is the direct cause of the variance described."
+    },
+    {
+      "id": "c2",
+      "scenario": "You have a prompt that extracts product names from reviews. It works correctly 95% of the time. The 5% failure case is when the model adds a sentence like 'I hope this helps!' after the list of names. You want to eliminate this without rewriting the whole prompt.",
+      "question": "Which principle addresses this specific failure, and what would you add?",
+      "options": [
+        "A. Task Definition: rewrite the task to be more explicit about what to extract.",
+        "B. Examples: add an example of the correct output format.",
+        "C. Constraints: add 'Do not add any commentary, explanation, or closing remarks.'",
+        "D. Tone: specify 'Be direct and terse.'"
+      ],
+      "answer": "C",
+      "explanation": "The failure is a specific unwanted output behavior: added commentary. This is exactly what constraints address. A negative constraint ('do not add commentary') directly suppresses the failure mode. Tone could also help but is less precise. Constraints are the right tool when the model is producing correct core content but adding unwanted surrounding text."
+    },
+    {
+      "id": "c3",
+      "scenario": "A team maintains 8 separate Python files, each with a hardcoded string for a different prompt. A model update changes how the model interprets the phrase 'be concise.' Three files need updating but nobody knows which ones have that phrase.",
+      "question": "What architectural change would have prevented this problem?",
+      "options": [
+        "A. Use a larger model that doesn't require such specific instructions.",
+        "B. Store prompts as named constants in a central module or use a PromptTemplate class, making each prompt a single source of truth.",
+        "C. Add version numbers to each prompt string.",
+        "D. Use a database to store prompts instead of Python files."
+      ],
+      "answer": "B",
+      "explanation": "Hardcoded prompts scattered across files have no single source of truth. When a prompt needs to change, you need to find every copy. The fix is to treat prompts as code artifacts: named constants in a shared module, PromptTemplate instances with explicit interfaces, or a prompt registry. A database is overkill for most teams. Version numbers help tracking but don't solve the discoverability problem."
+    },
+    {
+      "id": "c4",
+      "scenario": "You write a prompt with all 6 principles applied: task, role, format, example, constraints, tone. You test it 10 times and get consistent format 8/10 times. The 2 failing cases both involve a specific edge case: when the input has no clear assignees, the model invents one.",
+      "question": "How do you fix this without rewriting the entire prompt?",
+      "options": [
+        "A. Add more examples showing the correct output format.",
+        "B. Add a constraint that explicitly handles the edge case: 'If no person is clearly assigned to a task, write UNASSIGNED as the person.'",
+        "C. Switch to a more powerful model.",
+        "D. Increase max_tokens to give the model more room to reason."
+      ],
+      "answer": "B",
+      "explanation": "The failure is a specific edge case: the model invents assignees when none exist. This is a missing constraint, not a format or example problem. Adding an explicit rule for the edge case ('write UNASSIGNED if no person is clearly assigned') closes the gap without touching the rest of the prompt. Edge cases are the most common source of residual variance after the 6 principles are applied."
+    },
+    {
+      "id": "c5",
+      "scenario": "You're building a prompt for a technical documentation tool. You've defined the task clearly and specified JSON output format. A junior engineer asks: 'Why do we need to specify the role? Can't we just skip that?'",
+      "question": "What is the practical argument for including a role specification?",
+      "options": [
+        "A. The API requires a role in the system prompt.",
+        "B. A role activates relevant training patterns and sets an implicit quality bar, producing outputs that match the domain expertise implied by the role.",
+        "C. Roles make prompts longer, which gives the model more context to work with.",
+        "D. Without a role, the model defaults to casual language."
+      ],
+      "answer": "B",
+      "explanation": "A role like 'You are a senior technical writer' activates patterns from the model's training data associated with high-quality technical writing: precise vocabulary, structured explanations, appropriate formality. It sets an implicit quality bar. Without it, the model defaults to general-purpose patterns that may produce technically correct but stylistically inconsistent outputs. Roles are a lightweight way to shift the model's prior toward the right output space."
+    },
+    {
+      "id": "c6",
+      "scenario": "You have a PromptTemplate that requires 3 variables: role, task, and input. A developer calls template.render(role='analyst', task='analyze this') and deploys. The code works in dev where input always exists, but crashes in production when input is sometimes empty.",
+      "question": "What is the correct fix in the PromptTemplate class?",
+      "options": [
+        "A. Catch the KeyError in render() and return an empty string.",
+        "B. Validate that all required variables are present and non-empty before rendering, and raise a ValueError with a clear error message if any are missing.",
+        "C. Make input an optional variable with a default value.",
+        "D. Add try/except around the template.format() call."
+      ],
+      "answer": "B",
+      "explanation": "The PromptTemplate's render() method should validate required variables before rendering. A ValueError with a clear message ('Missing required variables: [input]') fails fast and loudly in development, preventing silent production failures. Making variables optional with defaults is a design decision, but it hides the bug in this case. Catching KeyError is masking, not fixing. Fail-fast validation is the right pattern for required parameters."
+    },
+    {
+      "id": "c7",
+      "scenario": "You run an ablation test on your prompt: you remove the 'Examples' principle and run 10 tests. The format consistency drops from 10/10 to 6/10. You remove the 'Constraints' principle instead and consistency drops to 7/10. The task and format specification alone give 8/10.",
+      "question": "What does this ablation test tell you about this specific prompt?",
+      "options": [
+        "A. Examples are the most important principle for all prompts.",
+        "B. For this specific prompt, examples do more work than constraints. Both matter, but if you had to choose one to optimize first, it would be the examples.",
+        "C. The prompt needs all 6 principles applied at maximum detail.",
+        "D. An 8/10 baseline without examples means the format description is sufficient."
+      ],
+      "answer": "B",
+      "explanation": "Ablation tests tell you which principles are doing the most work for your specific task and model. In this case, removing examples causes a larger consistency drop than removing constraints, so examples have more impact here. This is task-specific: a different task might show the opposite. Use ablation results to prioritize effort: if examples drop consistency from 10 to 6, invest in more and better examples. Don't generalize from one task to a universal principle ordering."
+    },
+    {
+      "id": "c8",
+      "scenario": "You're reviewing a prompt for a legal document classification system. The prompt says: 'Classify the document as CONTRACT, NDA, or OTHER.' The output format is implied by the options listed. There are no constraints and no examples.",
+      "question": "What specific failure mode is most likely in production, and which principle would fix it?",
+      "options": [
+        "A. The model will sometimes output lowercase 'contract' instead of 'CONTRACT'. Fix: add constraint 'Always use uppercase.'",
+        "B. The model will output a valid class label but also explain its reasoning, adding extra text the downstream parser can't handle. Fix: add constraint 'Output only the class label, nothing else.'",
+        "C. The model will refuse to classify some documents. Fix: add role 'You are a legal expert.'",
+        "D. The model will sometimes output 'AGREEMENT' instead of 'CONTRACT'. Fix: add examples showing edge cases."
+      ],
+      "answer": "B",
+      "explanation": "The most common failure mode for classification prompts without constraints is that the model adds explanation alongside the label: 'CONTRACT (this appears to be a service agreement because...)'. Downstream parsers expecting a single word will break. The fix is a constraint: 'Output only the class label. Do not add explanation or reasoning.' This is the most critical missing principle. The model has the right information to classify; it just needs to be told to output only the label."
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "01-request-anatomy",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You build a customer support chatbot. After 15 turns, the model starts asking the user for their account number again, even though the user provided it in turn 2. Your code has not changed.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. The model's context window has been exceeded and it lost turn 2.",
+        "B. The model has a bug where it forgets information after N turns.",
+        "C. Your conversation management code is truncating old turns to reduce token costs, and turn 2 is being dropped.",
+        "D. The system prompt is overriding the user's information."
+      ],
+      "answer": "C",
+      "explanation": "The model has no memory. The only way it knows the account number is if turn 2 is in the messages array. When the model stops seeing it, the account number is gone. The most common cause in production is history truncation logic that drops old turns without preserving critical context. The model itself does not forget; it just stops receiving the information."
+    },
+    {
+      "id": "c2",
+      "scenario": "You want to set up Claude as a JSON-only responder for a data pipeline. You add 'Always respond in JSON' to the first user message instead of the system parameter.",
+      "question": "What is the practical difference between putting this instruction in the user message vs. the system parameter?",
+      "options": [
+        "A. No difference. The model treats all instructions equally regardless of which role they come from.",
+        "B. The system parameter is read first and sets the frame for all subsequent messages. A user-message instruction is more likely to be overridden by subsequent user turns that don't mention JSON.",
+        "C. User message instructions are always stronger than system instructions.",
+        "D. The system parameter only works for single-turn requests."
+      ],
+      "answer": "B",
+      "explanation": "The system parameter establishes the model's baseline behavior and is treated as authoritative context. Instructions in the user message are part of the conversation flow and can be diluted when subsequent user messages shift the context. For persistent behavioral constraints like output format, use the system parameter."
+    },
+    {
+      "id": "c3",
+      "scenario": "You send this messages array: [{role: 'user', content: 'Hello'}, {role: 'user', content: 'Are you there?'}]. The API returns an error.",
+      "question": "What is wrong and how do you fix it?",
+      "options": [
+        "A. The messages array cannot have more than one entry.",
+        "B. The 'Hello' message is too short and triggers a validation error.",
+        "C. Two consecutive user messages violate the alternating role requirement. Add an assistant message between them or merge the two user messages into one.",
+        "D. The content strings need to be wrapped in content block objects, not plain strings."
+      ],
+      "answer": "C",
+      "explanation": "The Anthropic API requires user and assistant messages to alternate. Two consecutive user messages are a hard error. The fix is to either merge the messages into a single user turn, or to include an assistant response between them if the conversation actually had one."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are building a debugging tool. After a production incident, you want to reproduce the exact model behavior that caused the bug. You have the logs but they only show the final user message and the model's response.",
+      "question": "What additional information do you need to fully reproduce the bug?",
+      "options": [
+        "A. The model version and temperature setting.",
+        "B. The complete messages array (all turns) and the system parameter that were sent in the failing API call.",
+        "C. The user's account ID and session token.",
+        "D. The model's internal reasoning chain."
+      ],
+      "answer": "B",
+      "explanation": "The model's output is fully determined by the payload sent to the API: the messages array and the system parameter (plus model, temperature, and max_tokens). To reproduce a bug, you need the exact payload. This is why logging the full messages array on every production call is not optional. The final user message alone is insufficient because the model's behavior depends on all prior context."
+    },
+    {
+      "id": "c5",
+      "scenario": "A developer claims: 'I don't need to worry about the messages array because I'm using a chat framework that handles all that automatically.' You're doing a code review.",
+      "question": "What specific production risk does this attitude create?",
+      "options": [
+        "A. None. Frameworks handle conversation management correctly by design.",
+        "B. The framework may truncate, reorder, or modify messages in ways that cause subtle bugs. Without understanding the messages array, you cannot debug unexpected model behavior.",
+        "C. Frameworks always send more tokens than necessary, increasing API costs.",
+        "D. The model behaves differently when called through a framework."
+      ],
+      "answer": "B",
+      "explanation": "Frameworks manage conversation history using their own logic: windowing, summarization, filtering. When the model behaves unexpectedly, the first step is always 'what did the model receive?' If the developer cannot inspect or understand the messages array the framework sends, they cannot debug the problem. Understanding request anatomy is the prerequisite for debugging any framework that sits on top of it."
+    },
+    {
+      "id": "c6",
+      "scenario": "You want the model to continue a response it started in a previous turn. You add a partially completed assistant message as the last entry in the messages array before calling the API.",
+      "question": "What effect does this have?",
+      "options": [
+        "A. It causes an API error because the last message must always be from the user.",
+        "B. The model ignores the prefilled assistant content and generates a fresh response.",
+        "C. The model treats the prefilled assistant content as its own previous output and continues from where it left off.",
+        "D. The model will repeat the prefilled content verbatim and then add new content."
+      ],
+      "answer": "C",
+      "explanation": "This is the assistant prefill technique. When the last message in the array is an assistant message, the model continues generating from that point. It treats the content as its own prior output. This is useful for enforcing output formats or steering the response. Note: the Anthropic API requires the last message to be from the user in standard calls, but prefill is supported as a specific pattern."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your agent processes a 20-turn conversation. You check response.usage.input_tokens after each call. You notice the input token count grows by roughly the same amount each turn.",
+      "question": "What does this confirm about how the API works?",
+      "options": [
+        "A. The model is caching previous turns and only processing new content.",
+        "B. The model sends only the last 2-3 turns to save bandwidth.",
+        "C. The entire messages array is sent and processed on every API call. Input tokens grow with conversation length because the full history is included each time.",
+        "D. Token count growth indicates a memory leak in the SDK."
+      ],
+      "answer": "C",
+      "explanation": "Input tokens reflect the complete payload: system prompt plus every message in the array. Because the full history is sent on every call, input tokens grow approximately linearly with conversation length. This is the empirical proof that there is no server-side session state. Every call is stateless from the API's perspective."
+    },
+    {
+      "id": "c8",
+      "scenario": "You send a request and receive stop_reason: 'max_tokens'. The response text ends mid-sentence.",
+      "question": "What is happening and what is the correct fix?",
+      "options": [
+        "A. The model encountered an error and stopped early. Retry the request.",
+        "B. The model's context window was exceeded. Reduce the size of the messages array.",
+        "C. The output reached the max_tokens limit you set. Increase max_tokens to allow a longer response.",
+        "D. The system prompt is conflicting with the user message. Remove the system prompt."
+      ],
+      "answer": "C",
+      "explanation": "stop_reason 'max_tokens' means the output was cut off because it reached the max_tokens parameter, not an error. The fix is to increase max_tokens if you need longer responses. Context window issues produce different errors. The max_tokens parameter controls output length; the context window limits total input + output tokens combined."
+    }
+  ]
+}

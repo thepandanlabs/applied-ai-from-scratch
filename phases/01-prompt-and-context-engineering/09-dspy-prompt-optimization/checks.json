@@ -1,0 +1,98 @@
+[
+  {
+    "id": "09-q1",
+    "question": "Your support ticket classifier has been stuck at 76% accuracy despite three rounds of manual prompt rewriting. You have 80 labeled examples. What is the most appropriate next step?",
+    "options": [
+      "Write a more detailed system prompt explaining the categories in depth",
+      "Use DSPy BootstrapFewShot to compile an optimized module against your labeled examples",
+      "Switch to a larger model without changing the prompt",
+      "Add more few-shot examples manually by reading through the training set"
+    ],
+    "answer": 1,
+    "explanation": "You have enough labeled data (80 examples, well above the 20-example minimum) and have hit the ceiling of manual tuning. DSPy BootstrapFewShot systematically searches for the best demonstration subset against your metric, which is exactly what manual tuning approximates by hand. Switching models or writing more prose does not address the systematic search problem."
+  },
+  {
+    "id": "09-q2",
+    "question": "You run DSPy BootstrapFewShot. The accuracy on your training set improves from 72% to 91%, but accuracy on your held-out dev set stays at 73%. What is the most likely problem?",
+    "options": [
+      "The optimizer is not working correctly and should be rerun",
+      "Your metric function has a bug that rewards wrong predictions",
+      "The dev set examples leaked into the training set the optimizer saw, causing overfitting",
+      "The model is too small to use DSPy"
+    ],
+    "answer": 2,
+    "explanation": "When training accuracy improves dramatically but dev accuracy does not move, the optimizer is overfitting to the training examples. The most common cause is that dev set examples appear in the training set, so the optimizer selects demonstrations that match dev examples exactly rather than generalizing. Always hold out dev examples strictly before calling optimizer.compile()."
+  },
+  {
+    "id": "09-q3",
+    "question": "A colleague asks: 'What is the difference between compile-time and runtime in DSPy?' Which answer is correct?",
+    "options": [
+      "Compile-time is when you write the code; runtime is when you run it in production",
+      "Compile-time is the expensive optimizer step that runs once against your training data; runtime is each individual inference call using the compiled prompt",
+      "Compile-time refers to Python bytecode compilation; runtime is when the LLM generates a response",
+      "Compile-time optimizes the model weights; runtime uses those weights for inference"
+    ],
+    "answer": 1,
+    "explanation": "DSPy compile-time is when the optimizer runs against your training set to find the best instructions and demonstrations. It is expensive (many LLM calls) but happens once. Runtime is every subsequent inference call using the compiled result, which costs exactly one LLM call. The cost of compilation is amortized across all runtime calls."
+  },
+  {
+    "id": "09-q4",
+    "question": "You are building a pipeline to classify support tickets. You have 15 labeled examples so far. Should you use DSPy now?",
+    "options": [
+      "Yes, DSPy works with any number of examples, even one",
+      "Yes, but only if you use MIPROv2 instead of BootstrapFewShot",
+      "No, build more labeled data first: 15 examples is below the minimum for reliable optimization",
+      "No, DSPy only works on tasks with more than 10 categories"
+    ],
+    "answer": 2,
+    "explanation": "BootstrapFewShot requires at least 20 examples for reliable results, and more data produces more consistent improvements. With 15 examples, the optimizer does not have enough signal to distinguish genuinely useful demonstrations from lucky ones. The right step is to label more examples before running optimization."
+  },
+  {
+    "id": "09-q5",
+    "question": "You have 300 labeled examples. You run BootstrapFewShot and see a 3-point accuracy improvement. You have 2 hours before the deadline. What is the right call?",
+    "options": [
+      "Ship the 3-point improvement - any improvement is worth taking",
+      "Try MIPROv2 with auto='light' - with 300 examples and 2 hours, it may produce a larger improvement",
+      "Abandon DSPy and go back to manual prompt engineering",
+      "Add more labeled examples until you have 1000 before attempting MIPROv2"
+    ],
+    "answer": 1,
+    "explanation": "With 300 labeled examples and 2 hours, MIPROv2 auto='light' is a reasonable bet. BootstrapFewShot only optimizes demonstrations. MIPROv2 also searches over instructions, which is often where larger accuracy gains come from when you have sufficient data. The 3-point improvement from BootstrapFewShot suggests the task is amenable to optimization; MIPROv2 can go further."
+  },
+  {
+    "id": "09-q6",
+    "question": "Your team ships a new version of the Claude model. Your compiled DSPy program was compiled against claude-3-haiku. What should you do?",
+    "options": [
+      "Nothing - compiled state is model-agnostic and transfers across model versions",
+      "Recompile the optimizer against the new model version, then evaluate on dev_set before shipping",
+      "Delete the compiled state and go back to manual prompts for the new model",
+      "Load the compiled state and run it unchanged - the new model will automatically improve accuracy"
+    ],
+    "answer": 1,
+    "explanation": "Compiled DSPy state is model-specific. The instructions and demonstrations selected were optimized for one model's response patterns. A different model version may respond differently to the same prompts. The correct procedure is to recompile against the new model, evaluate on dev_set, confirm accuracy is maintained or improved, then ship."
+  },
+  {
+    "id": "09-q7",
+    "question": "Your accuracy_metric function returns True for every prediction during compilation. After compiling, the optimized module performs identically to the baseline. What is the root cause?",
+    "options": [
+      "The optimizer found the optimal prompt on the first try",
+      "The metric has a bug that always returns True, so the optimizer has no signal to optimize against",
+      "BootstrapFewShot does not improve accuracy for this type of task",
+      "The training set is too large for the optimizer to process"
+    ],
+    "answer": 1,
+    "explanation": "If the metric always returns True, every candidate demonstration looks perfect to the optimizer. It cannot distinguish good prompts from bad ones. The optimizer selects random demonstrations with no meaningful signal, producing a compiled module that performs like the baseline. Always test your metric function manually on a known-wrong prediction before running compilation."
+  },
+  {
+    "id": "09-q8",
+    "question": "A team wants to recompile their DSPy classifier on every deployment to production. Is this a good practice?",
+    "options": [
+      "Yes, recompiling ensures the prompt is always optimal for the latest data",
+      "No, compiled state is stable until the model or label distribution changes significantly; recompiling on every deploy wastes LLM budget and risks degrading performance without a quality check",
+      "Yes, but only if you also fine-tune the model on each deploy",
+      "No, because DSPy does not support recompilation after the first compile"
+    ],
+    "answer": 1,
+    "explanation": "Compiled DSPy state should be treated like a trained model artifact, not regenerated on every deploy. Recompile only when the model version changes or the label distribution shifts significantly. Each recompile costs LLM API calls and can produce worse results if the training set has changed without careful validation. Save the compiled state, version it, and evaluate before promoting to production."
+  }
+]

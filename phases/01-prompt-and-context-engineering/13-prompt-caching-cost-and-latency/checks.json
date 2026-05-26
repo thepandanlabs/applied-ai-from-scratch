@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "13-prompt-caching-cost-and-latency",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You add cache_control to your 800-token system prompt. After deploying, you check usage.cache_read_input_tokens and it is always 0. Your model is claude-3-5-haiku-20241022.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. The cache_control syntax is incorrect and being silently ignored.",
+        "B. The system prompt is below Haiku's 2048-token minimum for caching. The breakpoint has no effect.",
+        "C. The cache TTL of 5 minutes has expired between your test calls.",
+        "D. Output tokens are not cached and the model returns only uncached tokens."
+      ],
+      "answer": "B",
+      "explanation": "Claude 3.5 Haiku requires a minimum of 2048 tokens in the cached prefix. An 800-token system prompt does not meet this threshold, so cache_control is silently ignored and all tokens are billed at full input price. The fix is either to expand the system prompt or switch to a Sonnet-family model with a 1024-token minimum."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your API call caches a 10,000-token system prompt. The second call to the same endpoint returns cache_read_input_tokens=0 and cache_creation_input_tokens=10000. You made the second call 8 minutes after the first.",
+      "question": "What happened?",
+      "options": [
+        "A. The cache was invalidated because the output tokens changed between calls.",
+        "B. The cache TTL expired (5 minutes) before the second call arrived, triggering a new cache write.",
+        "C. The breakpoint was placed incorrectly and the prefix did not match.",
+        "D. Caching only works when both calls are made from the same IP address."
+      ],
+      "answer": "B",
+      "explanation": "Cache entries expire after 5 minutes of non-use. An 8-minute gap between calls means the first cache entry had already expired. The second call had to write a new cache entry, charging the cache write rate instead of the cache read rate. If your request rate is lower than one request per 5 minutes, caching may not be beneficial."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are building a multi-tenant document Q&A service. Each customer has their own unique system prompt prefix containing their company name and subscription tier. You add cache_control to all system prompts. After two weeks, your cache hit rate is 3%.",
+      "question": "Why is the cache hit rate so low and how do you fix it?",
+      "options": [
+        "A. You need to increase cache TTL to 30 minutes by setting a longer expiry in cache_control.",
+        "B. Customer-specific data in the prefix creates unique cache keys per customer, so each customer hits the cache only after their own recent calls. Separate the shared static instructions from the per-customer dynamic data. Cache only the static portion.",
+        "C. The document text must come before the system prompt for caching to work.",
+        "D. cache_control only works on Opus models; Sonnet and Haiku do not support it."
+      ],
+      "answer": "B",
+      "explanation": "The cache key is the exact token sequence before the breakpoint. If company name and subscription tier are in the prefix, each unique customer creates a separate cache entry. With hundreds of customers, each cache entry is read rarely. The fix: put shared, static instructions before the breakpoint (these are the same for all customers and cache effectively). Put customer-specific data after the breakpoint, where it does not affect the shared cache."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your service makes 1,000 requests per day using a 5,000-token system prompt. You are deciding whether to add caching. Your expected cache hit rate at this volume is 95% (requests are well within the 5-min TTL window throughout the day).",
+      "question": "Roughly how much does caching reduce your monthly system-prompt input token cost?",
+      "options": [
+        "A. About 10% - caching only helps with the largest prompts.",
+        "B. About 50% - you still pay for cache writes on cache misses.",
+        "C. About 80-90% - 95% of calls pay cache read price (~10% of standard input price).",
+        "D. 100% - cached tokens are free."
+      ],
+      "answer": "C",
+      "explanation": "With a 95% cache hit rate, 95% of calls pay the cache read rate (~10% of standard input price). 5% of calls pay the cache write rate (~125% of standard input price). Weighted average: (0.95 x 0.10) + (0.05 x 1.25) = 0.095 + 0.0625 = ~15.75% of uncached cost, saving roughly 84% on system prompt tokens. Caching is highly effective at this volume."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are caching a large reference document that is sent with every request. The document has a timestamp prepended: 'Document last updated: 2026-05-26T14:23:00Z'. This timestamp is refreshed on every deployment.",
+      "question": "What problem does this create?",
+      "options": [
+        "A. The timestamp increases the document's token count above the caching threshold.",
+        "B. Any change to content before the cache_control breakpoint invalidates the entire cache entry. A changing timestamp in the document prefix guarantees cache misses on every deployment.",
+        "C. Timestamps cause the model to weight recent information differently, reducing accuracy.",
+        "D. The UTC timezone format is not supported in cached content blocks."
+      ],
+      "answer": "B",
+      "explanation": "The cache key is the exact token sequence up to the breakpoint. The timestamp changes on every deployment, which means the cached prefix changes, which means every request after a deployment starts with a cache miss and triggers a new cache write. Move the timestamp out of the cached content block and put it in the user message or after the cache_control breakpoint."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your system has a single endpoint that processes 3 requests per hour using a 15,000-token system prompt. You add cache_control to the system prompt and deploy. After one week, your bill is higher than before caching.",
+      "question": "Why did costs increase?",
+      "options": [
+        "A. 15,000-token prompts are too large to cache efficiently.",
+        "B. At 3 requests per hour, the cache expires (5-min TTL) long before the next request. Each request triggers a cache write at elevated price with no cache reads to amortize it.",
+        "C. cache_control charges a flat fee per request in addition to token costs.",
+        "D. Caching is billed at the output token rate, which is higher than input."
+      ],
+      "answer": "B",
+      "explanation": "3 requests per hour means 1 request every 20 minutes on average. The 5-minute cache TTL expires before the next request arrives, so every request is a cache write (charged at ~125% of standard input price) with zero cache reads. You pay the cache write premium on every single call and receive no discount. Remove cache_control for low-volume endpoints."
+    },
+    {
+      "id": "c7",
+      "scenario": "You want to cache both a shared system prompt (3,000 tokens) and a company-specific policy document (8,000 tokens) that is the same for all users of that company. The user's actual question is dynamic.",
+      "question": "What is the correct cache_control placement?",
+      "options": [
+        "A. Put cache_control on the user question only, since that changes each call.",
+        "B. Put cache_control after the system prompt and after the policy document, with the user question having no cache_control.",
+        "C. Put a single cache_control after the user question to cache the entire conversation.",
+        "D. cache_control can only be placed on system prompts, not on message content."
+      ],
+      "answer": "B",
+      "explanation": "Two breakpoints: one after the system prompt (caches the static instructions) and one after the policy document (caches the document). The user question has no cache_control because it changes every call and should not be part of the cached prefix. This allows both the system prompt and the document to be cached independently, maximizing savings on the stable 11,000 tokens while the 50-token question is processed fresh each time."
+    },
+    {
+      "id": "c8",
+      "scenario": "You check usage.cache_read_input_tokens on your first call to a new endpoint. It shows 5,000 tokens even though you just deployed this endpoint for the first time today.",
+      "question": "What explains this?",
+      "options": [
+        "A. A bug in the SDK: cache_read_input_tokens is always non-zero on the first call.",
+        "B. Another request from your application (a warm-up call, a health check, or a different code path) already wrote this cache entry earlier in the day.",
+        "C. The model pre-caches common system prompts automatically.",
+        "D. cache_read_input_tokens counts the tokens that were available for caching, not tokens actually read from cache."
+      ],
+      "answer": "B",
+      "explanation": "If cache_read_input_tokens is non-zero on what you believe is the first call, another request using the exact same prefix (before the cache_control breakpoint) already wrote the cache entry. Common sources: startup health checks, integration test suites, or a previous deployment that used the same system prompt. This is expected behavior and means the cache is working correctly."
+    }
+  ]
+}

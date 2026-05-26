@@ -1,0 +1,109 @@
+{
+  "version": "1.0",
+  "lesson": "03-few-shot-and-chain-of-thought",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You're building a support ticket severity classifier. Zero-shot accuracy is 70%. You add 6 examples (1-2 per severity tier) to the prompt and accuracy jumps to 88%. You run the same 6-example prompt 5 more times and get 88%, 86%, 88%, 87%, 88%. You need 95%+.",
+      "question": "What does the variance pattern tell you, and what should you try next?",
+      "options": [
+        "A. The variance is too high; switch to a deterministic model.",
+        "B. Few-shot has reached its ceiling for this task. The remaining errors are likely on ambiguous edge cases that need reasoning. Apply CoT for those cases.",
+        "C. Add more examples until you reach 12-15 total.",
+        "D. The variance is normal; 88% is the realistic ceiling for this task."
+      ],
+      "answer": "B",
+      "explanation": "Low variance (86-88%) with a ceiling below your target means few-shot is producing consistent but insufficient results. The remaining 12% errors are likely concentrated on ambiguous tickets where scope, impact, or workaround status requires reasoning, not pattern matching. CoT addresses exactly this gap. Try applying CoT to the tickets where few-shot fails to understand if reasoning improves those specific cases."
+    },
+    {
+      "id": "c2",
+      "scenario": "You add chain-of-thought to a product name extraction task: 'Think step by step and extract all product names from this review.' The accuracy stays the same but output tokens increase by 10x.",
+      "question": "What does this result tell you about CoT and this specific task?",
+      "options": [
+        "A. CoT is broken for extraction tasks.",
+        "B. The model needs more examples before CoT will work.",
+        "C. Product name extraction does not require multi-step reasoning. CoT adds cost with no accuracy benefit. Remove it and use few-shot or zero-shot.",
+        "D. CoT output tokens should not increase this much; there is a prompt error."
+      ],
+      "answer": "C",
+      "explanation": "CoT improves accuracy on tasks that require multi-step reasoning: comparisons, calculations, inference chains. Extraction tasks are pattern-matching: find text that matches a type. There are no reasoning steps to benefit from. CoT forced the model to generate reasoning that wasn't needed, increasing cost without improving accuracy. For extraction, few-shot examples that demonstrate format are more effective."
+    },
+    {
+      "id": "c3",
+      "scenario": "You have 20 labeled severity examples. You build a few-shot prompt using all 20. The accuracy on new tickets drops compared to your 6-example prompt.",
+      "question": "Why did adding more examples hurt performance, and what is the fix?",
+      "options": [
+        "A. 20 examples exceed the context window.",
+        "B. Too many examples dilute the pattern the model is trying to learn. The model spends more attention on example diversity than on the pattern. Use 3-6 well-chosen examples per label.",
+        "C. The 20 examples include incorrect labels that are misleading the model.",
+        "D. Few-shot performance always decreases after 10 examples due to attention limits."
+      ],
+      "answer": "B",
+      "explanation": "More examples are not always better. After a certain point (typically 3-6 total, 1-2 per class for classification), additional examples add noise and dilute the pattern. The model tries to reconcile diverse examples rather than extracting the core signal. Curate a small, high-quality, representative set rather than maximizing quantity. This is a common counterintuitive finding when tuning few-shot prompts."
+    },
+    {
+      "id": "c4",
+      "scenario": "You're using the SDK messages array pattern for few-shot. Your examples are stored as a list of (input, output) tuples loaded from a YAML config file. A new engineer asks why you're not just hardcoding the examples in the prompt string.",
+      "question": "What is the practical production advantage of the messages array approach?",
+      "options": [
+        "A. The messages array is processed faster by the API.",
+        "B. Examples stored separately from prompt logic can be updated without changing code. You can A/B test example sets, add domain-specific examples per customer, or reload examples without a deployment.",
+        "C. The messages array supports more examples than inline prompt strings.",
+        "D. Inline examples cause the model to ignore the system prompt."
+      ],
+      "answer": "B",
+      "explanation": "The messages array pattern decouples examples from code. When examples need updating (new edge cases, domain drift, accuracy improvements), you change the config, not the code. This enables: A/B testing different example sets without deployment, customer-specific examples loaded at runtime, and example versioning in git. These are operational advantages that matter in production systems where prompt tuning happens continuously."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your CoT classifier produces this output: 'The ticket mentions a payment issue affecting EU users. 1. Scope: regional impact, not all users. 2. Core function: payment is core. 3. Workaround: unclear. Given regional scope and payment impact, SEVERITY: Critical.' Your ground truth label is High.",
+      "question": "The CoT reasoning reached the wrong conclusion. What likely went wrong?",
+      "options": [
+        "A. CoT cannot be used for classification tasks.",
+        "B. The reasoning chain weighted 'payment is core' too heavily relative to 'regional scope'. The CoT instruction did not specify how to weight competing factors. Update the system prompt to add explicit weighting rules.",
+        "C. The model should have been given more examples of High tickets before applying CoT.",
+        "D. The correct answer is Critical, not High. The ground truth label is wrong."
+      ],
+      "answer": "B",
+      "explanation": "CoT makes the reasoning visible, which is valuable for debugging. In this case, the model correctly identified the relevant factors but weighted them incorrectly. The fix is to add explicit weighting rules to the system prompt: 'Regional impact (less than 50% of users) caps severity at High, even if the affected feature is critical.' CoT failing is often a prompt specification problem, not a model limitation. The visible reasoning chain tells you exactly where to intervene."
+    },
+    {
+      "id": "c6",
+      "scenario": "You combine few-shot and CoT: your examples each include a reasoning chain before the label. After adding this, accuracy on ambiguous cases improves from 70% to 92%, but accuracy on clear-cut cases drops from 99% to 95%.",
+      "question": "How do you get the best of both without the regression on clear cases?",
+      "options": [
+        "A. Remove the CoT reasoning from the examples so they are labels only.",
+        "B. Use a routing layer: fast few-shot (no CoT) for high-confidence cases, few-shot+CoT for ambiguous ones.",
+        "C. Switch to a larger model that handles both without regression.",
+        "D. Accept the trade-off. 95% on clear cases is still good."
+      ],
+      "answer": "B",
+      "explanation": "Different prompt strategies are optimal for different input types. A routing layer applies the cheapest sufficient technique: plain few-shot for clear cases (fast, accurate, cheap), few-shot+CoT for ambiguous cases (slower, more expensive, more accurate). Confidence routing can be as simple as checking whether the CoT reasoning shows uncertainty markers ('unclear', 'could be', 'depends'). This is a standard production pattern for balancing cost and accuracy across input distributions."
+    },
+    {
+      "id": "c7",
+      "scenario": "You need to add few-shot examples to a prompt for a financial document extraction task. You have 50 labeled examples. You need to pick 6. How do you choose?",
+      "options": [
+        "A. Pick the 6 most recent examples to ensure they reflect current document formats.",
+        "B. Pick 6 random examples to get unbiased coverage.",
+        "C. Pick examples that cover the full output distribution, include at least one edge case, and are representative of the actual input distribution you'll encounter in production.",
+        "D. Pick the 6 examples where the extraction was most straightforward to avoid confusing the model."
+      ],
+      "answer": "C",
+      "explanation": "Few-shot example selection is a curation task. Cover the full output distribution (all document types the model will encounter). Include edge cases that are common in production (documents with missing fields, unusual formatting). Avoid cherry-picking easy cases: the model has already learned from clean examples in pretraining. Recency matters only if the format has genuinely changed. Representative over random; diverse over homogeneous; realistic over easy."
+    },
+    {
+      "id": "c8",
+      "scenario": "A developer argues: 'CoT works because it makes the model think harder. The model is allocating more compute to reasoning.' You're explaining the actual mechanism.",
+      "question": "What is the correct mechanistic explanation for why CoT improves reasoning on multi-step tasks?",
+      "options": [
+        "A. CoT increases the model's temperature, which produces more diverse and creative outputs.",
+        "B. CoT allocates more memory to the problem by storing intermediate steps.",
+        "C. CoT forces the model to generate intermediate reasoning tokens before the answer token. Each token becomes part of the context the model uses when predicting the next token, giving it more information at the point of committing to the final answer.",
+        "D. CoT works by activating a different neural pathway in the model that is better suited to reasoning."
+      ],
+      "answer": "C",
+      "explanation": "Language models generate one token at a time. Each generated token becomes part of the context for the next prediction. When CoT generates reasoning steps before the answer, the model has those steps available as context when it finally generates the answer token. Without CoT, the model must jump directly from the input to the answer with no intermediate context. CoT is a way of extending the model's 'working memory' by externalizing intermediate steps into the output."
+    }
+  ]
+}

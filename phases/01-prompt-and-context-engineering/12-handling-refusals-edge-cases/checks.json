@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "12-handling-refusals-edge-cases",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your document extraction pipeline is returning responses like 'I don't have access to the uploaded file. Could you paste the text directly?' Your code uploads a PDF and sends the filename in the user message.",
+      "question": "What refusal category is this, and what is the correct fix?",
+      "options": [
+        "A. Safety refusal. Reframe the request with an educational justification.",
+        "B. Capability mismatch. The model cannot access filesystem paths; paste the extracted text directly in the prompt.",
+        "C. Ambiguity refusal. Add an example of the expected JSON output.",
+        "D. Unknown failure. Retry the same request up to 5 times."
+      ],
+      "answer": "B",
+      "explanation": "The model receives only the text in the API messages array. Sending a filename does not give it file access. This is a capability mismatch: the fix is to extract the text before calling the model and embed it in the user message."
+    },
+    {
+      "id": "c2",
+      "scenario": "You ask Claude to 'summarize this support ticket and classify its urgency' with no format instructions. The response is: 'Could you clarify what urgency levels you use and what format you need for the summary?'",
+      "question": "Which recovery strategy resolves this most efficiently?",
+      "options": [
+        "A. Add 'please just answer the question' to the prompt.",
+        "B. Retry the same prompt with temperature=0.",
+        "C. Add an example output showing the expected format, or add: 'Use Low/Medium/High urgency; if format unclear, make a reasonable choice and state it.'",
+        "D. Switch to a larger model that handles ambiguous requests better."
+      ],
+      "answer": "C",
+      "explanation": "This is an ambiguity refusal: the model lacks specific information (urgency scale, output format) needed to complete the task. Adding a concrete example or instructing the model to state its assumptions resolves this in one retry without changing models."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your refusal classifier has a false positive rate of 12% on normal success responses. It incorrectly flags responses containing the word 'violates' in contexts like 'this contract violates standard terms' as safety refusals.",
+      "question": "What is the best fix?",
+      "options": [
+        "A. Remove 'violates' from the safety signal list entirely.",
+        "B. Require the safety signal phrase to appear in the first 50 characters of the response, where refusal preambles typically occur.",
+        "C. Switch from keyword matching to an LLM-based classifier for all responses.",
+        "D. Lower the refusal threshold to only flag responses under 20 characters."
+      ],
+      "answer": "B",
+      "explanation": "Safety refusals front-load the refusal phrase: 'I can't help with...' appears at the start. Contract text that mentions 'violates' does so mid-sentence. Anchoring signal detection to the first N characters reduces false positives without removing valid signals. Option C adds latency and cost. Option A creates false negatives. Option D misses longer refusal responses."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your pipeline auto-retries safety refusals with an updated prompt, adding 'This is for legitimate business use.' The model refuses again. On the third attempt with 'This is for internal research only', it also refuses.",
+      "question": "What is wrong with this approach?",
+      "options": [
+        "A. The model needs a higher temperature to bypass safety filters.",
+        "B. Safety refusals should not be auto-retried. If the framing does not change the core request, retries produce identical refusals and waste tokens.",
+        "C. The system prompt needs to be cleared before each retry.",
+        "D. Safety refusals require switching to a different model family."
+      ],
+      "answer": "B",
+      "explanation": "Safety classifiers evaluate the semantic content of the request, not surface framing. Adding 'for business use' does not change what is being asked. The right approach is to stop retrying and either fundamentally redesign the task or accept the boundary. Auto-retrying safety refusals wastes tokens and may trigger rate limits."
+    },
+    {
+      "id": "c5",
+      "scenario": "You deploy a new prompt version on Monday. By Wednesday, your refusal monitor shows the capability refusal rate jumped from 0.5% to 9.2%. The prompt change added a step asking the model to 'verify the information online before answering.'",
+      "question": "What happened and what is the fix?",
+      "options": [
+        "A. The model API is experiencing degraded capability; retry later.",
+        "B. The phrase 'verify online' triggers the model to declare it cannot access the internet. Remove that instruction and provide the needed data directly.",
+        "C. Increase max_tokens to give the model room to do the verification step.",
+        "D. Add 'You have internet access' to the system prompt to override the model's assumption."
+      ],
+      "answer": "B",
+      "explanation": "The capability refusal rate spike is a direct result of the prompt change. 'Verify online' signals to the model that internet access is required, which it refuses because it lacks it. The model cannot be told it has capabilities it does not have. The fix is to remove the instruction and either accept the model's static knowledge or pre-fetch the data and inject it into the prompt."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your team logs all model responses as JSON. When the model returns a refusal like 'I need more clarity on what JSON schema to use', your JSON parser throws an exception and the error is swallowed. Customers see a 500 error with no useful message.",
+      "question": "At what layer should refusal detection be added?",
+      "options": [
+        "A. In the JSON parser, catch parse errors and return a generic 'model error' message.",
+        "B. After the API call and before any downstream processing, so refusals are classified and handled before they reach the parser.",
+        "C. In the database write layer, where the invalid JSON would cause a constraint violation.",
+        "D. Refusal detection is not needed; increase max_retries in the API call."
+      ],
+      "answer": "B",
+      "explanation": "Refusal detection must happen immediately after the API response and before any downstream code that assumes a valid structured output. Catching the downstream exception tells you something broke but not what to do about it. Classifying at the response layer gives you the refusal type, the fix, and the ability to either retry with recovery or return a meaningful error."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are building a medical documentation tool for licensed clinicians. The model returns 'I'm unable to assist with medical diagnoses' when asked to extract structured data from a doctor's clinical notes.",
+      "question": "This is a safety false positive. What is the most effective reframe?",
+      "options": [
+        "A. Remove all medical terminology from the task description.",
+        "B. Add to the system prompt: 'You are assisting a licensed clinician with administrative documentation tasks. Your role is to extract and structure information already written by the clinician, not to diagnose or recommend treatment.'",
+        "C. Switch to a model with a more permissive safety policy.",
+        "D. Ask the model to pretend it is not an AI assistant."
+      ],
+      "answer": "B",
+      "explanation": "The refusal is a false positive triggered by medical content. The task is administrative (structure extraction), not clinical (diagnosis). The fix is to make the legitimate, non-diagnostic nature of the task explicit in the system prompt. This reframes the request without changing its substance. Option C introduces risk. Option D is prompt injection and unreliable."
+    },
+    {
+      "id": "c8",
+      "scenario": "You run a nightly batch job that processes 5,000 support tickets. Your refusal monitor shows a consistent 3% ambiguity refusal rate across all ticket types. The prompt has been in production for 3 months.",
+      "question": "Is 3% an acceptable rate, and should you act on it?",
+      "options": [
+        "A. Yes, 3% is acceptable for any production system. No action needed.",
+        "B. No, any refusal above 0% requires immediate remediation.",
+        "C. 3% is above a healthy target of under 2% for ambiguity refusals. Investigate which ticket types trigger it, add a concrete output example to the prompt, and re-test. At 5,000 tickets/night, this is 150 failed extractions per run.",
+        "D. 3% is acceptable but you should add more retry attempts to automatically resolve them."
+      ],
+      "answer": "C",
+      "explanation": "3% ambiguity refusals on a mature prompt indicates a structural issue with the prompt, not random noise. At 5,000 tickets/night, that is 150 failures creating silent data gaps. The correct approach is to audit which ticket types trigger ambiguity refusals (they likely share a pattern), update the prompt with a concrete example or assumption instruction, and verify the rate drops below 2% in testing before redeploying."
+    }
+  ]
+}
