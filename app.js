@@ -191,6 +191,8 @@ const SLIDE_DECKS = {
   '02': 'phase-02-rag',
   '03': 'phase-03-tools-and-mcp',
   '04': 'phase-04-agents',
+  '05': 'phase-05-evaluation',
+  '06': 'phase-06-shipping',
 };
 
 function phaseCard(phase) {
