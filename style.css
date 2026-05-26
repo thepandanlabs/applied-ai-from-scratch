@@ -318,7 +318,7 @@ img, svg { display: block; max-width: 100%; }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 28px 28px 44px;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s, background 0.15s;
   overflow: hidden;
@@ -393,8 +393,8 @@ img, svg { display: block; max-width: 100%; }
 
 .slides-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  bottom: 14px;
+  right: 14px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -402,7 +402,7 @@ img, svg { display: block; max-width: 100%; }
   text-decoration: none;
   border: 1px solid var(--accent);
   border-radius: 4px;
-  padding: 3px 9px;
+  padding: 4px 10px;
   opacity: 0.7;
   transition: opacity 0.15s, background 0.15s;
   background: transparent;
@@ -1116,7 +1116,7 @@ img, svg { display: block; max-width: 100%; }
   .phases-section { padding: 0 16px 60px; }
   .legend { display: none; }
   .phase-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .phase-card { padding: 18px; }
+  .phase-card { padding: 18px 18px 40px; }
   .phase-card-desc { display: none; }
   .phase-card-num { font-size: 40px; top: 10px; right: 12px; }
 
