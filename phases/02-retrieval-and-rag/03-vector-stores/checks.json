@@ -12,7 +12,7 @@
         "The store raises a dimension mismatch error and rejects the new documents"
       ],
       "answer": 1,
-      "explanation": "Each embedding model defines its own coordinate space — there is no universal geometry. A vector from all-MiniLM maps 'dog' to a specific point; text-embedding-3-small maps 'dog' to a completely different point. Cosine similarity between vectors from different models produces random-looking scores. Always version collections and re-index everything when changing models."
+      "explanation": "Each embedding model defines its own coordinate space - there is no universal geometry. A vector from all-MiniLM maps 'dog' to a specific point; text-embedding-3-small maps 'dog' to a completely different point. Cosine similarity between vectors from different models produces random-looking scores. Always version collections and re-index everything when changing models."
     },
     {
       "q": "Your production RAG system uses Qdrant with a metadata filter on `tenant_id`. After a deploy, users from tenant 'acme' report getting zero results. What is the most likely cause?",
@@ -34,7 +34,7 @@
         "When you need real-time vector updates with sub-millisecond write latency"
       ],
       "answer": 2,
-      "explanation": "pgvector lets you add vector search to a Postgres table you already manage. For corpora under ~5M vectors it delivers 30-50ms query latency with an HNSW index — more than adequate for most RAG systems. The operational savings of not running a separate service are significant. Reach for a dedicated vector DB when you need scale beyond pgvector's sweet spot, or features like named vectors and rich payload indexing."
+      "explanation": "pgvector lets you add vector search to a Postgres table you already manage. For corpora under ~5M vectors it delivers 30-50ms query latency with an HNSW index - more than adequate for most RAG systems. The operational savings of not running a separate service are significant. Reach for a dedicated vector DB when you need scale beyond pgvector's sweet spot, or features like named vectors and rich payload indexing."
     },
     {
       "q": "What is the key operational difference between a flat index and an HNSW index in a vector store?",
@@ -45,7 +45,7 @@
         "Flat indexes require GPU acceleration; HNSW runs on CPU"
       ],
       "answer": 1,
-      "explanation": "A flat index scans every vector — exact results, O(N) cost per query. HNSW builds a layered graph and navigates it — approximate results (95-99% recall is typical), O(log N) cost per query. For < 100K vectors, flat is fine. Above that, HNSW's approximation tradeoff is worth it for latency."
+      "explanation": "A flat index scans every vector - exact results, O(N) cost per query. HNSW builds a layered graph and navigates it - approximate results (95-99% recall is typical), O(log N) cost per query. For < 100K vectors, flat is fine. Above that, HNSW's approximation tradeoff is worth it for latency."
     },
     {
       "q": "You run `store.count()` after bulk indexing and get 48,200 results when you expected 50,000. What is the most useful immediate next step?",
@@ -56,7 +56,7 @@
         "Re-run the entire indexing job with a smaller batch size"
       ],
       "answer": 2,
-      "explanation": "Count mismatch means some documents didn't make it into the index. The right approach is to identify the specific missing IDs (set difference between your source and indexed IDs), then investigate why — common causes: silent upsert failures, documents that exceeded token limits and were skipped, duplicate IDs causing overwrites, or errors swallowed by a broad except clause."
+      "explanation": "Count mismatch means some documents didn't make it into the index. The right approach is to identify the specific missing IDs (set difference between your source and indexed IDs), then investigate why - common causes: silent upsert failures, documents that exceeded token limits and were skipped, duplicate IDs causing overwrites, or errors swallowed by a broad except clause."
     },
     {
       "q": "In Qdrant's local mode, what is the difference between QdrantClient(':memory:') and QdrantClient(path='./qdrant_data')?",
@@ -67,7 +67,7 @@
         "Path-based storage requires a Qdrant server process; ':memory:' does not"
       ],
       "answer": 2,
-      "explanation": "Both run entirely in-process — no server, no Docker. The only difference is durability: ':memory:' is purely in-RAM and gone when your process exits, while path-based storage serializes to disk so your index survives application restarts. The search API, performance characteristics, and code are identical for both."
+      "explanation": "Both run entirely in-process - no server, no Docker. The only difference is durability: ':memory:' is purely in-RAM and gone when your process exits, while path-based storage serializes to disk so your index survives application restarts. The search API, performance characteristics, and code are identical for both."
     }
   ]
 }

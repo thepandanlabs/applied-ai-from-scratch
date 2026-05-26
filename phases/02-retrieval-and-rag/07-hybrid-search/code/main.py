@@ -2,10 +2,10 @@
 # Usage: python main.py
 #
 # Implements from scratch:
-#   (1) BM25 — inverted index, TF-IDF weighting, BM25 formula
-#   (2) Dense retrieval — sentence-transformers bi-encoder (local, no API key needed)
-#   (3) Reciprocal Rank Fusion — merge ranked lists without score normalization
-#   (4) Cross-encoder reranking — precision scoring of top candidates
+#   (1) BM25 - inverted index, TF-IDF weighting, BM25 formula
+#   (2) Dense retrieval - sentence-transformers bi-encoder (local, no API key needed)
+#   (3) Reciprocal Rank Fusion - merge ranked lists without score normalization
+#   (4) Cross-encoder reranking - precision scoring of top candidates
 #
 # All components are runnable on CPU. First run downloads models (~100MB total).
 
@@ -153,7 +153,7 @@ class BM25Index:
         """
         Retrieve top_k documents by BM25 score.
         Only scores candidate documents that contain at least one query term
-        (exact matches only — this is the fundamental difference from dense).
+        (exact matches only - this is the fundamental difference from dense).
         Returns: [{"id": str, "score": float, "rank": int}, ...]
         """
         query_terms = tokenize(query)
@@ -166,7 +166,7 @@ class BM25Index:
             candidates.update(self.inverted_index.get(term, {}).keys())
 
         if not candidates:
-            return []  # no exact term overlap — BM25 returns nothing
+            return []  # no exact term overlap - BM25 returns nothing
 
         scored = [
             {"doc_idx": idx, "score": self._score_doc(query_terms, idx)}
@@ -301,7 +301,7 @@ class CrossEncoderReranker:
 
     Unlike a bi-encoder (which embeds query and doc separately), a cross-encoder
     takes the concatenated (query, doc) pair as input. This lets it model
-    the interaction between query terms and document terms — much more
+    the interaction between query terms and document terms - much more
     expressive but O(n) inference cost per query.
 
     Model output: logit score, higher = more relevant.

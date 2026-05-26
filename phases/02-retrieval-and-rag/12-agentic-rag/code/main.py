@@ -93,7 +93,7 @@ CORPUS = [
         title="Metformin Drug Interaction Reference",
         text=(
             "Metformin interactions with cardiovascular drugs: ACE inhibitors and ARBs "
-            "are generally safe with metformin — no pharmacokinetic interaction. "
+            "are generally safe with metformin - no pharmacokinetic interaction. "
             "Thiazide diuretics may reduce metformin efficacy and increase risk of "
             "volume depletion. Beta-blockers may mask hypoglycemic symptoms in combination "
             "therapy but do not interact pharmacokinetically with metformin."

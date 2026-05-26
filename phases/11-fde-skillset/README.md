@@ -44,4 +44,4 @@ All prior phases. This phase assumes you can build AI systems (Phases 00-08) and
 
 - Python + `anthropic` SDK (Claude as assistant in the tools)
 - CLI tools built with `argparse` and `json`
-- No external services required — all tools run locally
+- No external services required: all tools run locally

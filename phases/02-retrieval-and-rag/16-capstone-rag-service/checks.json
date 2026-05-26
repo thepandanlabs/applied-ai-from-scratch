@@ -9,13 +9,13 @@
       "The health check interval is too short"
     ],
     "answer": 1,
-    "explanation": "A process that is alive and connected to its vector store is NOT necessarily healthy for a RAG service — the index may be empty. /health must check that chunk_count > 0 and return 'degraded' if not. A deep health check verifies operational readiness, not just process liveness."
+    "explanation": "A process that is alive and connected to its vector store is NOT necessarily healthy for a RAG service - the index may be empty. /health must check that chunk_count > 0 and return 'degraded' if not. A deep health check verifies operational readiness, not just process liveness."
   },
   {
     "id": "16-q2",
     "question": "A user calls POST /ingest twice with the exact same document content. What should the second call return?",
     "options": [
-      "A 409 Conflict error — duplicate documents are not allowed",
+      "A 409 Conflict error - duplicate documents are not allowed",
       "The same response as the first call, with chunks_added > 0",
       "A 200 response with chunks_added: 0 and was_duplicate: true",
       "A 500 error because the hash collision is unexpected"
@@ -29,7 +29,7 @@
     "options": [
       "Jitter makes the retry less predictable, which is a security feature",
       "Jitter adds extra delay to comply with API terms of service",
-      "Without jitter, all clients that were rate-limited at the same time retry in sync, causing another rate limit wave — jitter desynchronizes retries",
+      "Without jitter, all clients that were rate-limited at the same time retry in sync, causing another rate limit wave - jitter desynchronizes retries",
       "Jitter compensates for network latency variance"
     ],
     "answer": 2,
@@ -39,9 +39,9 @@
     "id": "16-q4",
     "question": "A query takes 4.2 seconds. Your structured logs show: embed_ms: 45, retrieve_ms: 8, generate_ms: 4147. Where is the bottleneck and what should you investigate?",
     "options": [
-      "Embedding is slow — upgrade the embedding model",
-      "Retrieval is slow — the vector store needs an HNSW index",
-      "Generation is slow — the LLM call is the bottleneck; investigate rate limiting, model choice, or prompt length",
+      "Embedding is slow - upgrade the embedding model",
+      "Retrieval is slow - the vector store needs an HNSW index",
+      "Generation is slow - the LLM call is the bottleneck; investigate rate limiting, model choice, or prompt length",
       "The total latency is normal for a RAG service"
     ],
     "answer": 2,
@@ -51,9 +51,9 @@
     "id": "16-q5",
     "question": "You run the RAG Triad evaluation on 20 questions and get: faithfulness: 0.91, answer_relevance: 0.84, context_relevance: 0.58. Which number is most concerning and what does it indicate?",
     "options": [
-      "Faithfulness: 0.91 — the LLM is hallucinating too often",
-      "Answer relevance: 0.84 — the answers are not addressing the questions",
-      "Context relevance: 0.58 — the retrieval is finding the wrong chunks; the system is answering from poor evidence",
+      "Faithfulness: 0.91 - the LLM is hallucinating too often",
+      "Answer relevance: 0.84 - the answers are not addressing the questions",
+      "Context relevance: 0.58 - the retrieval is finding the wrong chunks; the system is answering from poor evidence",
       "All three are fine; no action needed"
     ],
     "answer": 2,
@@ -75,8 +75,8 @@
     "id": "16-q7",
     "question": "Your team wants to replace the InMemoryVectorStore with Qdrant for production. What is the minimum change needed to main.py?",
     "options": [
-      "Rewrite the entire main.py — Qdrant has a completely different API",
-      "Change only the `vector_store` variable instantiation — Qdrant's wrapper exposes the same add(), search(), count() interface",
+      "Rewrite the entire main.py - Qdrant has a completely different API",
+      "Change only the `vector_store` variable instantiation - Qdrant's wrapper exposes the same add(), search(), count() interface",
       "Add Qdrant imports at the top and change all vector_store.search() calls to use the Qdrant query format",
       "The service cannot use Qdrant without changes to the query endpoint"
     ],
@@ -87,10 +87,10 @@
     "id": "16-q8",
     "question": "What should you check FIRST when your RAG service starts returning obviously wrong answers in production?",
     "options": [
-      "Check the LLM system prompt — it probably needs better instructions",
+      "Check the LLM system prompt - it probably needs better instructions",
       "Upgrade to a more powerful LLM model",
-      "Check /health for chunk_count and check query logs for top_chunk_score — if retrieval quality dropped (scores < 0.5), the problem is retrieval, not generation",
-      "Restart the service — transient LLM issues often resolve on restart"
+      "Check /health for chunk_count and check query logs for top_chunk_score - if retrieval quality dropped (scores < 0.5), the problem is retrieval, not generation",
+      "Restart the service - transient LLM issues often resolve on restart"
     ],
     "answer": 2,
     "explanation": "Before touching the LLM or prompt, check whether retrieval is working. Look at top_chunk_score in query logs. If scores dropped (e.g., from 0.85 to 0.45), something changed in the index or query routing. Check chunk_count for unexpected drops. If retrieval looks fine (high scores), then investigate the generation step. Never tune the generator when the retriever is broken."

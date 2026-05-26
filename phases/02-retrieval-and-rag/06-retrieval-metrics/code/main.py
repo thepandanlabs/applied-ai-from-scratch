@@ -1,4 +1,4 @@
-# No dependencies required — pure Python standard library only.
+# No dependencies required - pure Python standard library only.
 # Usage: python main.py
 #
 # Implements from scratch:
@@ -83,7 +83,7 @@ def recall_at_k(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> flo
     """
     Of all relevant documents, what fraction was retrieved in the top K?
 
-    Measures: coverage — did we find the answer?
+    Measures: coverage - did we find the answer?
     Low recall → the model will miss key facts even if it follows the context perfectly.
     High recall → the model has everything it needs to give a complete answer.
 
@@ -111,7 +111,7 @@ def hit_rate_at_k(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> f
     Was at least one relevant document in the top K? Returns 1.0 or 0.0.
 
     This is the minimum viable metric. If your hit_rate@5 is below 0.7,
-    the system is simply broken for 30% of queries — the model has nothing
+    the system is simply broken for 30% of queries - the model has nothing
     to work with regardless of how good the prompt or LLM is.
 
     It is a binary metric, so it is easy to track on a dashboard:
@@ -122,7 +122,7 @@ def hit_rate_at_k(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> f
 
 
 # ---------------------------------------------------------------------------
-# Metric 4: MRR — Mean Reciprocal Rank
+# Metric 4: MRR - Mean Reciprocal Rank
 # ---------------------------------------------------------------------------
 
 def reciprocal_rank(retrieved_ids: list[str], relevant_ids: set[str]) -> float:
@@ -167,7 +167,7 @@ def mean_reciprocal_rank(dataset: list[dict]) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Metric 5: nDCG@K — Normalized Discounted Cumulative Gain
+# Metric 5: nDCG@K - Normalized Discounted Cumulative Gain
 # ---------------------------------------------------------------------------
 
 def dcg_at_k(retrieved_ids: list[str], relevant_ids: set[str], k: int) -> float:
@@ -237,7 +237,7 @@ def context_precision(retrieved_ids: list[str], relevant_ids: set[str]) -> float
       0.3–0.6: acceptable for many use cases
       > 0.7: efficient, clean context
 
-    Context precision does not tell you if you have enough relevant chunks —
+    Context precision does not tell you if you have enough relevant chunks -
     that is context recall's job.
     """
     if not retrieved_ids:
@@ -252,7 +252,7 @@ def context_recall(retrieved_ids: list[str], relevant_ids: set[str]) -> float:
 
     Measured over the full retrieved set (not top K).
     If context_recall is 0.6 for a query, the model has only 60% of the
-    material it needs — it will give partial or incomplete answers.
+    material it needs - it will give partial or incomplete answers.
 
     Rule of thumb:
       < 0.5: retrieval is failing badly on this query type
@@ -339,45 +339,45 @@ def _interpret(agg: dict, k: int) -> None:
 
     if hit_rate < 0.7:
         issues.append(
-            f"  [CRITICAL] Hit Rate@{k} = {hit_rate:.2f} — retrieval finds nothing useful "
+            f"  [CRITICAL] Hit Rate@{k} = {hit_rate:.2f} - retrieval finds nothing useful "
             f"for {(1-hit_rate)*100:.0f}% of queries.\n"
             f"             Fix: increase K, re-chunk corpus, or switch embedding model."
         )
 
     if recall < 0.6:
         issues.append(
-            f"  [HIGH] Recall@{k} = {recall:.2f} — regularly missing relevant documents.\n"
+            f"  [HIGH] Recall@{k} = {recall:.2f} - regularly missing relevant documents.\n"
             f"         Fix: increase K, or add hybrid/sparse search (Lesson 07)."
         )
 
     if precision < 0.4:
         issues.append(
-            f"  [MEDIUM] Precision@{k} = {precision:.2f} — too much noise in context.\n"
+            f"  [MEDIUM] Precision@{k} = {precision:.2f} - too much noise in context.\n"
             f"           Fix: reduce K, add min_score filter, or add a reranker."
         )
 
     if mrr < 0.4:
         issues.append(
-            f"  [MEDIUM] MRR = {mrr:.2f} — first relevant result is often below position 2.\n"
+            f"  [MEDIUM] MRR = {mrr:.2f} - first relevant result is often below position 2.\n"
             f"           Fix: add cross-encoder reranker or query transformation (Lesson 08)."
         )
 
     if cp < 0.5:
         issues.append(
-            f"  [MEDIUM] Context Precision = {cp:.2f} — more than half the context is noise.\n"
+            f"  [MEDIUM] Context Precision = {cp:.2f} - more than half the context is noise.\n"
             f"           Fix: add similarity score threshold or reranker."
         )
 
     if cr < 0.8:
         issues.append(
-            f"  [HIGH] Context Recall = {cr:.2f} — context cannot fully support answers.\n"
+            f"  [HIGH] Context Recall = {cr:.2f} - context cannot fully support answers.\n"
             f"         Fix: increase K, check chunking (key facts split across chunks?),\n"
             f"         or add multi-query retrieval (Lesson 08)."
         )
 
     if ndcg < 0.5:
         issues.append(
-            f"  [MEDIUM] nDCG@{k} = {ndcg:.2f} — relevant docs are ranked too low.\n"
+            f"  [MEDIUM] nDCG@{k} = {ndcg:.2f} - relevant docs are ranked too low.\n"
             f"           Fix: add cross-encoder reranker or tune retrieval scoring."
         )
 
@@ -458,7 +458,7 @@ def print_k_sweep(dataset: list[dict], k_values: list[int] = None) -> None:
             f"{r[f'ndcg@{k}']:>8.3f}"
         )
 
-    print(f"\n  Note: MRR does not change with K — it evaluates the full ranked list.")
+    print(f"\n  Note: MRR does not change with K - it evaluates the full ranked list.")
     print(f"  Finding: pick K where recall is acceptable (≥0.7) and precision is not too low (≥0.3).")
 
 

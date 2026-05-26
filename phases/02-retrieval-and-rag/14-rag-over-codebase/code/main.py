@@ -1,6 +1,6 @@
 # pip install sentence-transformers numpy
 # ast, os, hashlib, pathlib are part of Python's standard library.
-# No API key needed — sentence-transformers runs locally on CPU.
+# No API key needed - sentence-transformers runs locally on CPU.
 
 import ast
 import os
@@ -302,7 +302,7 @@ class CodebaseIndex:
 
 def line_chunk_file(filepath: str, chunk_size: int = 20) -> list[dict]:
     """
-    Naive line-based chunking — what most document RAG systems do with code.
+    Naive line-based chunking - what most document RAG systems do with code.
     Used for side-by-side comparison with AST-based chunking.
     """
     lines = Path(filepath).read_text(encoding="utf-8").splitlines()
@@ -370,7 +370,7 @@ def compare_chunking_strategies(
             doc = f"\n    Docstring: \"{c.docstring[:80]}\"" if c.docstring else ""
             print(
                 f"\n  Rank {rank} (score: {ast_scores[i]:.3f}):\n"
-                f"    {c.kind.upper()}: `{c.name}` — {Path(c.file_path).name} "
+                f"    {c.kind.upper()}: `{c.name}` - {Path(c.file_path).name} "
                 f"lines {c.lineno_start}–{c.lineno_end}{doc}"
             )
     else:
@@ -382,7 +382,7 @@ def compare_chunking_strategies(
 # ---------------------------------------------------------------------------
 
 SAMPLE_AUTH_CODE = '''"""
-auth.py — Authentication, session management, and rate limiting.
+auth.py - Authentication, session management, and rate limiting.
 """
 
 import hashlib
@@ -506,7 +506,7 @@ def main():
         print("Creating sample codebase...")
         sample_file = write_sample_codebase(tmpdir)
 
-        # Load the model once — reuse across comparisons
+        # Load the model once - reuse across comparisons
         print(f"\nLoading embedding model: {EMBED_MODEL}")
         model = SentenceTransformer(EMBED_MODEL)
 
@@ -552,7 +552,7 @@ def main():
             results = index.hybrid_search(query, top_k=3)
             for r in results:
                 c = r["chunk"]
-                doc_preview = f" — {c.docstring[:55]}..." if c.docstring else ""
+                doc_preview = f" - {c.docstring[:55]}..." if c.docstring else ""
                 print(f"  [{r['rank']}] {c.kind} `{c.name}` (score={r['score']:.3f}){doc_preview}")
             print()
 
@@ -560,7 +560,7 @@ def main():
         # Part 3: Evaluation
         # ----------------------------------------------------------------
         print(f"{'=' * 65}")
-        print("RETRIEVAL EVALUATION — top-3 hit rate")
+        print("RETRIEVAL EVALUATION - top-3 hit rate")
         print(f"{'=' * 65}")
 
         eval_set = [

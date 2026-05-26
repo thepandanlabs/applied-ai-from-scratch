@@ -71,7 +71,7 @@ SAMPLE_DOCUMENTS = [
     },
 ]
 
-# Chunks with problematic references — ideal test for contextual retrieval
+# Chunks with problematic references - ideal test for contextual retrieval
 ORPHANED_CHUNKS = [
     {
         "source": "methodology-report.pdf",
@@ -340,7 +340,7 @@ def contextualize_chunk(
     """
     Prepend a LLM-generated context sentence to the chunk.
     This is Anthropic's Contextual Retrieval (Sept 2024).
-    Run once per chunk at index time — zero added retrieval latency.
+    Run once per chunk at index time - zero added retrieval latency.
     """
     prompt = CONTEXT_PROMPT.format(
         full_document=full_document[:3000],  # Trim for token budget
@@ -486,7 +486,7 @@ def demo_contextual_retrieval():
 
     example = ORPHANED_CHUNKS[0]
 
-    # Naive retrieval — chunk without context
+    # Naive retrieval - chunk without context
     naive_retriever = ContextualRetriever()
     naive_retriever.add_document(
         full_document=example["full_document"],
@@ -495,7 +495,7 @@ def demo_contextual_retrieval():
         use_context=False,
     )
 
-    # Contextual retrieval — chunk with prepended context
+    # Contextual retrieval - chunk with prepended context
     contextual_retriever = ContextualRetriever()
     contextual_retriever.add_document(
         full_document=example["full_document"],

@@ -6,13 +6,13 @@
     {
       "q": "A team is building a RAG system for a corpus of biomedical research papers. They test text-embedding-3-small and get MRR@5 of 0.61 on their labeled query set. What is the most productive next step?",
       "options": [
-        "Switch to text-embedding-3-large — more dimensions will fix the domain gap",
+        "Switch to text-embedding-3-large - more dimensions will fix the domain gap",
         "Add more documents to the index to improve model accuracy",
         "Benchmark a domain-specific model like PubMedBERT or voyage-4 on the same labeled query set",
         "Increase chunk size so that embeddings capture more context per document"
       ],
       "answer": 2,
-      "explanation": "MRR@5 of 0.61 on domain-specific content (biomedical papers) is a domain mismatch signal, not a size signal. text-embedding-3-large uses the same training data as small — more dimensions won't help if the model hasn't seen biomedical terminology. Domain-specific models trained on PubMed/clinical data will perform significantly better."
+      "explanation": "MRR@5 of 0.61 on domain-specific content (biomedical papers) is a domain mismatch signal, not a size signal. text-embedding-3-large uses the same training data as small - more dimensions won't help if the model hasn't seen biomedical terminology. Domain-specific models trained on PubMed/clinical data will perform significantly better."
     },
     {
       "q": "What does Matryoshka Representation Learning (MRL) enable that standard embedding models do not support?",
@@ -23,7 +23,7 @@
         "Asymmetric embedding where queries and documents use different model heads"
       ],
       "answer": 1,
-      "explanation": "MRL trains the model so the first N dimensions carry the most information. You can truncate text-embedding-3-small from 1536d to 256d and retain ~88% of retrieval quality. Standard models (all-MiniLM, older OpenAI ada-002) don't support this — arbitrary truncation destroys quality."
+      "explanation": "MRL trains the model so the first N dimensions carry the most information. You can truncate text-embedding-3-small from 1536d to 256d and retain ~88% of retrieval quality. Standard models (all-MiniLM, older OpenAI ada-002) don't support this - arbitrary truncation destroys quality."
     },
     {
       "q": "You need to embed customer support tickets (English), but your privacy policy prohibits sending customer data to third-party APIs. Which model should you use?",
@@ -45,13 +45,13 @@
         "Index every other document and rely on the LLM to fill gaps"
       ],
       "answer": 1,
-      "explanation": "Matryoshka truncation to 256 dimensions reduces storage by ~83% while retaining ~88% of retrieval quality — the best quality-to-storage tradeoff available. Switching to all-MiniLM-L6-v2 would reduce quality significantly while only saving modestly on storage (384d vs 256d). 8-bit quantization is an orthogonal optimization that can be applied additionally."
+      "explanation": "Matryoshka truncation to 256 dimensions reduces storage by ~83% while retaining ~88% of retrieval quality - the best quality-to-storage tradeoff available. Switching to all-MiniLM-L6-v2 would reduce quality significantly while only saving modestly on storage (384d vs 256d). 8-bit quantization is an orthogonal optimization that can be applied additionally."
     },
     {
       "q": "The MTEB leaderboard shows Model A outperforms Model B on retrieval tasks. You benchmark both on your product domain and find Model B beats Model A by 8 MRR points. How do you proceed?",
       "options": [
-        "Trust MTEB — it evaluates on more data and is more statistically reliable",
-        "Use Model B — your domain benchmark is the ground truth for your system",
+        "Trust MTEB - it evaluates on more data and is more statistically reliable",
+        "Use Model B - your domain benchmark is the ground truth for your system",
         "Average both scores; the combined signal is more reliable",
         "Report the discrepancy to the MTEB maintainers as a potential benchmark bug"
       ],
@@ -67,7 +67,7 @@
         "It changes the normalization strategy applied to output vectors"
       ],
       "answer": 1,
-      "explanation": "Asymmetric embedding trains separate encoder functions for queries (typically short, keyword-like) and documents (longer, full text). The model is trained so query embeddings are geometrically close to the document embeddings they should retrieve — even though query and document text look different in structure and length. Symmetric models (same function for both) sacrifice this optimization."
+      "explanation": "Asymmetric embedding trains separate encoder functions for queries (typically short, keyword-like) and documents (longer, full text). The model is trained so query embeddings are geometrically close to the document embeddings they should retrieve - even though query and document text look different in structure and length. Symmetric models (same function for both) sacrifice this optimization."
     }
   ]
 }

@@ -16,12 +16,12 @@
     "question": "Why must schema serialization include sample rows, not just column names and types?",
     "options": [
       "Sample rows make the prompt shorter",
-      "Column types alone don't reveal valid values — a 'status' column could mean anything without examples",
+      "Column types alone don't reveal valid values - a 'status' column could mean anything without examples",
       "The LLM ignores column type information",
       "Sample rows allow the LLM to skip the schema entirely"
     ],
     "answer": 1,
-    "explanation": "Column types tell the LLM the data type (TEXT, INTEGER). Sample rows reveal the actual semantics — e.g., that 'status' takes values 'pending', 'shipped', 'delivered'. Without this, the LLM guesses and generates wrong WHERE clauses."
+    "explanation": "Column types tell the LLM the data type (TEXT, INTEGER). Sample rows reveal the actual semantics - e.g., that 'status' takes values 'pending', 'shipped', 'delivered'. Without this, the LLM guesses and generates wrong WHERE clauses."
   },
   {
     "id": "13-q3",
@@ -45,7 +45,7 @@
       "Open a separate database for each query"
     ],
     "answer": 2,
-    "explanation": "PRAGMA query_only = ON is a SQLite connection-level setting that blocks all write operations regardless of the SQL content. Prompt instructions are not security controls — they can be bypassed. Keyword parsing alone misses edge cases. PRAGMA is the correct primary enforcement."
+    "explanation": "PRAGMA query_only = ON is a SQLite connection-level setting that blocks all write operations regardless of the SQL content. Prompt instructions are not security controls - they can be bypassed. Keyword parsing alone misses edge cases. PRAGMA is the correct primary enforcement."
   },
   {
     "id": "13-q5",
@@ -54,7 +54,7 @@
       "Pure text-to-SQL: generate SQL to query the support tickets table",
       "Pure RAG: embed all tickets and retrieve by similarity",
       "Hybrid: SQL to identify VIP customer IDs, then RAG over their support tickets filtered by customer_id",
-      "Neither — this question is unanswerable with AI"
+      "Neither - this question is unanswerable with AI"
     ],
     "answer": 2,
     "explanation": "This is a hybrid query. The 'VIP customer' part is structured (SQL can identify them by a condition like total_spend > X). The 'what did they say' part is unstructured (RAG over ticket text). Use SQL to find the entity IDs, then scope RAG retrieval to those IDs."
@@ -69,6 +69,6 @@
       "LLM confidence score for the generated SQL"
     ],
     "answer": 2,
-    "explanation": "Execution success rate only tells you the SQL ran — not that it returned the right rows. SQL string similarity is fragile (many valid SQL queries answer the same question differently). Correct result rate — comparing actual returned rows to expected values — is the true quality metric."
+    "explanation": "Execution success rate only tells you the SQL ran - not that it returned the right rows. SQL string similarity is fragile (many valid SQL queries answer the same question differently). Correct result rate - comparing actual returned rows to expected values - is the true quality metric."
   }
 ]

@@ -4,7 +4,7 @@
 
 ## The through-line
 
-A 200 OK with a hallucinated answer looks identical to a correct one at the HTTP layer. LLM observability requires capturing semantic content, token counts, cost, and quality signals — not just HTTP metrics. This phase builds the full observability stack: traces, logs, cost accounting, latency profiling, SLOs, and chaos testing.
+A 200 OK with a hallucinated answer looks identical to a correct one at the HTTP layer. LLM observability requires capturing semantic content, token counts, cost, and quality signals, not just HTTP metrics. This phase builds the full observability stack: traces, logs, cost accounting, latency profiling, SLOs, and chaos testing.
 
 ## What you build
 

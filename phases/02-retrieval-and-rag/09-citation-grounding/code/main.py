@@ -96,7 +96,7 @@ SAMPLE_CHUNKS = [
         page=4,
         section="RAG Evaluation",
         text=(
-            "The RAG Triad — faithfulness, answer relevance, and context relevance — provides "
+            "The RAG Triad - faithfulness, answer relevance, and context relevance - provides "
             "a structured framework for evaluating RAG system quality. Faithfulness measures "
             "whether the generated answer is entailed by the retrieved context. Answer "
             "relevance measures whether the answer addresses the user's question. Context "
@@ -119,7 +119,7 @@ SAMPLE_CHUNKS = [
 
 
 # ---------------------------------------------------------------------------
-# Retrieval (toy implementation — replace with your vector store)
+# Retrieval (toy implementation - replace with your vector store)
 # ---------------------------------------------------------------------------
 
 def _keyword_overlap_score(query: str, chunk: Chunk) -> float:
@@ -174,7 +174,7 @@ def build_citation_prompt(
     Build (system_prompt, user_message) for citation-grounded generation.
 
     The user message embeds numbered sources so the LLM can cite them as [1], [2], etc.
-    Every number maps to a specific chunk — which is what makes hallucination detection
+    Every number maps to a specific chunk - which is what makes hallucination detection
     possible.
     """
     source_blocks = []
@@ -216,7 +216,7 @@ def generate_cited_answer(
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},
         ],
-        temperature=0.0,  # Deterministic — important for citation accuracy
+        temperature=0.0,  # Deterministic - important for citation accuracy
     )
     return response.choices[0].message.content.strip()
 
@@ -298,14 +298,14 @@ def format_final_response(
         )
         display_text += warning
 
-    # Build sources section — only chunks that were actually cited
+    # Build sources section - only chunks that were actually cited
     cited_source_lines = []
     for idx in sorted(verification["valid_ids"]):
         chunk = retrieved_chunks[idx - 1]
         location = f"page {chunk.page}" if chunk.page else (chunk.section or "")
         loc_str = f", {location}" if location else ""
         snippet = chunk.text[:80] + ("..." if len(chunk.text) > 80 else "")
-        cited_source_lines.append(f"[{idx}] **{chunk.source}**{loc_str} — \"{snippet}\"")
+        cited_source_lines.append(f"[{idx}] **{chunk.source}**{loc_str} - \"{snippet}\"")
 
     if cited_source_lines:
         sources_section = "\n".join(cited_source_lines)
@@ -443,7 +443,7 @@ def main():
         "How do dense retrieval methods work and what models are commonly used?",
         "What is citation hallucination and how can it be mitigated?",
         "What does the RAG Triad measure?",
-        "What is the capital of France?",  # Out-of-scope — should trigger abstention
+        "What is the capital of France?",  # Out-of-scope - should trigger abstention
     ]
 
     for query in test_queries:

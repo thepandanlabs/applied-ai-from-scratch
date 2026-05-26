@@ -1,5 +1,5 @@
 """
-Embedding Models — Phase 02 Lesson 02
+Embedding Models - Phase 02 Lesson 02
 appliedaifromscratch.com
 
 Benchmark multiple embedding models on a small labeled test set.
@@ -18,7 +18,7 @@ from dataclasses import dataclass
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# Test dataset — replace with your own (query, [relevant_doc_ids]) pairs
+# Test dataset - replace with your own (query, [relevant_doc_ids]) pairs
 # ---------------------------------------------------------------------------
 
 DOCUMENTS = [
@@ -202,7 +202,7 @@ def evaluate_openai(
         return ModelResult(
             model_name=model_name, mrr=0.0, hit_rate=0.0,
             query_latency_ms=0.0, dim=0, per_query=[],
-            error="OPENAI_API_KEY not set — skipping",
+            error="OPENAI_API_KEY not set - skipping",
         )
 
     try:
@@ -274,7 +274,7 @@ def evaluate_voyage(
         return ModelResult(
             model_name=model_name, mrr=0.0, hit_rate=0.0,
             query_latency_ms=0.0, dim=0, per_query=[],
-            error="VOYAGE_API_KEY not set — skipping",
+            error="VOYAGE_API_KEY not set - skipping",
         )
 
     try:
@@ -339,7 +339,7 @@ def matryoshka_truncation_experiment(
     Requires OPENAI_API_KEY.
     """
     if not os.environ.get("OPENAI_API_KEY"):
-        print("  [SKIP] OPENAI_API_KEY not set — Matryoshka experiment skipped")
+        print("  [SKIP] OPENAI_API_KEY not set - Matryoshka experiment skipped")
         return
 
     print("\n--- Matryoshka Truncation Experiment ---")
@@ -425,7 +425,7 @@ def print_failure_analysis(results: list[ModelResult]) -> None:
 
 def main():
     print("=" * 60)
-    print("Phase 02 · Lesson 02 — Embedding Models Benchmark")
+    print("Phase 02 · Lesson 02 - Embedding Models Benchmark")
     print("=" * 60)
     print(f"\nTest set: {len(DOCUMENTS)} documents, {len(LABELED_QUERIES)} labeled queries")
     print("Metric: MRR@5 (Mean Reciprocal Rank at K=5)\n")
@@ -438,8 +438,8 @@ def main():
     # ------------------------------------------------------------------
     print("--- Stage 1: Local Models (sentence-transformers) ---")
     local_models = [
-        "all-MiniLM-L6-v2",      # 384d — prototyping baseline, very fast
-        "all-mpnet-base-v2",      # 768d — better quality baseline
+        "all-MiniLM-L6-v2",      # 384d - prototyping baseline, very fast
+        "all-mpnet-base-v2",      # 768d - better quality baseline
     ]
     for model_name in local_models:
         r = evaluate_sentence_transformer(model_name, DOCUMENTS, LABELED_QUERIES)
@@ -456,7 +456,7 @@ def main():
     openai_models = [
         ("text-embedding-3-small", None),     # 1536d, full quality
         ("text-embedding-3-small", 256),      # 256d, Matryoshka truncated
-        ("text-embedding-3-large", None),     # 3072d — highest quality, higher cost
+        ("text-embedding-3-large", None),     # 3072d - highest quality, higher cost
     ]
     for model_name, dims in openai_models:
         r = evaluate_openai(model_name, DOCUMENTS, LABELED_QUERIES, dimensions=dims)
@@ -509,7 +509,7 @@ def main():
     """)
 
     print("=" * 60)
-    print("Done. Next: Lesson 03 — Vector Stores")
+    print("Done. Next: Lesson 03 - Vector Stores")
     print("=" * 60)
 
 

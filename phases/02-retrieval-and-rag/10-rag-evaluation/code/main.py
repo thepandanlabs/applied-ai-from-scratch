@@ -95,7 +95,7 @@ SAMPLE_EVAL_SET = [
             "RAG can fail through retrieval (returning wrong chunks), generation "
             "(hallucinating beyond the context), and context truncation. "
             "Additionally, the system may answer adjacent questions due to embedding drift."
-            # Last sentence is not in context — faithfulness should catch this
+            # Last sentence is not in context - faithfulness should catch this
         ),
     ),
     EvalExample(
@@ -119,7 +119,7 @@ SAMPLE_EVAL_SET = [
             "Water covers approximately 71% of Earth's surface.",
         ],
         answer="The boiling point of water at sea level is 100 degrees Celsius.",
-        # Answer is not supported by context — faithfulness and context relevance tests
+        # Answer is not supported by context - faithfulness and context relevance tests
     ),
 ]
 
@@ -525,12 +525,12 @@ def diagnose(scores: dict) -> str:
     if f >= 0.8 and ar >= 0.75 and cr >= 0.7:
         return "System is working within acceptable bounds on all three dimensions."
     if cr < 0.7:
-        return "Retriever is the primary issue — fix context relevance before touching the generator."
+        return "Retriever is the primary issue - fix context relevance before touching the generator."
     if f < 0.8 and cr >= 0.7:
-        return "Generator is hallucinating despite adequate retrieval — tighten grounding prompts."
+        return "Generator is hallucinating despite adequate retrieval - tighten grounding prompts."
     if ar < 0.75 and f >= 0.8:
-        return "Generator is answering adjacent questions — check query understanding and context window."
-    return "Multiple dimensions failing — start with context relevance, then faithfulness."
+        return "Generator is answering adjacent questions - check query understanding and context window."
+    return "Multiple dimensions failing - start with context relevance, then faithfulness."
 
 
 # ---------------------------------------------------------------------------

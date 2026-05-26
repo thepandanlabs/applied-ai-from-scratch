@@ -59,7 +59,7 @@ def add_to_store(
     return chunk_id
 
 # ---------------------------------------------------------------------------
-# Step 1: Ingest — load + chunk + embed + store
+# Step 1: Ingest - load + chunk + embed + store
 # ---------------------------------------------------------------------------
 
 def chunk_text(text: str, chunk_size: int = DEFAULT_CHUNK_SIZE, overlap: int = DEFAULT_OVERLAP) -> list[str]:
@@ -132,7 +132,7 @@ def ingest(filepath: str, chunk_size: int = DEFAULT_CHUNK_SIZE, overlap: int = D
     return store
 
 # ---------------------------------------------------------------------------
-# Step 2: Retrieve — embed query + cosine search
+# Step 2: Retrieve - embed query + cosine search
 # ---------------------------------------------------------------------------
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -152,7 +152,7 @@ def retrieve(query: str, store: dict, top_k: int = DEFAULT_TOP_K) -> list[dict]:
 
     This is a linear scan: O(n) over every stored chunk.
     Fine for up to ~50k chunks. Beyond that, use approximate nearest neighbor
-    indexing (HNSW via Qdrant, pgvector, or FAISS) — same cosine math,
+    indexing (HNSW via Qdrant, pgvector, or FAISS) - same cosine math,
     just with an index that avoids the full scan.
 
     Returns list of dicts sorted by score descending:
@@ -178,7 +178,7 @@ def retrieve(query: str, store: dict, top_k: int = DEFAULT_TOP_K) -> list[dict]:
     return scored[:top_k]
 
 # ---------------------------------------------------------------------------
-# Step 3: Augment — format retrieved chunks into a prompt
+# Step 3: Augment - format retrieved chunks into a prompt
 # ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """You are a precise, helpful assistant. Answer the user's question using ONLY the context provided below.
@@ -217,7 +217,7 @@ Question: {query}
 Answer (based strictly on the context above):"""
 
 # ---------------------------------------------------------------------------
-# Step 4: Generate — LLM call → answer + sources
+# Step 4: Generate - LLM call → answer + sources
 # ---------------------------------------------------------------------------
 
 def generate(query: str, retrieved_chunks: list[dict]) -> dict:
@@ -232,7 +232,7 @@ def generate(query: str, retrieved_chunks: list[dict]) -> dict:
         "usage": {"prompt_tokens": int, "completion_tokens": int}
       }
 
-    temperature=0.0 makes output deterministic — essential for reproducible evals.
+    temperature=0.0 makes output deterministic - essential for reproducible evals.
     If you run the same query twice and get different answers, you cannot tell
     whether a code change helped or hurt.
     """
@@ -270,7 +270,7 @@ def ask(query: str, store: dict, top_k: int = DEFAULT_TOP_K, verbose: bool = Tru
     Returns the generate() result dict.
 
     Debugging workflow:
-      1. Log retrieved_chunks — if the right passage isn't here, fix retrieval
+      1. Log retrieved_chunks - if the right passage isn't here, fix retrieval
       2. If the right passage IS here but the answer is wrong, fix the prompt/model
       Never confuse these two failure modes.
     """

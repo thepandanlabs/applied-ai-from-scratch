@@ -21,13 +21,13 @@
       "To limit the total number of documents that can be indexed"
     ],
     "answer": 1,
-    "explanation": "Without max_iterations, an agent searching for information not in the corpus will keep retrieving, finding partial results, refining its query, retrieving again — potentially until the context window overflows or you run out of money. max_iterations is a hard safety governor that ensures the loop terminates regardless of what the LLM wants to do."
+    "explanation": "Without max_iterations, an agent searching for information not in the corpus will keep retrieving, finding partial results, refining its query, retrieving again - potentially until the context window overflows or you run out of money. max_iterations is a hard safety governor that ensures the loop terminates regardless of what the LLM wants to do."
   },
   {
     "id": "12-q03",
     "question": "An agentic RAG system has 40% of queries hitting max_iterations. What does this signal?",
     "options": [
-      "The system is working well — multi-hop questions naturally require many iterations",
+      "The system is working well - multi-hop questions naturally require many iterations",
       "Retrieval is broken: the corpus doesn't contain answers, the corpus is poorly chunked, or the agent is getting stuck in loops",
       "max_iterations is set too low and should be increased",
       "The LLM is choosing not to use the search tool for most queries"
@@ -45,14 +45,14 @@
       "Merging two different queries into one to reduce retrieval calls"
     ],
     "answer": 1,
-    "explanation": "When an agent fails to find information, it often rephrases and tries again — sometimes with nearly identical queries. Query deduplication detects this: if query N is semantically similar to any previous query (by string overlap or embedding similarity), skip the retrieval and return a message that no new information is available. This prevents the agent from wasting iterations on variations of a query that's already been tried."
+    "explanation": "When an agent fails to find information, it often rephrases and tries again - sometimes with nearly identical queries. Query deduplication detects this: if query N is semantically similar to any previous query (by string overlap or embedding similarity), skip the retrieval and return a message that no new information is available. This prevents the agent from wasting iterations on variations of a query that's already been tried."
   },
   {
     "id": "12-q05",
     "question": "You have a real-time customer support chatbot (< 500ms latency requirement). Should you use agentic RAG?",
     "options": [
       "Yes, agentic RAG always produces better answers",
-      "No — each agent iteration adds 1-3 seconds; even 2 iterations violates a 500ms SLA",
+      "No - each agent iteration adds 1-3 seconds; even 2 iterations violates a 500ms SLA",
       "Yes, but limit max_iterations to 1 to stay under 500ms",
       "Only if the questions are multi-hop; use the same system for all queries"
     ],
@@ -65,7 +65,7 @@
     "options": [
       "Total tokens used",
       "Faithfulness score",
-      "Queries requiring more than 3 calls — signal that retrieval or chunking may be broken",
+      "Queries requiring more than 3 calls - signal that retrieval or chunking may be broken",
       "Context relevance score from the first retrieval"
     ],
     "answer": 2,

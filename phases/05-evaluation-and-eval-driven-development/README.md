@@ -4,7 +4,7 @@
 
 **Status:** ✅ Complete  
 **Time:** ~15 hours  
-**Prerequisites:** P02 (RAG) or P04 (Agents) — you need a system to evaluate
+**Prerequisites:** P02 (RAG) or P04 (Agents): you need a system to evaluate
 
 ---
 

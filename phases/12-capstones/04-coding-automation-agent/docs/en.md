@@ -368,7 +368,7 @@ Known outcome: a valid checks.json with 6-8 questions in the correct format.
 Metric: does the proposed file match the checks.json schema? (Validate with JSON schema check.)
 
 **Task 3: Find lessons missing a Real-world check blockquote**
-Task: "Find all lessons in Phase 02 that are missing a '> **Real-world check:**' section."
+Task: "Find all lessons in Phase 02 that are missing the required layman question blockquote in their Build It section."
 Known answer: zero (all Phase 02 lessons have this section - if this is not true in the repo, the answer is the actual list).
 Metric: does the agent report the correct list?
 

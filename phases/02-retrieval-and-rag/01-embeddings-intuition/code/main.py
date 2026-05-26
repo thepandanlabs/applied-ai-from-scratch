@@ -1,5 +1,5 @@
 """
-Embeddings Intuition — Phase 02 Lesson 01
+Embeddings Intuition - Phase 02 Lesson 01
 appliedaifromscratch.com
 
 Demonstrates: text as vectors, cosine similarity, semantic search.
@@ -15,7 +15,7 @@ from collections import Counter
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# PART 1: Core math — cosine similarity
+# PART 1: Core math - cosine similarity
 # ---------------------------------------------------------------------------
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -24,7 +24,7 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     Range: [-1.0, 1.0]. Higher means more similar direction.
 
     Why cosine and not Euclidean distance?
-    Euclidean distance is sensitive to vector magnitude — a longer document
+    Euclidean distance is sensitive to vector magnitude - a longer document
     produces a larger raw vector even if the content is the same topic as a
     shorter one. Cosine similarity measures only the angle, ignoring magnitude,
     which makes it robust for text of different lengths.
@@ -32,7 +32,7 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     norm_a = np.linalg.norm(a)
     norm_b = np.linalg.norm(b)
     if norm_a == 0.0 or norm_b == 0.0:
-        # Zero vector has no direction — similarity is undefined, return 0
+        # Zero vector has no direction - similarity is undefined, return 0
         return 0.0
     return float(np.dot(a, b) / (norm_a * norm_b))
 
@@ -119,7 +119,7 @@ class SemanticSearchEngine:
     Replaces vocabulary lookup with contextual neural embeddings that capture
     meaning rather than surface form.
 
-    The search() logic is identical to LexicalSearchEngine — only the
+    The search() logic is identical to LexicalSearchEngine - only the
     embedding function changes. This is the whole point: the retrieval
     primitive is the same; the representation is what improves.
     """
@@ -135,7 +135,7 @@ class SemanticSearchEngine:
         self.model = SentenceTransformer(model_name)
 
         # normalize_embeddings=True scales each vector to unit length.
-        # This makes cosine_sim(a, b) == dot(a, b) — faster and numerically
+        # This makes cosine_sim(a, b) == dot(a, b) - faster and numerically
         # stable. It does NOT change which documents rank highest.
         self.doc_vectors = self.model.encode(
             docs,
@@ -234,7 +234,7 @@ def print_results(label: str, results: list[tuple[float, str]]) -> None:
 
 def main():
     print("=" * 60)
-    print("Phase 02 · Lesson 01 — Embeddings Intuition")
+    print("Phase 02 · Lesson 01 - Embeddings Intuition")
     print("=" * 60)
 
     # -----------------------------------------------------------------------
@@ -251,7 +251,7 @@ def main():
     print(f"  cosine_sim(a, c) = {cosine_similarity(a, c):.4f}  (different, expect ~-0.5)")
 
     # -----------------------------------------------------------------------
-    # Step 2: Lexical search (bag-of-words) — shows the failure mode
+    # Step 2: Lexical search (bag-of-words) - shows the failure mode
     # -----------------------------------------------------------------------
     print("\n--- Step 2: Lexical Search (Bag-of-Words) ---")
     print("Watch how queries with no word overlap score 0.0\n")
@@ -269,7 +269,7 @@ def main():
     )
 
     # -----------------------------------------------------------------------
-    # Step 3: Semantic search — show the improvement
+    # Step 3: Semantic search - show the improvement
     # -----------------------------------------------------------------------
     print("\n--- Step 3: Semantic Search (Neural Embeddings) ---")
     print("Loading all-MiniLM-L6-v2 (downloads ~90MB on first run)...\n")
@@ -301,7 +301,7 @@ def main():
         all_results = semantic.search(example_query, top_k=len(DOCUMENTS))
         scores = [s for s, _ in all_results]
         print(f"\n  Query: '{example_query}'")
-        print(f"  Top-1 score : {scores[0]:.3f}  {'(good, >0.7)' if scores[0] > 0.7 else '(low — may need a better model)'}")
+        print(f"  Top-1 score : {scores[0]:.3f}  {'(good, >0.7)' if scores[0] > 0.7 else '(low - may need a better model)'}")
         print(f"  Top-5 mean  : {sum(scores[:5])/5:.3f}")
         print(f"  Top-10 mean : {sum(scores)/len(scores):.3f}")
         print(
@@ -317,7 +317,7 @@ def main():
         )
 
     print("\n" + "=" * 60)
-    print("Done. Next: Lesson 02 — Embedding Models (model selection at scale)")
+    print("Done. Next: Lesson 02 - Embedding Models (model selection at scale)")
     print("=" * 60)
 
 

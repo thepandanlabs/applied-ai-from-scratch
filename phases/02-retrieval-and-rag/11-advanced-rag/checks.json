@@ -1,12 +1,12 @@
 [
   {
     "id": "11-q01",
-    "question": "Users report that RAG answers are incomplete — they reference 'as mentioned in the previous point' without including that content. Which pattern addresses this?",
+    "question": "Users report that RAG answers are incomplete - they reference 'as mentioned in the previous point' without including that content. Which pattern addresses this?",
     "options": [
-      "Multi-vector indexing — generate summaries that capture the full argument",
-      "Parent-document retrieval — retrieve small chunks but return larger parent context",
-      "Contextual retrieval — prepend context to chunks to include prior content",
-      "Hybrid search — BM25 will find the keyword reference"
+      "Multi-vector indexing - generate summaries that capture the full argument",
+      "Parent-document retrieval - retrieve small chunks but return larger parent context",
+      "Contextual retrieval - prepend context to chunks to include prior content",
+      "Hybrid search - BM25 will find the keyword reference"
     ],
     "answer": 1,
     "explanation": "This is the size mismatch problem: the retrieved child chunk is too small to include the 'previous point'. Parent-document retrieval indexes small children for precision but returns the full parent section to the LLM, which includes the surrounding context. Contextual retrieval helps with orphaned references but doesn't change the size of what's returned."
@@ -27,13 +27,13 @@
     "id": "11-q03",
     "question": "What is the indexing-time cost of contextual retrieval relative to naive RAG?",
     "options": [
-      "Zero — contextual retrieval doesn't change the indexing process",
+      "Zero - contextual retrieval doesn't change the indexing process",
       "One LLM call per chunk to generate the context sentence",
       "One LLM call per query at retrieval time",
       "Doubles the embedding cost because two vectors are stored per chunk"
     ],
     "answer": 1,
-    "explanation": "Contextual retrieval requires one LLM call per chunk at index time to generate the context sentence. This is a one-time offline cost amortized over all future queries. There is zero added latency at retrieval time. The embedding cost is the same (one vector per chunk — just on the enriched text instead of the raw text)."
+    "explanation": "Contextual retrieval requires one LLM call per chunk at index time to generate the context sentence. This is a one-time offline cost amortized over all future queries. There is zero added latency at retrieval time. The embedding cost is the same (one vector per chunk - just on the enriched text instead of the raw text)."
   },
   {
     "id": "11-q04",
@@ -63,12 +63,12 @@
     "id": "11-q06",
     "question": "What RAG Triad metric should you watch most closely after applying parent-document retrieval?",
     "options": [
-      "Answer relevance — the parent chunks may cause the LLM to answer adjacent questions",
-      "Faithfulness — the larger parent context should reduce hallucination",
-      "Context relevance — the larger parents may include irrelevant content, diluting the signal",
-      "Abstention rate — parents return more text, making abstention less likely"
+      "Answer relevance - the parent chunks may cause the LLM to answer adjacent questions",
+      "Faithfulness - the larger parent context should reduce hallucination",
+      "Context relevance - the larger parents may include irrelevant content, diluting the signal",
+      "Abstention rate - parents return more text, making abstention less likely"
     ],
     "answer": 1,
-    "explanation": "Parent-document retrieval returns larger chunks to the LLM. The primary benefit is that more complete context reduces faithfulness failures (the generator has enough context to avoid hallucinating missing details). The primary risk is that larger parents include more text, some of which may be irrelevant — potentially diluting context relevance. Monitor faithfulness improvement and context relevance stability to confirm the pattern is helping."
+    "explanation": "Parent-document retrieval returns larger chunks to the LLM. The primary benefit is that more complete context reduces faithfulness failures (the generator has enough context to avoid hallucinating missing details). The primary risk is that larger parents include more text, some of which may be irrelevant - potentially diluting context relevance. Monitor faithfulness improvement and context relevance stability to confirm the pattern is helping."
   }
 ]

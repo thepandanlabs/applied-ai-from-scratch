@@ -173,7 +173,7 @@ def llamaindex_ask(query: str, index, top_k: int = 3, verbose: bool = False) -> 
 def llamaindex_retrieve_raw(query: str, index, top_k: int = 3) -> list:
     """
     Escape hatch: get raw Node objects for custom processing.
-    Bypasses the QueryEngine — use for custom re-ranking or prompt formatting.
+    Bypasses the QueryEngine - use for custom re-ranking or prompt formatting.
     """
     if index is None:
         return []

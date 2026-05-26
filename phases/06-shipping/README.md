@@ -1,4 +1,4 @@
-# Phase 06: Shipping It — Notebook to Production Service
+# Phase 06: Shipping It: Notebook to Production Service
 
 14 lessons. ~15 hours. Close the demo-to-production gap and deploy a real AI service that handles the real world: noisy inputs, network failures, concurrent users, and evolving prompts.
 

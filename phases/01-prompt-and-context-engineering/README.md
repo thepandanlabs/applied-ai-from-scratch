@@ -4,7 +4,7 @@
 
 ## The through-line
 
-Everything in AI engineering starts with a prompt. Before RAG, before agents, before fine-tuning, you need to understand how to construct requests that produce reliable outputs, how to manage what the model sees, and how to measure whether your prompts actually work. This phase covers all of it — from request anatomy through a production extraction service.
+Everything in AI engineering starts with a prompt. Before RAG, before agents, before fine-tuning, you need to understand how to construct requests that produce reliable outputs, how to manage what the model sees, and how to measure whether your prompts actually work. This phase covers all of it : from request anatomy through a production extraction service.
 
 ## What you build
 
@@ -56,4 +56,4 @@ Phase 00 (Setup) or just: working Python environment, Anthropic API key. No prio
 - `pydantic` for validation and retry loops
 - `dspy` for programmatic optimization (L09)
 - `fastapi` + `uvicorn` for the capstone service
-- No LangChain required — you build the patterns raw first
+- No LangChain required: you build the patterns raw first

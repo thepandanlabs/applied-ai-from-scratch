@@ -1,5 +1,5 @@
 """
-Vector Stores — Phase 02 Lesson 03
+Vector Stores - Phase 02 Lesson 03
 appliedaifromscratch.com
 
 Part 1: Build a minimal in-memory vector store from scratch (NumPy only)
@@ -132,7 +132,7 @@ class InMemoryVectorStore:
         """
         Return the top_k most similar documents to query_vector.
 
-        filter_metadata: optional {field: value} dict — only documents
+        filter_metadata: optional {field: value} dict - only documents
         matching ALL conditions are searched.
 
         Implementation: brute-force cosine similarity (exact nearest neighbor).
@@ -164,7 +164,7 @@ class InMemoryVectorStore:
         scores = matrix @ q  # dot product == cosine sim for unit vectors: (N,)
 
         k = min(top_k, len(ids))
-        # np.argpartition is O(N) — faster than full sort for large N
+        # np.argpartition is O(N) - faster than full sort for large N
         top_indices = np.argpartition(scores, -k)[-k:]
         top_indices = top_indices[np.argsort(scores[top_indices])[::-1]]
 
@@ -192,7 +192,7 @@ class QdrantVectorStore:
 
     Uses ':memory:' for in-process storage (like InMemoryVectorStore).
     Switch to path='./qdrant_data' for persistence across restarts.
-    Switch to url='http://...' for a production server — zero code changes.
+    Switch to url='http://...' for a production server - zero code changes.
     """
 
     def __init__(
@@ -203,9 +203,9 @@ class QdrantVectorStore:
     ) -> None:
         """
         storage options:
-          ':memory:' — in-process, no persistence
-          './qdrant_data' — file-backed persistence
-          'http://localhost:6333' — server (use url= kwarg instead)
+          ':memory:' - in-process, no persistence
+          './qdrant_data' - file-backed persistence
+          'http://localhost:6333' - server (use url= kwarg instead)
         """
         from qdrant_client import QdrantClient
         from qdrant_client.models import Distance, VectorParams
@@ -252,7 +252,7 @@ class QdrantVectorStore:
         vector: np.ndarray,
         metadata: dict[str, Any] | None = None,
     ) -> None:
-        """Alias for upsert — Qdrant uses upsert semantics natively."""
+        """Alias for upsert - Qdrant uses upsert semantics natively."""
         self.upsert(doc_id, text, vector, metadata)
 
     def delete(self, doc_id: str) -> bool:
@@ -336,7 +336,7 @@ class QdrantVectorStore:
 
 
 # ---------------------------------------------------------------------------
-# PART 3: Verification tests — run on both store implementations
+# PART 3: Verification tests - run on both store implementations
 # ---------------------------------------------------------------------------
 
 def run_store_tests(store, label: str) -> None:
@@ -517,7 +517,7 @@ DEMO_QUERIES = [
 
 def main():
     print("=" * 60)
-    print("Phase 02 · Lesson 03 — Vector Stores")
+    print("Phase 02 · Lesson 03 - Vector Stores")
     print("=" * 60)
 
     # ------------------------------------------------------------------
@@ -589,7 +589,7 @@ def main():
     )
 
     print("\n" + "=" * 60)
-    print("Done. Next: Lesson 04 — Chunking Strategies")
+    print("Done. Next: Lesson 04 - Chunking Strategies")
     print("=" * 60)
 
 

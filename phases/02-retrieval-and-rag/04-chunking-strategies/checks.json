@@ -12,7 +12,7 @@
         "The cosine similarity threshold is set too high, filtering out relevant chunks"
       ],
       "answer": 2,
-      "explanation": "When retrieved chunks have the right keyword but are grammatically incomplete, the chunker is splitting mid-sentence. Fixed-size chunking is the classic cause — it slices at fixed token positions regardless of sentence boundaries. The fix is to use recursive character splitting (respects sentence boundaries) or sentence-window chunking (one complete sentence per chunk)."
+      "explanation": "When retrieved chunks have the right keyword but are grammatically incomplete, the chunker is splitting mid-sentence. Fixed-size chunking is the classic cause - it slices at fixed token positions regardless of sentence boundaries. The fix is to use recursive character splitting (respects sentence boundaries) or sentence-window chunking (one complete sentence per chunk)."
     },
     {
       "q": "You're building a RAG system over a Markdown documentation site. Each page has H1/H2/H3 headers with content under each. Which chunking strategy best preserves the document structure while keeping sections retrievable?",
@@ -23,7 +23,7 @@
         "Sentence-window with window_size=3"
       ],
       "answer": 1,
-      "explanation": "Markdown-aware splitting creates chunks that align with the document's own structure. Including the header in each chunk ensures the embedding knows the section's topic — a chunk that just contains 'See section 3 for details' without its header has no useful signal. The other strategies ignore the document's inherent structure."
+      "explanation": "Markdown-aware splitting creates chunks that align with the document's own structure. Including the header in each chunk ensures the embedding knows the section's topic - a chunk that just contains 'See section 3 for details' without its header has no useful signal. The other strategies ignore the document's inherent structure."
     },
     {
       "q": "What is the key advantage of sentence-window chunking over plain sentence chunking?",
@@ -34,7 +34,7 @@
         "Sentence-window automatically detects paragraph boundaries"
       ],
       "answer": 2,
-      "explanation": "Sentence-window separates the indexing unit (a single sentence) from the generation unit (the sentence plus surrounding context). You get precision retrieval — the exact sentence is indexed — while the LLM receives enough context to generate a coherent answer. Plain sentence chunking would return only the single sentence to the LLM, which is often too short to interpret correctly."
+      "explanation": "Sentence-window separates the indexing unit (a single sentence) from the generation unit (the sentence plus surrounding context). You get precision retrieval - the exact sentence is indexed - while the LLM receives enough context to generate a coherent answer. Plain sentence chunking would return only the single sentence to the LLM, which is often too short to interpret correctly."
     },
     {
       "q": "Semantic chunking embeds every sentence and splits where cosine similarity drops below a threshold. What is the primary failure mode of this approach?",
@@ -56,7 +56,7 @@
         "It eliminates the need for chunk overlap by making each chunk fully self-contained"
       ],
       "answer": 2,
-      "explanation": "Standard chunking embeds each chunk in isolation — chunk 1 knows nothing about chunks 2 through N. Late chunking embeds the full document first (getting token-level representations with full context), then extracts chunk vectors from those full-document representations. The result: a chunk early in the document has an embedding that reflects what appears later in the same document."
+      "explanation": "Standard chunking embeds each chunk in isolation - chunk 1 knows nothing about chunks 2 through N. Late chunking embeds the full document first (getting token-level representations with full context), then extracts chunk vectors from those full-document representations. The result: a chunk early in the document has an embedding that reflects what appears later in the same document."
     },
     {
       "q": "You run a chunking quality check and find that 40% of your chunks are exactly at your max_chars limit, while 10% are tiny (< 20 tokens). What does this distribution suggest?",

@@ -129,7 +129,7 @@ class InMemoryVectorStore:
         return removed
 
 
-# Singleton store — shared by all endpoints
+# Singleton store - shared by all endpoints
 vector_store = InMemoryVectorStore()
 
 # ---------------------------------------------------------------------------
@@ -329,7 +329,7 @@ def run_query(query: str, top_k: int, request_id: str = "") -> dict:
     # Step 4: Generate
     t0 = time.time()
     client = get_oai_client()
-    answer = "[LLM not configured — set OPENAI_API_KEY or USE_LOCAL_EMBEDDINGS=true]"
+    answer = "[LLM not configured - set OPENAI_API_KEY or USE_LOCAL_EMBEDDINGS=true]"
     token_info: dict = {}
 
     if client:
@@ -478,7 +478,7 @@ if FASTAPI_AVAILABLE:
 
     app = FastAPI(
         title="RAG Service",
-        description="Production RAG API — Applied AI From Scratch, Phase 02 Capstone",
+        description="Production RAG API - Applied AI From Scratch, Phase 02 Capstone",
         version="1.0.0",
         lifespan=lifespan,
     )
@@ -502,7 +502,7 @@ if FASTAPI_AVAILABLE:
     @app.get("/health")
     async def health(request: Request) -> JSONResponse:
         """
-        Deep health check — not just 'process alive' but 'system functional'.
+        Deep health check - not just 'process alive' but 'system functional'.
         Returns 200 if healthy, 207 if degraded, 503 if unhealthy.
         """
         checks: dict[str, Any] = {}
@@ -513,7 +513,7 @@ if FASTAPI_AVAILABLE:
             count = vector_store.count()
             checks["vector_store"] = {"status": "ok", "chunk_count": count}
             if count == 0:
-                checks["vector_store"]["warning"] = "Index is empty — ingest documents first"
+                checks["vector_store"]["warning"] = "Index is empty - ingest documents first"
                 status = "degraded"
         except Exception as e:
             checks["vector_store"] = {"status": "error", "detail": str(e)}
@@ -718,7 +718,7 @@ DEMO_CORPUS = [
     "Chunking strategy is the most impactful decision in a RAG pipeline. Too small: context is lost. Too large: retrieval is diluted.",
     "Hybrid search combines dense (embedding) retrieval with sparse (BM25/keyword) retrieval. It consistently outperforms either approach alone.",
     "The RAG Triad evaluates three dimensions: faithfulness (answer grounded in context?), answer relevance (answers the question?), and context relevance (right chunks retrieved?).",
-    "Idempotent ingestion uses content hashing to detect duplicate documents. Re-ingesting the same document produces no change — no error, no duplicate chunks.",
+    "Idempotent ingestion uses content hashing to detect duplicate documents. Re-ingesting the same document produces no change - no error, no duplicate chunks.",
     "Exponential backoff with jitter handles rate limiting: wait 1s, 2s, 4s with small random offsets to desynchronize retries from concurrent clients.",
     "Health checks should verify all dependencies: vector store reachable, LLM API configured, index non-empty. A process that is alive but has an empty index is not healthy.",
     "Structured JSON logging captures: request_id, query, latency_breakdown (embed_ms + retrieve_ms + generate_ms), tokens, and top chunk score.",
@@ -740,7 +740,7 @@ def run_demo() -> None:
     Does not require a running server.
     """
     print("=" * 65)
-    print("RAG Service — Standalone Demo")
+    print("RAG Service - Standalone Demo")
     print("=" * 65)
 
     # Ingest
@@ -785,7 +785,7 @@ def run_demo() -> None:
         print("   Set USE_LOCAL_EMBEDDINGS=true to test without an API key.")
 
     # Idempotency demo
-    print("\n4. Idempotency test — re-ingest the same doc...")
+    print("\n4. Idempotency test - re-ingest the same doc...")
     result = ingest_document(
         content=DEMO_CORPUS[0],
         doc_id="doc-01",

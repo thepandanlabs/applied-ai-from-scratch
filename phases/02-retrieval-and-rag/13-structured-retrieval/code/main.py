@@ -1,5 +1,5 @@
 # pip install openai
-# SQLite is part of Python's standard library — no install needed.
+# SQLite is part of Python's standard library - no install needed.
 # Set environment variable: OPENAI_API_KEY=sk-...
 
 import os
@@ -192,7 +192,7 @@ Rules:
 2. Use only table and column names that appear in the schema.
 3. For date comparisons, use SQLite string comparison (e.g., created_at >= '2024-12-01').
 4. Always qualify column names with table name/alias when joining multiple tables.
-5. Return ONLY the raw SQL query — no explanation, no markdown, no backticks.
+5. Return ONLY the raw SQL query - no explanation, no markdown, no backticks.
 6. If the question is ambiguous, make the most reasonable interpretation.
 """
 
@@ -249,7 +249,7 @@ def correct_sql(
         f"Failed SQL:\n{failed_sql}\n\n"
         f"SQLite Error:\n{error_message}\n\n"
         f"Write a corrected SQL query that fixes the error. "
-        f"Return ONLY the raw SQL — no explanation, no backticks."
+        f"Return ONLY the raw SQL - no explanation, no backticks."
     )
 
     response = client.chat.completions.create(
@@ -397,7 +397,7 @@ def run_text_to_sql(
 
 ANSWER_SYSTEM_PROMPT = """You are a helpful data analyst. Given a natural language question,
 the SQL query used to answer it, and the query results as JSON rows, write a clear and concise
-natural language answer. Be specific — include actual numbers, names, and values from the results.
+natural language answer. Be specific - include actual numbers, names, and values from the results.
 Keep it to 1-3 sentences. If results are empty, say so directly."""
 
 

@@ -1,7 +1,7 @@
 [
   {
     "id": "14-q1",
-    "question": "You run naive RAG over a Python codebase, chunking every 300 characters. A developer queries 'how does authentication work?' and gets back the middle of the authenticate() function body — no function name, no docstring, no signature. What is the root cause?",
+    "question": "You run naive RAG over a Python codebase, chunking every 300 characters. A developer queries 'how does authentication work?' and gets back the middle of the authenticate() function body - no function name, no docstring, no signature. What is the root cause?",
     "options": [
       "The embedding model cannot handle code",
       "The cosine similarity threshold is too high",
@@ -15,10 +15,10 @@
     "id": "14-q2",
     "question": "When building a rich text representation for embedding a code chunk, which of the following provides the most semantic signal for natural language queries?",
     "options": [
-      "The raw source code only — queries should match implementation details",
-      "The function name and docstring combined with the source — natural language bridges code and query vocabulary",
-      "Only the docstring — source code adds noise",
-      "The file path and line numbers — location is most useful"
+      "The raw source code only - queries should match implementation details",
+      "The function name and docstring combined with the source - natural language bridges code and query vocabulary",
+      "Only the docstring - source code adds noise",
+      "The file path and line numbers - location is most useful"
     ],
     "answer": 1,
     "explanation": "The function name and docstring contain natural language that matches query vocabulary. A query for 'authentication' matches the word 'authenticate' in the function name and phrases like 'verify user credentials' in the docstring. Raw source code has limited semantic signal for intent-based queries."
@@ -39,7 +39,7 @@
     "id": "14-q4",
     "question": "Your codebase has 2,000 Python functions. A developer changes one file with 12 functions. What is the correct approach for re-indexing?",
     "options": [
-      "Re-embed all 2,000 functions — the entire index must be consistent",
+      "Re-embed all 2,000 functions - the entire index must be consistent",
       "Skip re-indexing until the next scheduled full rebuild",
       "Re-embed only the 12 functions in the changed file, using content hashing to detect which ones actually changed",
       "Re-embed only the single function that was edited"
@@ -51,13 +51,13 @@
     "id": "14-q5",
     "question": "A developer queries: 'show me the `authenticate` function'. What is the best retrieval strategy?",
     "options": [
-      "Vector similarity only — let the embedding model find the match",
+      "Vector similarity only - let the embedding model find the match",
       "Symbol search (exact/partial name match) first, combined with vector similarity as a fallback",
       "Full-text grep on the source files",
-      "File-level retrieval only — don't retrieve individual functions"
+      "File-level retrieval only - don't retrieve individual functions"
     ],
     "answer": 1,
-    "explanation": "When the query contains a specific function name, symbol search (exact string match on function names) should be the primary strategy — it's faster and more precise than vector similarity for exact lookups. Vector similarity handles paraphrase queries ('how does login work?'). Hybrid search combines both."
+    "explanation": "When the query contains a specific function name, symbol search (exact string match on function names) should be the primary strategy - it's faster and more precise than vector similarity for exact lookups. Vector similarity handles paraphrase queries ('how does login work?'). Hybrid search combines both."
   },
   {
     "id": "14-q6",
@@ -65,7 +65,7 @@
     "options": [
       "Increase the embedding dimension",
       "Switch from cosine similarity to dot product",
-      "Improve the embed text — add docstrings to functions that lack them, and ensure function names are included in the representation",
+      "Improve the embed text - add docstrings to functions that lack them, and ensure function names are included in the representation",
       "Add more sample files to the codebase"
     ],
     "answer": 2,

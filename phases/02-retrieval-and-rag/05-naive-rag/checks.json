@@ -10,20 +10,20 @@
       "Augment → Ingest → Retrieve → Generate"
     ],
     "answer": "Ingest → Retrieve → Augment → Generate",
-    "explanation": "Ingest (load, chunk, embed, store) runs once at setup time. Retrieve, Augment, and Generate run per query in that order. Ingest cannot run per-query — it would re-embed the entire corpus on every question."
+    "explanation": "Ingest (load, chunk, embed, store) runs once at setup time. Retrieve, Augment, and Generate run per query in that order. Ingest cannot run per-query - it would re-embed the entire corpus on every question."
   },
   {
     "id": "05-q2",
     "question": "A RAG system returns a wrong answer. You log the top-5 retrieved chunks and find the relevant passage is at position 3. What is the most likely root cause?",
     "type": "multiple_choice",
     "options": [
-      "Retrieval failure — the embedding model returned an irrelevant chunk",
-      "Generation failure — the LLM ignored the context even though the right chunk was retrieved",
-      "Chunking failure — the passage was split across two chunks",
-      "Augmentation failure — the prompt format confused the model"
+      "Retrieval failure - the embedding model returned an irrelevant chunk",
+      "Generation failure - the LLM ignored the context even though the right chunk was retrieved",
+      "Chunking failure - the passage was split across two chunks",
+      "Augmentation failure - the prompt format confused the model"
     ],
-    "answer": "Generation failure — the LLM ignored the context even though the right chunk was retrieved",
-    "explanation": "If the relevant passage appears in the top-K retrieved chunks, retrieval is working. The problem is in the generate step: the LLM is not using the provided context. Fixing the system prompt, lowering temperature, or upgrading the model are the right next steps — not changing chunking or retrieval parameters."
+    "answer": "Generation failure - the LLM ignored the context even though the right chunk was retrieved",
+    "explanation": "If the relevant passage appears in the top-K retrieved chunks, retrieval is working. The problem is in the generate step: the LLM is not using the provided context. Fixing the system prompt, lowering temperature, or upgrading the model are the right next steps - not changing chunking or retrieval parameters."
   },
   {
     "id": "05-q3",
@@ -31,7 +31,7 @@
     "type": "multiple_choice",
     "options": [
       "Batching produces higher quality embeddings by averaging across the batch",
-      "The API requires it — individual calls are not supported",
+      "The API requires it - individual calls are not supported",
       "Batching reduces latency dramatically (1 call vs N calls) with identical output quality",
       "Batching uses a different model with better semantic understanding"
     ],
@@ -56,7 +56,7 @@
     "question": "What is chunk overlap and why is it important?",
     "type": "multiple_choice",
     "options": [
-      "Overlap is when two chunks share the same embedding — it indicates duplicate content",
+      "Overlap is when two chunks share the same embedding - it indicates duplicate content",
       "Overlap is repeating some words at the start of each new chunk to prevent answers that span a chunk boundary from being lost",
       "Overlap is when the cosine similarity between two chunks exceeds 0.9, indicating they should be merged",
       "Overlap is the number of tokens shared between the query and the top retrieved chunk"

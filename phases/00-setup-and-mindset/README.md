@@ -46,4 +46,4 @@ None. This is the starting point. You need Python installed and an Anthropic API
 - TypeScript + Node (L01, L03)
 - `anthropic` SDK
 - Docker (L08)
-- No frameworks — raw API calls only
+- No frameworks, raw API calls only

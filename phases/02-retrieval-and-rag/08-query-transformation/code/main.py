@@ -4,10 +4,10 @@
 #   python main.py
 #
 # Implements 4 query transformation techniques:
-#   (1) Query Rewriting — rephrase for better retrieval vocabulary
-#   (2) HyDE — generate hypothetical answer, embed that instead of the question
-#   (3) Step-Back Prompting — generate more general query for background context
-#   (4) Multi-Query — generate N phrasings, retrieve all, deduplicate
+#   (1) Query Rewriting - rephrase for better retrieval vocabulary
+#   (2) HyDE - generate hypothetical answer, embed that instead of the question
+#   (3) Step-Back Prompting - generate more general query for background context
+#   (4) Multi-Query - generate N phrasings, retrieve all, deduplicate
 #
 # To use with your RAG pipeline from Lesson 05:
 #   from lesson05_main import ingest, retrieve
@@ -87,7 +87,7 @@ Rules:
 - Replace informal language with technical vocabulary likely to appear in documents
 - Add synonyms or related terms that might appear in relevant passages
 - Remove filler words and conversational phrasing
-- Return ONLY the rewritten query — no explanation, no preamble, no punctuation at the end."""
+- Return ONLY the rewritten query - no explanation, no preamble, no punctuation at the end."""
 
 
 def rewrite_query(query: str) -> str:
@@ -122,8 +122,8 @@ directly answer the given question, as if it came from the relevant documentatio
 Requirements:
 - Write 2-4 sentences
 - Use the technical vocabulary that would appear in source documents
-- Be specific and concrete — write as a confident factual excerpt
-- Do NOT say "In this document" or "This passage explains" — start with the content directly
+- Be specific and concrete - write as a confident factual excerpt
+- Do NOT say "In this document" or "This passage explains" - start with the content directly
 - Do NOT express uncertainty or use hedging language"""
 
 
@@ -137,7 +137,7 @@ def hyde_query(query: str) -> tuple[str, list[float]]:
     typically through a null pointer dereference or buffer overflow."
 
     The hypothetical answer embeds in the same neighborhood as real document
-    passages — because it uses the same vocabulary and sentence patterns.
+    passages - because it uses the same vocabulary and sentence patterns.
 
     Returns: (hypothetical_document_text, embedding_vector_of_that_text)
 
@@ -172,7 +172,7 @@ The step-back question should:
 - Be general enough to retrieve foundational context
 - NOT include the specific identifiers or values from the original question
 
-Return ONLY the step-back question — no explanation, no preamble.
+Return ONLY the step-back question - no explanation, no preamble.
 
 Examples:
   Specific: "What is the max dose of ibuprofen for a 70kg adult with mild pain?"
@@ -452,7 +452,7 @@ if __name__ == "__main__":
 
     print("=" * 70)
     print("QUERY TRANSFORMATION DEMO")
-    print("(Using stub retriever — replace with your real retrieve() function)")
+    print("(Using stub retriever - replace with your real retrieve() function)")
     print("=" * 70)
 
     for query, _ in demo_queries[:1]:

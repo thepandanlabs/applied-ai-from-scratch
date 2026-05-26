@@ -23,7 +23,7 @@
         "Cosine similarity always produces values in [0, 1] while Euclidean distance can be unbounded"
       ],
       "answer": 1,
-      "explanation": "A long document accumulates more token contributions than a short one, producing a larger-magnitude vector even if both cover the same topic. Cosine similarity measures only the angle between vectors, ignoring magnitude — so a long and short document on the same topic can still score near 1.0."
+      "explanation": "A long document accumulates more token contributions than a short one, producing a larger-magnitude vector even if both cover the same topic. Cosine similarity measures only the angle between vectors, ignoring magnitude - so a long and short document on the same topic can still score near 1.0."
     },
     {
       "q": "You call model.encode(texts, normalize_embeddings=True). What does normalization do to retrieval quality?",
@@ -34,12 +34,12 @@
         "It makes all embeddings identical in magnitude, reducing discriminative power"
       ],
       "answer": 1,
-      "explanation": "Normalizing vectors to unit length means |v| = 1 for all vectors. At that point, dot(a, b) = cos(a, b) exactly — no division needed. This is a computational optimization, not a quality change. Rankings are identical to un-normalized cosine similarity."
+      "explanation": "Normalizing vectors to unit length means |v| = 1 for all vectors. At that point, dot(a, b) = cos(a, b) exactly - no division needed. This is a computational optimization, not a quality change. Rankings are identical to un-normalized cosine similarity."
     },
     {
       "q": "You embed 500 support documents and run sanity checks. The similarity score between 'How to cancel a subscription' and 'Unsubscribe from billing plan' is 0.38. What should you do?",
       "options": [
-        "This score is fine — anything above 0.3 counts as similar",
+        "This score is fine - anything above 0.3 counts as similar",
         "The cosine similarity formula is implemented incorrectly",
         "The embedding model is likely wrong for this domain; evaluate alternatives from Lesson 02",
         "Increase the number of documents in the corpus to improve embedding quality"
@@ -67,7 +67,7 @@
         "Increase the embedding dimension by using a larger model like text-embedding-3-large"
       ],
       "answer": 2,
-      "explanation": "Before changing the model, inspect what is actually being retrieved. A top-1 score of 0.45 often means the correct answer spans a chunk boundary — the best matching chunk contains only part of the answer. Fixing chunking is lower cost and often more impactful than upgrading the embedding model."
+      "explanation": "Before changing the model, inspect what is actually being retrieved. A top-1 score of 0.45 often means the correct answer spans a chunk boundary - the best matching chunk contains only part of the answer. Fixing chunking is lower cost and often more impactful than upgrading the embedding model."
     }
   ]
 }

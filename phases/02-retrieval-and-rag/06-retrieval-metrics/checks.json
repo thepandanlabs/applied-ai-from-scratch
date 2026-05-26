@@ -17,13 +17,13 @@
     "question": "A query has 3 relevant documents. Your system retrieves them at positions 2, 4, and 8 (1-based). What is the reciprocal rank for this query?",
     "type": "multiple_choice",
     "options": [
-      "0.50 (1/2 — position of first relevant result)",
-      "0.33 (1/3 — based on number of relevant docs)",
-      "0.25 (1/4 — position of second relevant result)",
+      "0.50 (1/2 - position of first relevant result)",
+      "0.33 (1/3 - based on number of relevant docs)",
+      "0.25 (1/4 - position of second relevant result)",
       "0.17 (average of 1/2 + 1/4 + 1/8 / 3)"
     ],
-    "answer": "0.50 (1/2 — position of first relevant result)",
-    "explanation": "Reciprocal rank only cares about the position of the FIRST relevant result. The first relevant doc is at position 2, so RR = 1/2 = 0.50. MRR ignores all subsequent relevant results — it's designed for Q&A where you primarily care about the top result."
+    "answer": "0.50 (1/2 - position of first relevant result)",
+    "explanation": "Reciprocal rank only cares about the position of the FIRST relevant result. The first relevant doc is at position 2, so RR = 1/2 = 0.50. MRR ignores all subsequent relevant results - it's designed for Q&A where you primarily care about the top result."
   },
   {
     "id": "06-q3",
@@ -36,7 +36,7 @@
       "The answers are wrong. Fix: update the system prompt."
     ],
     "answer": "The context is clean but you're missing half the relevant chunks. Fix: increase K or add hybrid search.",
-    "explanation": "High precision (0.8) means what you retrieve is mostly relevant — low noise. Low recall (0.4) means you're only finding 40% of the relevant documents — you're missing most of them. This means the model will give incomplete answers, not wrong ones. Fix: increase K to cast a wider net, or add hybrid search to catch documents that dense retrieval misses."
+    "explanation": "High precision (0.8) means what you retrieve is mostly relevant - low noise. Low recall (0.4) means you're only finding 40% of the relevant documents - you're missing most of them. This means the model will give incomplete answers, not wrong ones. Fix: increase K to cast a wider net, or add hybrid search to catch documents that dense retrieval misses."
   },
   {
     "id": "06-q4",
@@ -69,12 +69,12 @@
     "question": "You compute all retrieval metrics and find: hit_rate@5 = 0.95, recall@5 = 0.82, precision@5 = 0.55, MRR = 0.71, context_recall = 0.86. But your RAG answers are still frequently wrong. What should you investigate first?",
     "type": "multiple_choice",
     "options": [
-      "Increase K — recall is too low to get correct answers",
-      "Add a reranker — MRR is too low, relevant docs aren't at the top",
-      "Investigate the generation step — metrics show retrieval is working well",
-      "Switch embedding models — the retrieved docs are not relevant enough"
+      "Increase K - recall is too low to get correct answers",
+      "Add a reranker - MRR is too low, relevant docs aren't at the top",
+      "Investigate the generation step - metrics show retrieval is working well",
+      "Switch embedding models - the retrieved docs are not relevant enough"
     ],
-    "answer": "Investigate the generation step — metrics show retrieval is working well",
+    "answer": "Investigate the generation step - metrics show retrieval is working well",
     "explanation": "All retrieval metrics are in healthy ranges: hit_rate (0.95) is excellent, recall (0.82) is strong, precision (0.55) is acceptable, MRR (0.71) means the first relevant result is usually at position 1-2, and context_recall (0.86) means the model has almost all the material it needs. When retrieval metrics are good but answers are wrong, the problem is in generation: the LLM is not grounding its answer in the context. Fix: strengthen the system prompt grounding instructions, lower temperature, or try a stronger model."
   }
 ]

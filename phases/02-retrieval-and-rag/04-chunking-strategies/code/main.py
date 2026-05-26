@@ -1,5 +1,5 @@
 """
-Chunking Strategies — Phase 02 Lesson 04
+Chunking Strategies - Phase 02 Lesson 04
 appliedaifromscratch.com
 
 Implements all 6 chunking strategies as standalone functions.
@@ -37,7 +37,7 @@ Requests that exceed the rate limit receive a 429 Too Many Requests response. Th
 
 When your application receives a 429 response, it should implement exponential backoff. Start with a 1-second delay, then double the delay on each subsequent retry up to a maximum of 32 seconds. After 5 failed retries, surface the error to the user or log it for investigation.
 
-Do not retry immediately on receiving a 429 — this will only worsen the situation. Burst behavior that triggers rate limits is usually caused by unbatched requests in tight loops. Review your request patterns before increasing retry counts.
+Do not retry immediately on receiving a 429 - this will only worsen the situation. Burst behavior that triggers rate limits is usually caused by unbatched requests in tight loops. Review your request patterns before increasing retry counts.
 
 ## Monitoring Your Usage
 
@@ -58,7 +58,7 @@ Consistency means every read receives the most recent write or an error. Availab
 
 In practice, network partitions do occur in any distributed system, so the real choice is between consistency and availability during a partition. Systems like HBase and Zookeeper choose consistency, returning errors when a partition occurs rather than potentially stale data. Systems like Cassandra and CouchDB choose availability, returning the best available data and resolving conflicts later.
 
-The choice has major implications for application design. Consistency-first systems require clients to handle errors and retries explicitly. Availability-first systems require conflict resolution strategies—last-write-wins, vector clocks, or application-level merge functions.
+The choice has major implications for application design. Consistency-first systems require clients to handle errors and retries explicitly. Availability-first systems require conflict resolution strategies-last-write-wins, vector clocks, or application-level merge functions.
 
 Modern systems increasingly use tunable consistency models that let operators configure the tradeoff per query. Cassandra allows choosing from ONE, QUORUM, and ALL consistency levels at read time. This gives teams control over where on the spectrum each operation falls.
 
@@ -233,7 +233,7 @@ def markdown_split(
     """
     Split Markdown on H1/H2/H3 headers. Include the header in each chunk.
 
-    When to use: documentation, wikis, READMEs — any content with headers.
+    When to use: documentation, wikis, READMEs - any content with headers.
     Failure mode: sections longer than max_chars need further splitting;
     non-Markdown documents produce one large chunk.
     """
@@ -251,7 +251,7 @@ def markdown_split(
         if len(section) <= max_chars:
             chunks.append(section)
         else:
-            # Section is too large — extract header and split body by paragraphs
+            # Section is too large - extract header and split body by paragraphs
             header_match = header_pattern.match(section)
             header_line = header_match.group() + "\n\n" if header_match else ""
             body = section[len(header_line):]
@@ -418,7 +418,7 @@ def late_chunking_demo(
         model_hf = AutoModel.from_pretrained(model_name, trust_remote_code=True)
         model_hf.eval()
 
-        # Encode the FULL document — get token-level embeddings
+        # Encode the FULL document - get token-level embeddings
         inputs = tokenizer(
             text,
             return_tensors="pt",
@@ -442,7 +442,7 @@ def late_chunking_demo(
             chunk_lower = chunk_text.lower()
             pos = text_lower.find(chunk_lower, search_start)
             if pos == -1:
-                # Chunk not found at position — approximate
+                # Chunk not found at position - approximate
                 pos = search_start
 
             chunk_end = pos + len(chunk_text)
@@ -560,7 +560,7 @@ def token_distribution(chunks: list[str]) -> dict:
 
 def main():
     print("=" * 60)
-    print("Phase 02 · Lesson 04 — Chunking Strategies")
+    print("Phase 02 · Lesson 04 - Chunking Strategies")
     print("=" * 60)
 
     doc_tokens = count_tokens(SAMPLE_DOCUMENT)
@@ -718,7 +718,7 @@ def main():
             print(f"  {name:<28} [SKIP: {e}]")
 
     print("\n" + "=" * 60)
-    print("Done. Next: Lesson 05 — Naive RAG (full pipeline)")
+    print("Done. Next: Lesson 05 - Naive RAG (full pipeline)")
     print("=" * 60)
 
     # ------------------------------------------------------------------

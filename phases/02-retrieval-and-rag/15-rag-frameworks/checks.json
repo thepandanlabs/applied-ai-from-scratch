@@ -3,22 +3,22 @@
     "id": "15-q1",
     "question": "You have 5,000 plain text documents and need a simple Q&A chatbot. Which approach is most appropriate?",
     "options": [
-      "LangChain with LCEL chains — it's the industry standard",
-      "LlamaIndex — it handles document management automatically",
-      "Raw Python with numpy and openai — the complexity is unnecessary for this scale",
-      "LangGraph — it provides the best agent orchestration"
+      "LangChain with LCEL chains - it's the industry standard",
+      "LlamaIndex - it handles document management automatically",
+      "Raw Python with numpy and openai - the complexity is unnecessary for this scale",
+      "LangGraph - it provides the best agent orchestration"
     ],
     "answer": 2,
-    "explanation": "5,000 plain text documents is well within the range where raw Python (50–80 lines) handles the job without framework overhead. LlamaIndex and LangChain earn their complexity at higher scale with complex ingestion, multi-index, or orchestration needs — none of which apply here."
+    "explanation": "5,000 plain text documents is well within the range where raw Python (50–80 lines) handles the job without framework overhead. LlamaIndex and LangChain earn their complexity at higher scale with complex ingestion, multi-index, or orchestration needs - none of which apply here."
   },
   {
     "id": "15-q2",
     "question": "You need to build a RAG system that ingests PDFs, HTML pages, Notion pages, and Slack messages, and maintains relationships between parent documents and their chunks. Which framework is most appropriate?",
     "options": [
-      "Raw Python — write custom parsers for each document type",
-      "LlamaIndex — it has built-in loaders for all these types and manages node relationships natively",
-      "LangChain/LCEL — it handles document ingestion best",
-      "Neither — use a dedicated ETL pipeline instead"
+      "Raw Python - write custom parsers for each document type",
+      "LlamaIndex - it has built-in loaders for all these types and manages node relationships natively",
+      "LangChain/LCEL - it handles document ingestion best",
+      "Neither - use a dedicated ETL pipeline instead"
     ],
     "answer": 1,
     "explanation": "LlamaIndex is designed for exactly this: complex, multi-source ingestion pipelines with managed metadata and chunk relationships. It has built-in readers for PDFs, HTML, Notion, and Slack. Writing custom parsers for each type in raw Python is what LlamaIndex was built to avoid."
@@ -33,7 +33,7 @@
       "You should document how to remove the framework from your codebase"
     ],
     "answer": 1,
-    "explanation": "The escape hatch is the ability to extract raw primitives (retrieved nodes, documents, embeddings) from the framework and implement custom logic — re-ranking, prompt formatting, filtering — without being constrained by the framework's built-in pipeline. A framework without this escape hatch will eventually trap you."
+    "explanation": "The escape hatch is the ability to extract raw primitives (retrieved nodes, documents, embeddings) from the framework and implement custom logic - re-ranking, prompt formatting, filtering - without being constrained by the framework's built-in pipeline. A framework without this escape hatch will eventually trap you."
   },
   {
     "id": "15-q4",
@@ -41,7 +41,7 @@
     "options": [
       "It merges two vector stores into a single retriever",
       "It applies bitwise OR to similarity scores from two retrievers",
-      "It composes Runnable objects sequentially — the output of the left becomes the input of the right",
+      "It composes Runnable objects sequentially - the output of the left becomes the input of the right",
       "It parallelizes two chains and returns whichever finishes first"
     ],
     "answer": 2,
@@ -49,7 +49,7 @@
   },
   {
     "id": "15-q5",
-    "question": "Your team imports LangChain on day one and configures a RetrievalQA chain. After 3 months, a LangChain update breaks the pipeline silently — wrong answers with no error. What anti-pattern does this describe?",
+    "question": "Your team imports LangChain on day one and configures a RetrievalQA chain. After 3 months, a LangChain update breaks the pipeline silently - wrong answers with no error. What anti-pattern does this describe?",
     "options": [
       "Improper API key rotation",
       "Framework-first design: importing a framework before understanding what the raw version would fail at",
@@ -65,7 +65,7 @@
     "options": [
       "Only the embedding step",
       "Only the chunking step",
-      "Chunking (node parsing), embedding each node, and storing vectors — the full ingestion pipeline",
+      "Chunking (node parsing), embedding each node, and storing vectors - the full ingestion pipeline",
       "Loading documents from disk only"
     ],
     "answer": 2,
