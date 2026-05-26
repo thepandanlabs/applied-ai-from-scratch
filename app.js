@@ -197,27 +197,30 @@ function phaseCard(phase) {
   const clickable = phase.status !== 'planned' || phase.slug;
   const href = clickable ? `#phase/${phase.id}` : 'javascript:void(0)';
   const slideDeck = SLIDE_DECKS[phase.id];
+  // slides-btn is a sibling of the card anchor, not nested inside it
   const slidesBtn = slideDeck
-    ? `<a class="slides-btn" href="site/slides/${slideDeck}.html" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Open facilitator slide deck">⧉ Slides</a>`
+    ? `<a class="slides-btn" href="site/slides/${slideDeck}.html" target="_blank" rel="noopener" title="Open facilitator slide deck">⧉ Slides</a>`
     : '';
 
   return `
-    <a class="phase-card ${phase.status}" href="${href}" style="display:block; text-decoration:none;">
-      <div class="phase-card-num">${phase.id}</div>
-      <div class="phase-card-status">
-        <span class="status-dot ${phase.status}"></span>
-        <span class="status-label ${phase.status}">${statusLabel(phase.status)}</span>
-        ${slidesBtn}
-      </div>
-      <div class="phase-card-title">${phase.title}</div>
-      <div class="phase-card-desc">${phase.description}</div>
-      <div class="phase-progress">
-        <div class="phase-progress-bar">
-          <div class="phase-progress-fill" style="width:${pct}%"></div>
+    <div class="phase-card-wrap">
+      <a class="phase-card ${phase.status}" href="${href}" style="display:block; text-decoration:none;">
+        <div class="phase-card-num">${phase.id}</div>
+        <div class="phase-card-status">
+          <span class="status-dot ${phase.status}"></span>
+          <span class="status-label ${phase.status}">${statusLabel(phase.status)}</span>
         </div>
-        <div class="phase-progress-text">${done} / ${total} lessons · ${phase.time}</div>
-      </div>
-    </a>
+        <div class="phase-card-title">${phase.title}</div>
+        <div class="phase-card-desc">${phase.description}</div>
+        <div class="phase-progress">
+          <div class="phase-progress-bar">
+            <div class="phase-progress-fill" style="width:${pct}%"></div>
+          </div>
+          <div class="phase-progress-text">${done} / ${total} lessons · ${phase.time}</div>
+        </div>
+      </a>
+      ${slidesBtn}
+    </div>
   `;
 }
 

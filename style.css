@@ -387,8 +387,14 @@ img, svg { display: block; max-width: 100%; }
 .status-label.progress { color: var(--amber); }
 .status-label.planned  { color: var(--text-muted); }
 
+.phase-card-wrap {
+  position: relative;
+}
+
 .slides-btn {
-  margin-left: auto;
+  position: absolute;
+  top: 12px;
+  right: 12px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -396,11 +402,16 @@ img, svg { display: block; max-width: 100%; }
   text-decoration: none;
   border: 1px solid var(--accent);
   border-radius: 4px;
-  padding: 2px 8px;
-  opacity: 0.75;
-  transition: opacity 0.15s;
+  padding: 3px 9px;
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+  background: transparent;
+  z-index: 1;
 }
-.slides-btn:hover { opacity: 1; }
+.slides-btn:hover {
+  opacity: 1;
+  background: var(--accent-glow);
+}
 
 .phase-card-title {
   font-size: 15px;
