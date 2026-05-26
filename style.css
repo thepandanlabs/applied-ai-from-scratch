@@ -698,6 +698,15 @@ img, svg { display: block; max-width: 100%; }
   margin: 0 auto;
 }
 
+/* Colab badge */
+.colab-badge-wrap {
+  margin-bottom: 16px;
+}
+.colab-badge-wrap img {
+  height: 20px;
+  border-radius: 4px;
+}
+
 /* Lesson meta header */
 .lesson-meta-bar {
   display: flex;

@@ -379,7 +379,10 @@ async function loadLessonContent(phase, lesson) {
     const res = await fetch(mdPath);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const md = await res.text();
-    body.innerHTML = renderMarkdown(md);
+    const colabBadge = lesson.notebook
+      ? `<div class="colab-badge-wrap"><a href="https://colab.research.google.com/github/thepandanlabs/applied-ai-from-scratch/blob/main/${lesson.notebook}" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a></div>`
+      : '';
+    body.innerHTML = colabBadge + renderMarkdown(md);
     await runMermaid();
     hljs.highlightAll();
   } catch (e) {

@@ -103,6 +103,11 @@ function getLessonArtifact(phaseSlug, lessonSlug) {
   return files[0] || null;
 }
 
+function getLessonNotebook(phaseId, lessonSlug) {
+  const nbPath = path.join(ROOT, 'notebooks', `phase-${phaseId}`, `${lessonSlug}.ipynb`);
+  return fs.existsSync(nbPath) ? `notebooks/phase-${phaseId}/${lessonSlug}.ipynb` : null;
+}
+
 function main() {
   const roadmap = fs.readFileSync(ROADMAP_PATH, 'utf8');
   const phases = parseRoadmap(roadmap);
@@ -117,6 +122,7 @@ function main() {
       lesson.slug = lessonFolders[lesson.id] || null;
       if (lesson.slug) {
         lesson.artifact = getLessonArtifact(phase.slug, lesson.slug);
+        lesson.notebook = getLessonNotebook(phase.id, lesson.slug);
       }
     }
   }
