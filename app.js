@@ -188,6 +188,7 @@ function renderHome() {
 const SLIDE_DECKS = {
   '00': 'phase-00-setup',
   '02': 'phase-02-rag',
+  '04': 'phase-04-agents',
 };
 
 function phaseCard(phase) {

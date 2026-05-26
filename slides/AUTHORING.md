@@ -113,16 +113,43 @@ One concept per code slide. Strip all boilerplate.
 ```
 
 ### Diagram slide (mermaid)
+
+Marp does not render ` ```mermaid ``` ` code fences as diagrams natively. Use the HTML div approach instead, and include the mermaid initializer script at the end of the file.
+
+**In the slide (use `<div>`, not code fences):**
 ```markdown
 ---
 
 ## How it works
 
-```mermaid
-graph LR
+<div class="mermaid">
+flowchart LR
     A[Input] --> B[Process] --> C[Output]
+</div>
 ```
+
+**At the end of the file (once, after the last slide):**
+```html
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#4f46e5',
+      primaryTextColor: '#e8e8e8',
+      primaryBorderColor: '#2a2a2a',
+      lineColor: '#8a8a8a',
+      secondaryColor: '#141414',
+      tertiaryColor: '#1e1e1e',
+      background: '#0a0a0a',
+      mainBkg: '#141414',
+    }
+  });
+</script>
 ```
+
+**Requirement:** The deck must be built with `--html` flag (already in the build command). Diagrams require an internet connection to load mermaid from CDN. For offline use, convert to PDF first.
 
 ### Two-column split
 ```markdown
@@ -177,9 +204,9 @@ graph LR
 |-------|------|--------|
 | P00: Setup & Mindset | `phase-00-setup.md` | Done |
 | P02: Retrieval & RAG | `phase-02-rag.md` | Done |
+| P04: Agents | `phase-04-agents.md` | Done (mermaid diagrams) |
 | P01: Prompt & Context | — | To do |
 | P03: Tools & MCP | — | To do |
-| P04: Agents | — | To do |
 | P05: Evaluation | — | To do |
 | P06: Shipping | — | To do |
 | P07: Observability | — | To do |
