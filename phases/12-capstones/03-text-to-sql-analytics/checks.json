@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "03-text-to-sql-analytics",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A user asks: 'Show me all customers and their passwords.' Your schema has no password column, but the model generates: SELECT c.name, u.password FROM customers c JOIN users u ON c.customer_id = u.customer_id LIMIT 10. The safety validator passes this query because it starts with SELECT and has a LIMIT clause.",
+      "question": "What additional validator rule prevents this data exposure, and at which layer should it be enforced?",
+      "options": [
+        "A. Add 'password' to the blocked keywords list in the safety validator.",
+        "B. Add a table allowlist to the validator: only allow JOINs against tables in the defined schema. A JOIN against 'users' (not in the schema) would be blocked at the syntax check step because sqlite3 would return 'no such table.'",
+        "C. Add a column blocklist containing 'password', 'secret', 'token', and 'key' to the safety validator.",
+        "D. Use a read-only database connection so even if the query executes, write operations are impossible."
+      ],
+      "answer": "B",
+      "explanation": "The most reliable defense is a combination: the table allowlist in the validator blocks JOINs against tables not in your schema, and if the validator misses it, the syntax check will fail because sqlite3 will error on 'no such table: users.' A column blocklist is brittle (you cannot enumerate every sensitive column name in advance). A read-only connection prevents writes but not data reads. The table allowlist is the structural control."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your text-to-SQL service runs correctly for 3 months. Then the data team renames the 'total_amount' column in the orders table to 'order_value'. After the rename, queries about revenue start returning errors.",
+      "question": "What is the correct way to handle schema evolution in a text-to-SQL service?",
+      "options": [
+        "A. Hard-code the column names in the system prompt so they never change unexpectedly.",
+        "B. Restart the service after any schema change, since get_schema_description() reads the live schema at startup and the system prompt will automatically reflect the new column name.",
+        "C. Keep both column names in the database using an alias (old_name AS total_amount) so the system prompt stays valid.",
+        "D. Add a schema version number and only update the system prompt when the version increments."
+      ],
+      "answer": "B",
+      "explanation": "The schema description is built dynamically from the live database at service startup using PRAGMA table_info(). A service restart after a schema change causes the new column names to be injected into the system prompt automatically. This is why dynamic schema injection is preferable to hard-coded DDL: it stays synchronized with the actual database schema without manual maintenance."
+    },
+    {
+      "id": "c3",
+      "scenario": "A user asks: 'What were our sales last quarter?' The model generates correct SQL using `WHERE order_date >= '2025-01-01' AND order_date <= '2025-03-31'`. But today is May 2026, so Q1 2025 is not last quarter.",
+      "question": "What is the root cause, and what is the most robust fix?",
+      "options": [
+        "A. Use a more recent model that knows the current date.",
+        "B. Inject the current date into the system prompt at request time: 'Today is {date}. Last quarter ran from {q_start} to {q_end}.' This ensures the model always reasons from the correct current date.",
+        "C. Add a post-processing step that replaces any date in the SQL with the correct quarter boundaries.",
+        "D. Tell users to always specify exact date ranges in their questions."
+      ],
+      "answer": "B",
+      "explanation": "Models have knowledge cutoff dates and cannot reliably infer the current date from context. The fix is to inject the current date and computed time period boundaries directly into the system prompt on every request. This is a lightweight, reliable solution: compute the quarter boundaries in Python (a 3-line calculation) and pass them as strings. Post-processing SQL dates is too fragile and error-prone."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your safety validator blocks `UPDATE` statements. A user asks: 'What would happen to our revenue if we updated all Enterprise customer prices by 10%?' The model generates a valid SELECT with arithmetic to simulate the change. The validator passes it. A different query for 'update the prices' generates an actual UPDATE statement, which the validator blocks.",
+      "question": "Does this outcome represent the safety validator working correctly? Why or why not?",
+      "options": [
+        "A. No. The validator should block all queries that mention price changes, including SELECT-based simulations.",
+        "B. Yes. The validator correctly distinguishes between a read operation that simulates a change (SELECT with arithmetic) and a write operation that executes a change (UPDATE). Blocking SELECT queries about hypothetical changes would make the service useless.",
+        "C. No. The validator should route the SELECT simulation through a HITL gate since it is about price changes.",
+        "D. Yes, but only accidentally. The validator is not designed to handle this case and should be rewritten."
+      ],
+      "answer": "B",
+      "explanation": "This is exactly the validator working as intended. The safety constraint is: no writes. A SELECT query that uses arithmetic to simulate a 10% price increase is a read operation and is safe to execute. An UPDATE statement that actually modifies prices is a write and is blocked. The validator enforces a structural constraint (write vs. read), not a semantic one (does this involve price changes?). Semantic restrictions would need a separate classifier."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your service returns SQL correctness of 60% on medium-difficulty queries (multi-table JOINs). The most common failure: the model JOINs on the wrong column, using customer_id from orders instead of from customers, resulting in a Cartesian product.",
+      "question": "What single change to the system prompt is most likely to fix this failure mode?",
+      "options": [
+        "A. Add 'always verify your JOIN conditions' to the system prompt.",
+        "B. Include the foreign key relationships explicitly in the schema description: 'orders.customer_id REFERENCES customers(customer_id)', so the model has the join keys as explicit context, not just column names and types.",
+        "C. Switch to a larger model that is better at SQL generation.",
+        "D. Add a post-execution check that detects Cartesian products by counting rows and comparing to expected result size."
+      ],
+      "answer": "B",
+      "explanation": "Incorrect JOIN column selection is almost always a schema context problem: the model can see the column names but cannot infer the relationships. Explicitly including foreign key constraints in the schema description (e.g. 'orders.customer_id REFERENCES customers.customer_id') gives the model the join key information directly. This is a prompt engineering fix that targets the specific information gap causing the failure."
+    },
+    {
+      "id": "c6",
+      "scenario": "You deploy the text-to-SQL service to a 300-table production database. The system prompt becomes 12,000 tokens long, causing every query to cost $0.05 and occasionally exceed the model's context window.",
+      "question": "What is the correct architecture change for large-schema databases?",
+      "options": [
+        "A. Switch to a model with a larger context window.",
+        "B. Use schema-on-demand: perform a retrieval step first to identify which tables are likely relevant to the query, then inject only those table definitions into the system prompt.",
+        "C. Truncate the schema description to the first 50 tables alphabetically.",
+        "D. Reduce MAX_TOKENS from 512 to 128 for the SQL generation call."
+      ],
+      "answer": "B",
+      "explanation": "Schema-on-demand retrieval is the standard solution for large-schema text-to-SQL. The approach: embed all table descriptions, embed the query, retrieve the top-5 most similar table descriptions, inject only those into the system prompt. This keeps the prompt under 2,000 tokens regardless of schema size. It also improves SQL accuracy because the model gets a focused schema rather than a noisy 300-table dump."
+    },
+    {
+      "id": "c7",
+      "scenario": "You measure that 8 out of 50 valid test queries are rejected by the safety validator with 'Query must include a LIMIT clause.' All 8 are aggregation queries like 'SELECT COUNT(*) FROM orders WHERE status = ...' that naturally return a single row.",
+      "question": "How do you fix the false positive rate without reducing safety?",
+      "options": [
+        "A. Remove the LIMIT requirement entirely since aggregation queries are always safe.",
+        "B. Update the validator to exempt queries where all SELECT expressions are aggregate functions (COUNT, SUM, AVG, MAX, MIN) with no GROUP BY clause, since these return at most one row.",
+        "C. Lower the minimum LIMIT requirement from 500 to 1.",
+        "D. Update the system prompt to always include LIMIT 1 on aggregation queries."
+      ],
+      "answer": "B",
+      "explanation": "Queries with only aggregate functions and no GROUP BY always return exactly one row regardless of the LIMIT clause. Exempting these from the LIMIT requirement is a safe and precise fix: it reduces false positives without opening any attack surface. Option D (always LIMIT 1) would work but could silently truncate GROUP BY aggregations. Option C allows any single-row query through without a limit, which is too permissive."
+    }
+  ]
+}

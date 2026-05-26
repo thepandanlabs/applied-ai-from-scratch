@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-fde-mock-engagement",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "During discovery, a customer says: 'We want AI to handle our support emails automatically.' You ask about volume and categories. They tell you they get 200 emails/day, 60% are routine, and their current response time is 6.2 hours. The FDE's next step is to produce an AI Spec before writing code.",
+      "question": "What is the primary purpose of the AI Spec at this stage of the engagement?",
+      "options": [
+        "A. To document the technical architecture for the engineering team",
+        "B. To convert the vague request into a measurable system design that both customer and FDE agree on before a line of code is written",
+        "C. To estimate the cost of the project for procurement approval",
+        "D. To select the correct AI model for the task"
+      ],
+      "answer": "B",
+      "explanation": "The AI Spec is an alignment artifact, not a technical document. Its primary function is to convert 'we want AI' into a specific, measurable scope with defined success metrics that the customer has signed off on. Writing code before this step means you might build something that solves the wrong problem. The technical architecture, cost, and model selection are downstream of the spec."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are doing pattern selection for the email triage system. Your colleague suggests using a multi-agent approach: one agent for classification, a retrieval agent to look up similar historical tickets, and a response agent. You consider the constraints: categories are fixed (4 known types), latency matters (< 2 min response), and the customer wants auditability.",
+      "question": "Why does the router pattern win over multi-agent for this use case?",
+      "options": [
+        "A. Multi-agent is always slower and more expensive than routing",
+        "B. The categories are known at design time, latency is a constraint, and deterministic routing is more auditable than agent decision-making",
+        "C. Agents cannot classify emails accurately",
+        "D. The router pattern is always preferable for customer-facing systems"
+      ],
+      "answer": "B",
+      "explanation": "The router wins on three axes specific to this problem: (1) categories are fixed and known - no dynamic decision-making needed, (2) sub-2-minute latency is a requirement - multi-agent adds hops and variability, (3) auditability matters - the customer needs to explain routing decisions. If any of these constraints were absent (dynamic categories, no latency requirement, opaque decisions acceptable), multi-agent would be worth evaluating."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your golden set evaluation returns: routine accuracy 88.5%, escalation recall 100%, escalation precision 96%. The target for routine accuracy is 90%.",
+      "question": "What is the correct go/no-go decision and next step?",
+      "options": [
+        "A. GO: all metrics are close to target and precision/recall both pass",
+        "B. NO-GO: routine accuracy is below 90% threshold, investigate which categories are underperforming before deployment",
+        "C. GO with note: 88.5% is close enough to 90% for a first deployment",
+        "D. GO: escalation recall at 100% is the only metric that matters for safety"
+      ],
+      "answer": "B",
+      "explanation": "The 90% routine accuracy threshold is a committed success metric from the AI Spec. 88.5% fails the spec. The correct action is to investigate per-category breakdown: which of the three routine categories is dragging the score down? A 1.5 percentage point gap may be fixable with a prompt update and another eval run. Deploying below threshold without customer agreement violates the engagement contract."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your evaluation shows escalation recall is 97%, not 100%. Three complex emails were classified as 'billing' and received automated draft responses. The support manager says 'close enough, let's ship it.'",
+      "question": "What should you do?",
+      "options": [
+        "A. Agree: 97% escalation recall is excellent and the support manager approved it",
+        "B. Ship it, but add a monitoring alert if escalation recall drops further",
+        "C. Do not deploy until escalation recall is 100%. The 3 missed escalations represent real customer risk. Fix the prompt or classification logic first.",
+        "D. Deploy to 10% of traffic to test in production before full rollout"
+      ],
+      "answer": "C",
+      "explanation": "Escalation recall is a safety property, not a performance metric. The 3 missed escalations mean 3 complex emails (possibly billing disputes, account issues, or frustrated customers) received an automated response instead of human review. In the spec, escalation recall was defined as a hard requirement at 100%. The support manager cannot waive it without understanding the customer risk. Fix the classification prompt for the failing cases and re-run the eval."
+    },
+    {
+      "id": "c5",
+      "scenario": "The customer's tech lead says the handoff package is too long. 'Just give us the main.py file and we can figure it out.' You have completed the 4-document handoff package: system overview, operational runbook, prompt change guide, and escalation path.",
+      "question": "How do you respond?",
+      "options": [
+        "A. Agree: engineers prefer reading code over documentation",
+        "B. Offer to shorten the runbook but skip the other three documents",
+        "C. Explain that the four documents serve different audiences - the runbook is for the operator, not the engineer. A missing runbook means the first time the system breaks, they will call you.",
+        "D. Skip the handoff package since the tech lead has seen the code"
+      ],
+      "answer": "C",
+      "explanation": "The four documents serve different audiences and purposes. The tech lead can read the code - the runbook is for whoever operates the system on a Tuesday night when something breaks. The escalation path is for anyone on the support team. The prompt change guide is for the engineer who will maintain the system 6 months from now. Skipping documents because the tech lead can read code is how engagements create support burdens after handoff."
+    },
+    {
+      "id": "c6",
+      "scenario": "It is day 45 post-handoff. The customer reports draft acceptance rate has dropped from 74% to 52%. They have not made any prompt changes. The API and infrastructure are running normally.",
+      "question": "What is the most likely cause, and what is the first thing to investigate?",
+      "options": [
+        "A. The model quality degraded; switch to a different Claude model",
+        "B. The support team is not trained well enough; schedule more training",
+        "C. Email patterns changed (new product release, seasonal topic shift, or new support category); review a sample of rejected drafts to identify the pattern",
+        "D. The prompt cache expired; clear the cache and restart"
+      ],
+      "answer": "C",
+      "explanation": "A 22-point drop in draft acceptance rate with no configuration changes points to input drift: the incoming emails changed, but the prompts did not. A new product feature, a seasonal billing cycle, or a recent company announcement can shift the distribution of support emails significantly. The correct first step is to pull 10-15 recently rejected drafts, identify what they have in common, and compare to the original golden set examples. This is also exactly the trigger defined in the runbook's 'retraining triggers' section."
+    },
+    {
+      "id": "c7",
+      "scenario": "At the 90-day review, the customer reports: first-response time dropped from 6.2 hours to 18 minutes on automated emails, draft acceptance rate is 78%, and the support team handled a prompt update independently using the runbook. But they say: 'We want to add a 5th category for feature requests and bug reports.'",
+      "question": "What is the correct FDE response to the request to add a 5th category?",
+      "options": [
+        "A. Add the category: the system is working well and the team is capable",
+        "B. Treat this as a new scope item. Update the AI Spec, add golden set examples for the new category, test accuracy impact on existing categories, and agree on a success metric before deploying.",
+        "C. Reject it: the system is performing well and changes introduce risk",
+        "D. Add it as a sub-category of 'escalate' without a new classification path"
+      ],
+      "answer": "B",
+      "explanation": "A new category is not a configuration change - it is a scope change. Adding a 5th category affects the classification decision boundary for all existing categories, not just the new one. The correct process: update the AI Spec (new category definition, success metric), add 5-7 golden set examples for the new category, run the full golden set eval to verify existing categories are not degraded, and agree on accuracy targets before deploying. This is exactly the engagement discipline that makes AI systems maintainable."
+    },
+    {
+      "id": "c8",
+      "scenario": "A junior engineer on the customer team finds the confidence scores in the classification output. They suggest setting a threshold: 'If confidence is below 0.7, always escalate regardless of category.' This would increase escalation volume by roughly 15%.",
+      "question": "Is this a good idea? What is the correct analysis?",
+      "options": [
+        "A. Yes: lower confidence always means higher risk, so escalating is the safe choice",
+        "B. It depends. Measure the correlation between low confidence and actual misclassification on the golden set before adding the threshold. If low confidence predicts errors, the threshold adds value. If it does not, it creates unnecessary escalation load.",
+        "C. No: confidence scores are unreliable and should not be used for routing decisions",
+        "D. Yes, but set the threshold at 0.5 instead of 0.7 to be more aggressive"
+      ],
+      "answer": "B",
+      "explanation": "The proposal is a hypothesis, not a fact: 'low confidence correlates with errors.' Test this on the golden set. Check whether the emails that the classifier got wrong had low confidence scores. If yes, the threshold is a useful safety feature. If the classifier got emails wrong with high confidence (overconfident errors), the threshold does not help and the 15% escalation increase is pure overhead. Always measure before adding thresholds - they look safe but can degrade throughput significantly."
+    }
+  ]
+}

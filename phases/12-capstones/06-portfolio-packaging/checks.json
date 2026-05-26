@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "06-portfolio-packaging",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A hiring manager at an AI-first company opens your GitHub portfolio. She has 30 seconds before deciding whether to forward your profile to the engineering team. Your repo has 150 files organized by phase number (00 through 12) with no README explaining the work.",
+      "question": "What is the primary problem with this portfolio presentation, and what is the most direct fix?",
+      "options": [
+        "A. The folder structure is confusing; rename the folders to be more descriptive",
+        "B. The work is buried behind structure with no narrative. The fix is a featured projects table at the repo root that answers the three interviewer questions in 30 seconds.",
+        "C. There are too many files; consolidate to the 10 best artifacts",
+        "D. The README is missing; add a standard GitHub README with a project description"
+      ],
+      "answer": "B",
+      "explanation": "The problem is not structure or volume - it is the absence of narrative. A hiring manager cannot reconstruct your competence from 150 files. The three-question test (Can you build it? Do you know when not to? Can you deliver it?) is the frame, and the featured projects table is the answer. A standard README with a description is necessary but not sufficient - it needs to surface the signal (capstone outcomes, artifacts with metrics, handoff evidence) in the first scroll."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are applying for a Forward-Deployed Engineer role. The job posting emphasizes: customer discovery, scoping ambiguous problems, delivering working demos to non-technical stakeholders, and handoffs that stick. You have 8 capstone projects and 150 artifacts. You need to select 3 artifacts to send with your application.",
+      "question": "Which 3 artifacts from the curriculum are the strongest signal for this role?",
+      "options": [
+        "A. eval-ragas-baseline-template.md, skill-agent-safety-checklist.md, service-fastapi-ai-template.md",
+        "B. runbook-fde-engagement-playbook.md, prompt-ai-spec-template.md, skill-handoff-package-template.md",
+        "C. prompt-portfolio-presentation-guide.md, prompt-continued-learning-map.md, skill-eval-driven-dev-guide.md",
+        "D. skill-chunking-strategy-guide.md, prompt-rag-system-prompt-template.md, eval-llm-as-judge-template.md"
+      ],
+      "answer": "B",
+      "explanation": "The FDE role requires three specific things: scoping (prompt-ai-spec-template.md shows you convert vague asks to measurable specs), delivery (runbook-fde-engagement-playbook.md is the complete engagement lifecycle artifact), and handoff (skill-handoff-package-template.md is the operational transfer artifact). Options A and D are strong technical artifacts but answer the wrong questions for an FDE interview. Option C is about career development, not FDE delivery skills."
+    },
+    {
+      "id": "c3",
+      "scenario": "In an Applied AI Engineer interview, the interviewer asks: 'Tell me about a project where you had to make a tradeoff between solution complexity and what the problem actually needed.' You want to use the email triage capstone as your example.",
+      "question": "Which part of the email triage work most directly answers this question?",
+      "options": [
+        "A. The golden set evaluation showing 92.3% accuracy",
+        "B. The Dockerfile and requirements.txt showing production-ready deployment",
+        "C. The pattern selection decision: choosing a router over a multi-agent architecture because categories were fixed, latency mattered, and auditability was required",
+        "D. The draft acceptance rate metric showing response quality"
+      ],
+      "answer": "C",
+      "explanation": "The question is about tradeoffs between complexity and need - which is exactly what pattern selection documents. The router vs. agent decision is a concrete example of 'I evaluated the more complex option (multi-agent), identified the specific constraints (fixed categories, latency, auditability), and chose the simpler pattern because it met the spec.' The eval results, Dockerfile, and draft acceptance rate are strong answers to other interview questions, but they do not address the tradeoff framing."
+    },
+    {
+      "id": "c4",
+      "scenario": "The portfolio generator script runs and produces a PORTFOLIO.md where the same 5 artifacts appear regardless of which --role flag is passed (fde, applied-ai-engineer, solutions-engineer). The feature projects list does not change.",
+      "question": "What does this indicate, and what should you fix?",
+      "options": [
+        "A. The portfolio is role-agnostic, which is a feature not a bug - it shows breadth",
+        "B. The role boost weights in ROLE_BOOSTS are not differentiated enough, or the base capstone scores are dominating. Adjust the role-specific tag and phase boosts to produce meaningfully different rankings.",
+        "C. The artifact index has too few non-capstone artifacts; add more phase 11 artifacts",
+        "D. The scoring algorithm is correct; FDE and Applied AI Engineer portfolios should be identical"
+      ],
+      "answer": "B",
+      "explanation": "Role-agnostic output means the scoring is not actually differentiating by role. If capstone base scores (10) drown out all role boosts (1-4), every role gets the same top 5 capstones. The fix is to verify that role-specific boosts are large enough to reorder artifacts meaningfully, or to cap the capstone base score for non-primary-role artifacts. The goal is that an FDE filter surfaces the P11 and P12-05 artifacts above the RAG and agent capstones."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are preparing for an interview at a company that specifically asks candidates to submit a 'project writeup' with their application. The writeup template asks: What did you build, what did you measure, and what would you do differently? You want to use the customer support agent capstone.",
+      "question": "What is the most important element to include in the 'what did you measure' section of this writeup?",
+      "options": [
+        "A. Lines of code and test coverage percentage",
+        "B. The specific metric, the target threshold from the spec, the actual result, and the go/no-go decision that followed - not just the number",
+        "C. API response time and infrastructure cost",
+        "D. The number of tools the agent has access to"
+      ],
+      "answer": "B",
+      "explanation": "Measurement evidence requires four elements to be credible: (1) the metric (what you measured), (2) the target threshold (what success looked like before you ran the eval), (3) the actual result (what you got), and (4) the decision it drove (go/no-go, or what changed). Just reporting a number ('85% accuracy') without a threshold or decision is not measurement evidence - it is a data point without context. The go/no-go decision is the most differentiating element: it shows you have a process, not just code."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are tailoring your portfolio for a Solutions Engineer role at a cloud provider. The job posting emphasizes: 'ability to explain technical concepts to non-technical customers, experience building POCs, and can present architecture tradeoffs clearly.' Your strongest technical artifact is the RAGAS evaluation harness from Phase 05.",
+      "question": "How should you frame the RAGAS eval harness in your portfolio for this role?",
+      "options": [
+        "A. Lead with the technical implementation: 'Built a RAGAS evaluation pipeline using Python, pgvector, and the RAGAS library'",
+        "B. Frame it as a communication tool: 'Built an eval harness that produces a one-page quality report a customer can read without knowing what RAGAS is - answering the question: is this RAG system ready for production?'",
+        "C. Mention it only as a supporting artifact; lead with the capstone projects instead",
+        "D. Include the full technical details including the RAGAS metric formulas"
+      ],
+      "answer": "B",
+      "explanation": "For a Solutions Engineer role, the value of the eval harness is not the technical implementation - it is the customer-facing output. A SE needs to explain tradeoffs to non-technical stakeholders. The framing 'it produces a one-page report a customer can read' is the signal: it shows you build things with the customer's comprehension in mind. Option A is correct for an ML engineering role. Option C undersells a genuine differentiator. Option D is the wrong audience."
+    },
+    {
+      "id": "c7",
+      "scenario": "You use the portfolio presentation prompt template with a job posting and ask Claude to generate interview questions. The output includes 5 questions that are all variants of 'tell me about a time you built X.' None of them test your scoping, pattern selection, or delivery skills.",
+      "question": "What is the most likely cause and fix?",
+      "options": [
+        "A. Claude does not understand AI engineering interviews; use a different model",
+        "B. The job posting probably emphasizes implementation over other skills. Supplement the prompt with: 'Also generate 2 questions testing my ability to scope and say no to complexity, and 2 questions testing customer delivery skills.'",
+        "C. The prompt template is broken; remove the project descriptions and try again",
+        "D. Accept the output: implementation questions are the most common in AI engineering interviews"
+      ],
+      "answer": "B",
+      "explanation": "The model generates questions that match the signal in the job posting. If the posting emphasizes building, you get building questions. The fix is to explicitly add the constraints you care about to the prompt: scoping questions (testing Question 2 of the three-question framework) and delivery questions (testing Question 3). The portfolio template is a starting point, not a complete spec. Editing the prompt to add specific question types is the right tool."
+    },
+    {
+      "id": "c8",
+      "scenario": "A recruiter who has seen your portfolio emails: 'Impressive depth, but I can't tell from your GitHub what level you are. Are you a junior engineer who did a lot of coursework, or a senior engineer who can work independently?' Your portfolio has all 12 phases of work but no framing of experience level or role readiness.",
+      "question": "What should you add to the portfolio to address this concern directly?",
+      "options": [
+        "A. Add your years of experience and education credentials prominently",
+        "B. Add an 'I can now...' statement covering all five curriculum pillars with specific evidence: what you can build, evaluate, deploy, debug, and hand off independently",
+        "C. Add a skills matrix listing all the frameworks and tools you used",
+        "D. Add testimonials or endorsements from others who reviewed your work"
+      ],
+      "answer": "B",
+      "explanation": "The recruiter is not asking about credentials - they are asking about independence and capability. An 'I can now...' statement with specific evidence answers this directly: 'I can scope an AI engagement from a vague ask to a signed AI spec (P11-03 artifact). I can evaluate a system against a golden set and make a defensible go/no-go decision (P12-05 eval). I can hand off a system so it operates without me (P12-05 runbook).' This is self-assessment with evidence, not credential listing. It answers the seniority question by demonstrating judgment."
+    }
+  ]
+}

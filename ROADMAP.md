@@ -242,14 +242,14 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 12: Capstones: Build the Portfolio [⬚] (~18 hours)
+## Phase 12: Capstones: Build the Portfolio [✅] (~18 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | Production RAG Assistant Over a Real Corpus | ⬚ | ~3 hours |
-| 02 | Customer-Support Agent with Tools + Guardrails + HITL | ⬚ | ~3 hours |
-| 03 | Talk-to-Your-Data Analytics App (Text-to-SQL) | ⬚ | ~2.5 hours |
-| 04 | Coding Automation Agent on a Real Repo | ⬚ | ~3 hours |
-| 05 | Multimodal Feature: Voice or Document Extraction | ⬚ | ~2.5 hours |
-| 06 | FDE Mock Engagement: Scope, Ship, Handoff | ⬚ | ~3 hours |
-| 07 | Portfolio Packaging + Interview Prep | ⬚ | ~1 hour |
+| 01 | Production RAG Assistant Over a Real Corpus | ✅ | ~3 hours |
+| 02 | Customer-Support Agent with Tools + Guardrails + HITL | ✅ | ~3 hours |
+| 03 | Talk-to-Your-Data Analytics App (Text-to-SQL) | ✅ | ~2.5 hours |
+| 04 | Coding Automation Agent on a Real Repo | ✅ | ~3 hours |
+| 05 | FDE Mock Engagement: Scope, Ship, Handoff | ✅ | ~3 hours |
+| 06 | Portfolio Packaging + Interview Prep | ✅ | ~1 hour |
+| 07 | What Comes Next | ✅ | ~30 min |

@@ -1606,6 +1606,103 @@
         "fastapi",
         "docker"
       ]
+    },
+    {
+      "name": "runbook-rag-assistant-deploy",
+      "description": "Deployment and evaluation runbook for a production RAG assistant with hybrid search and citation grounding",
+      "phase": "12",
+      "lesson": "01",
+      "file": "phases/12-capstones/01-production-rag-assistant/outputs/runbook-rag-assistant-deploy.md",
+      "tags": [
+        "rag",
+        "capstone",
+        "runbook",
+        "hybrid-search",
+        "citations"
+      ]
+    },
+    {
+      "name": "runbook-support-agent-deploy",
+      "description": "Deployment runbook for a customer support agent with tools, HITL approval gates, and audit logging",
+      "phase": "12",
+      "lesson": "02",
+      "file": "phases/12-capstones/02-customer-support-agent/outputs/runbook-support-agent-deploy.md",
+      "tags": [
+        "agent",
+        "capstone",
+        "runbook",
+        "hitl",
+        "tools"
+      ]
+    },
+    {
+      "name": "runbook-text-to-sql-deploy",
+      "description": "Deployment and safety runbook for a text-to-SQL analytics service with validated query execution",
+      "phase": "12",
+      "lesson": "03",
+      "file": "phases/12-capstones/03-text-to-sql-analytics/outputs/runbook-text-to-sql-deploy.md",
+      "tags": [
+        "text-to-sql",
+        "capstone",
+        "runbook",
+        "analytics",
+        "safety"
+      ]
+    },
+    {
+      "name": "runbook-coding-agent-deploy",
+      "description": "Deployment and safety runbook for a coding automation agent with approval gates and audit logging",
+      "phase": "12",
+      "lesson": "04",
+      "file": "phases/12-capstones/04-coding-automation-agent/outputs/runbook-coding-agent-deploy.md",
+      "tags": [
+        "coding-agent",
+        "capstone",
+        "runbook",
+        "automation",
+        "safety"
+      ]
+    },
+    {
+      "name": "runbook-fde-engagement-playbook",
+      "description": "FDE engagement handoff package for an email triage system with go/no-go criteria and 30/60/90 day success metrics",
+      "phase": "12",
+      "lesson": "05",
+      "file": "phases/12-capstones/05-fde-mock-engagement/outputs/runbook-fde-engagement-playbook.md",
+      "tags": [
+        "fde",
+        "capstone",
+        "runbook",
+        "engagement",
+        "handoff"
+      ]
+    },
+    {
+      "name": "prompt-portfolio-presentation-guide",
+      "description": "Prompt template for generating tailored project writeups and interview narratives from curriculum artifacts",
+      "phase": "12",
+      "lesson": "06",
+      "file": "phases/12-capstones/06-portfolio-packaging/outputs/prompt-portfolio-presentation-guide.md",
+      "tags": [
+        "portfolio",
+        "interview",
+        "career",
+        "fde",
+        "applied-ai-engineer"
+      ]
+    },
+    {
+      "name": "prompt-continued-learning-map",
+      "description": "90-day skill maintenance plan prompt template with curated sources and role-specific next project suggestions",
+      "phase": "12",
+      "lesson": "07",
+      "file": "phases/12-capstones/07-what-comes-next/outputs/prompt-continued-learning-map.md",
+      "tags": [
+        "learning",
+        "career",
+        "continued-education",
+        "foundations"
+      ]
     }
   ]
 }

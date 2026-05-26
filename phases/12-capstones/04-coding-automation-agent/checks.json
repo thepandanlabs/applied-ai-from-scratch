@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "04-coding-automation-agent",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your coding agent is tasked with 'Update all lesson README files to add a new header section.' It reads 3 README files, then calls propose_change 47 times, one for each lesson in the repo. You had intended it to update only Phase 04 lessons. The audit log shows the agent read 3 files and proposed 47 writes.",
+      "question": "What is the root cause of this over-reach, and what is the most effective architectural fix?",
+      "options": [
+        "A. The model misunderstood 'all lesson README files.' Fix by clarifying the task to specify Phase 04 explicitly.",
+        "B. The orchestrator produced an overly broad plan because the task was ambiguous, and the worker executed it without a scope check. Fix: add a scope confirmation step in the orchestrator pass that asks 'which files should be modified?' before generating the write plan.",
+        "C. The propose_change tool should auto-reject writes when the batch size exceeds 10.",
+        "D. The worker should have stopped and asked for clarification when it found more than 5 candidate files."
+      ],
+      "answer": "B",
+      "explanation": "The failure is in the orchestrator's plan: it interpreted 'all lesson README files' as the entire repo. The fix is a scope confirmation step where the orchestrator's output includes a list of specific target files, and the user approves or corrects that list before the worker begins. This is the planning accuracy metric: if the orchestrator's plan correctly identifies the scope, the worker executes correctly. The approval gate on individual writes is a last resort, not the primary scope control."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your coding agent has a read_file tool that returns up to 8,000 characters. A lesson file is 15,000 characters long. The agent reads it, gets the truncated version, then proposes a change based only on the first half of the file. The change overwrites the second half with empty content.",
+      "question": "What is the correct design for handling large files, and what guard prevents the destructive overwrite?",
+      "options": [
+        "A. Increase the read limit to 100,000 characters so truncation never occurs.",
+        "B. The truncation notice in the read result should cause the agent to re-read the file in sections before proposing changes. The diff preview in propose_change should catch the missing second half: a large deletion block in the diff is a signal to deny.",
+        "C. Add a file size check: refuse to read or modify files larger than 8,000 characters.",
+        "D. The propose_change tool should automatically merge new content with existing content rather than replacing it."
+      ],
+      "answer": "B",
+      "explanation": "Two lines of defense: first, the read_file function appends a truncation notice that the model can see and should interpret as 'I need to read more before proposing changes to this file.' Second, the diff preview in propose_change will show a large deletion block if the agent is overwriting the second half with empty content. A reviewer seeing a diff with hundreds of deleted lines for an 'update header' task should deny the change. The truncation notice and the diff review work together."
+    },
+    {
+      "id": "c3",
+      "scenario": "The orchestrator-workers pattern separates task planning from task execution. Your orchestrator produces this plan for 'Add a checks.json to lesson X': Step 1: Read the lesson docs. Step 2: Read an existing checks.json. Step 3: Generate the new checks.json. Step 4: Propose the file. The worker executes all four steps correctly.",
+      "question": "What is the key advantage of the orchestrator-workers split over a single agent that plans and executes simultaneously?",
+      "options": [
+        "A. The orchestrator uses fewer API calls, reducing cost.",
+        "B. The plan produced by the orchestrator is human-readable and can be reviewed before execution begins. A single planning-and-executing agent's reasoning is interleaved with tool calls and is harder to audit for scope correctness before anything happens.",
+        "C. The orchestrator can run multiple workers in parallel, which is faster.",
+        "D. Workers are smaller and cheaper models than orchestrators, reducing token cost."
+      ],
+      "answer": "B",
+      "explanation": "The primary benefit of the split is auditability of the plan. When the orchestrator outputs a numbered list of steps before any tool calls happen, a human can review the plan and say 'step 3 is wrong, it should read two reference examples, not one.' With a monolithic agent, the plan and execution are interleaved: by the time you see what the agent planned to do, it has already started doing it. The plan-review gate is optional in this implementation but is the key production benefit."
+    },
+    {
+      "id": "c4",
+      "scenario": "A user gives the agent this task: 'Delete all the TODO comments from main.py in each capstone.' The agent calls list_files to find all main.py files, then reads each one and calls propose_change with the TODO lines removed. The approval gate shows diffs correctly. The user approves all changes.",
+      "question": "What is the missing safety check in the tool design for this scenario?",
+      "options": [
+        "A. There is no missing check. The diff preview and human approval gate are sufficient.",
+        "B. The run_command tool should be called first to back up all files before modification.",
+        "C. The agent should confirm each file was backed up to git before proposing changes. If the repo has uncommitted changes, the agent should warn before any writes: the rollback procedure relies on git, and dirty working trees complicate recovery.",
+        "D. The propose_change tool should limit total writes per task to prevent batch overwrites."
+      ],
+      "answer": "C",
+      "explanation": "The rollback procedure for coding agents relies on git: 'git stash' or 'git checkout HEAD -- file' recovers approved-but-wrong changes. If the working tree already has uncommitted changes when the agent starts writing, a 'git stash' at the start is not possible and a 'git checkout' would also discard those pre-existing changes. The agent should check for a clean working tree before starting any write-heavy task and warn the user if the tree is dirty. This is a pre-flight check, not a tool guardrail."
+    },
+    {
+      "id": "c5",
+      "scenario": "After running the agent on 5 tasks, you review the audit log. Task 3 ('Find all Phase 02 lessons missing a Real-world check') required reading 10 files to find the answer. The agent read 38 files, including all phase 00, 01, 03, and 04 lesson files, before concluding Phase 02 had no missing sections. File selection precision is 10/38 = 0.26.",
+      "question": "What system prompt change most directly improves file selection precision?",
+      "options": [
+        "A. Add 'only read Phase 02 files' to the worker system prompt.",
+        "B. Add an explicit read budget instruction to the worker system prompt: 'Before reading any file, state which files you expect to need for this specific step and why. Read only those files. If you need more context, explain why before reading additional files.'",
+        "C. Reduce MAX_FILE_CHARS so each read is cheaper and the agent can afford to read more files.",
+        "D. Switch to a smaller model that has less tendency to explore broadly."
+      ],
+      "answer": "B",
+      "explanation": "A read budget instruction forces the agent to commit to a retrieval plan before executing reads. This is a meta-cognitive constraint: the agent must articulate why it needs each file before reading it. This pattern reduces exploratory reads (reading files 'just in case') by 50-70% in practice. It also improves the audit trail: you can see the agent's stated justification for each read alongside the tool call."
+    },
+    {
+      "id": "c6",
+      "scenario": "You want to add a run_tests tool to the coding agent that runs the test suite after proposing a change. The command is 'python -m pytest phases/12-capstones/ -q'. You add this to the allowlist and wire it to the tool.",
+      "question": "What additional safety concern does running tests introduce that reading files does not?",
+      "options": [
+        "A. Tests can fail, which wastes API tokens.",
+        "B. The pytest command will only run tests for Phase 12, so it is safe.",
+        "C. Test execution runs arbitrary Python code in the repo. If the repo contains malicious or buggy test files (including agent-generated ones), running tests after a proposed change executes that code before the change has been reviewed by a human. Tests should run only against committed, human-reviewed code.",
+        "D. Running tests produces too much output for the model context window."
+      ],
+      "answer": "C",
+      "explanation": "This is the 'generated code execution' risk: an agent that can both write files and run commands can write a test file and then execute it, effectively running its own generated code on the host machine. The safe pattern is: run tests only against the current committed state (before any agent writes), or run tests in a sandboxed container. Never run tests against agent-generated files that have not been reviewed and committed by a human."
+    },
+    {
+      "id": "c7",
+      "scenario": "You run the coding agent on task: 'Add a checks.json to phases/04-agents/11-agent-capstone.' The orchestrator produces a 4-step plan. In step 2, the worker calls read_file on 'phases/04-agents/01-the-agent-loop/checks.json' to use as a format reference. In step 3, it generates the new checks.json. In step 4, it calls propose_change. The diff shows a valid file. You approve it.",
+      "question": "How do you verify after approval that the generated checks.json is actually valid (correct format and scenario quality), beyond trusting the diff preview?",
+      "options": [
+        "A. Trust the model's output quality. If the reference format was read correctly, the output is valid.",
+        "B. Write a JSON schema validator script and add it to the ALLOWED_COMMAND_PATTERNS so the agent can call it after proposing a change: 'python scripts/validate_checks.py path/to/checks.json'.",
+        "C. Read the generated file back with read_file and compare to the reference manually.",
+        "D. Run the test suite, which will catch any JSON format errors."
+      ],
+      "answer": "B",
+      "explanation": "A JSON schema validator is the correct post-write verification step for structured outputs. It is deterministic (no false negatives for structural errors), runs in under 1 second, and can be added to the command allowlist safely. The validator should check: valid JSON, correct version field, lesson field matches folder name, each check has required keys (id, scenario, question, options, answer, explanation), and option count is 4. This is the EVALUATE IT step applied to agent outputs: structured outputs need structured validators."
+    }
+  ]
+}

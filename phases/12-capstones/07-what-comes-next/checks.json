@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "07-what-comes-next",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A new agent orchestration framework drops on GitHub with 8,000 stars overnight. It claims to be '10x faster than LangChain' with a benchmark comparison on a synthetic task. You are currently using a simple custom agent loop that works well for your production use case.",
+      "question": "Applying the new tool evaluation checklist, what is the first question to ask?",
+      "options": [
+        "A. Is it production-ready? Check the GitHub issues and open PRs",
+        "B. Does it solve a problem I actually have right now? If my current agent loop works, the answer is probably no.",
+        "C. Is the benchmark methodology valid? Compare the synthetic task to your real use case.",
+        "D. How many companies are using it in production? Wait for adoption before evaluating."
+      ],
+      "answer": "B",
+      "explanation": "The problem check is always first. A tool that does not solve your current problem should not receive evaluation time regardless of benchmark scores or star counts. The '10x faster' benchmark on a synthetic task does not answer 'does this help me?' If your current loop works for your use case, the bar for switching is high: measured evidence that it is better on your specific task, not a synthetic benchmark."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are 90 days out of the curriculum. You check your skills against the 5-pillar self-assessment and notice that your evaluation skills feel fluent (you ran evals at work twice this month), but your observability knowledge feels rusty. You cannot remember how to set up a Langfuse integration without looking it up.",
+      "question": "What is the correct response to this finding?",
+      "options": [
+        "A. Re-read the Phase 07 lessons to refresh the knowledge",
+        "B. Add observability to your next project: instrument an existing service with Langfuse tracing this weekend. Building refreshes skills faster than reading.",
+        "C. Accept that observability is a specialized skill and you do not need it unless your role requires it",
+        "D. Look up the Langfuse documentation once, take notes, and move on"
+      ],
+      "answer": "B",
+      "explanation": "The self-assessment is a diagnostic, not a reading trigger. When a skill feels rusty, the fix is building, not reading. Adding Langfuse tracing to an existing service in a weekend produces two things: working code you can reference, and a muscle memory refresh that reading documentation does not provide. Reading is useful for new knowledge. Building is how you maintain existing knowledge."
+    },
+    {
+      "id": "c3",
+      "scenario": "A senior engineer on your team says: 'You should be reading these 3 AI newsletters, following 10 researchers on Twitter, and watching all the major AI conference talks to stay current.' You currently have about 3 hours per week for learning outside of work.",
+      "question": "What is the correct response to this advice?",
+      "options": [
+        "A. Agree: staying current in AI requires broad information consumption",
+        "B. The advice optimizes for awareness over capability. With 3 hours per week, building one small project produces more lasting skill than reading 3 newsletters. Focus the reading on 3-4 high-signal sources and spend the majority of time building.",
+        "C. Follow the advice for 30 days and see if you feel more current",
+        "D. Replace all reading with building: stop following any news sources entirely"
+      ],
+      "answer": "B",
+      "explanation": "Broad information consumption feels productive but does not build skills. With 3 hours per week, the tradeoff is real: every hour reading a newsletter is an hour not spent building. The 4 curated sources (Anthropic release notes, Latent Space, applied-llms.org, Hamel's blog) cover the high-signal inputs. The remaining time should go to building. The 20% exploration time pattern is: 20% of engineering time on exploration, not 80% on reading about exploration."
+    },
+    {
+      "id": "c4",
+      "scenario": "Anthropic releases a new version of Claude with significantly improved function calling. The release notes show 40% improvement on the BFCL benchmark. You have a production agent that uses tool calling.",
+      "question": "Applying the foundation vs. surface area framework, what layer is this change on, and what should you do?",
+      "options": [
+        "A. This is a foundation change: update your agent patterns and system prompts immediately",
+        "B. This is surface area change (model version): apply your existing golden set eval to the new model, measure whether it improves your specific use case, and upgrade if the eval confirms improvement",
+        "C. This is noise: wait 6 months for the community to validate the benchmark",
+        "D. This is surface area: ignore it unless the old model is deprecated"
+      ],
+      "answer": "B",
+      "explanation": "A model version change is surface area, not foundation. Your agent patterns, golden set, and eval methodology (all foundations) remain unchanged. The correct action: run your golden set eval on the new model, compare to your baseline, and upgrade if your specific task improves. The BFCL benchmark improvement is a hint, not a guarantee - benchmarks are designed by their creators. Your golden set is designed for your use case."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are completing the 5-pillar self-assessment and reach Pillar 4 (AI Evaluation). You write: 'I can now build a golden set and run LLM-as-judge evals.' But when you try to fill in the evidence section, you realize your only example is from a curriculum exercise, not a production or real-world project.",
+      "question": "What does this indicate, and what is the next step?",
+      "options": [
+        "A. This is fine: curriculum projects are real projects",
+        "B. The skill is theoretical, not operational. The next step is to apply it to a new problem you have not solved before: pick any real use case, build a golden set, and run the eval. Document the go/no-go decision.",
+        "C. Add a note that the curriculum exercise was high-quality and move on",
+        "D. The evidence requirement is too strict; any completed exercise counts"
+      ],
+      "answer": "B",
+      "explanation": "The self-assessment asks for evidence because fluency requires having applied a skill in context, not just having completed it once under guided conditions. A curriculum exercise shows you can follow the pattern. Applying it to a new, self-directed problem shows you own the skill. The gap between 'completed the exercise' and 'applied it independently' is exactly what the self-assessment is designed to surface. The fix is a new project, not a re-read."
+    },
+    {
+      "id": "c6",
+      "scenario": "You want to stay current on AI engineering but find yourself spending 2 hours per day reading AI Twitter, newsletters, and blog posts. You feel current on announcements but have not built anything new in 3 weeks.",
+      "question": "This pattern indicates which failure mode, and what is the fix?",
+      "options": [
+        "A. This is fine: awareness of the field is essential for an AI engineer",
+        "B. This is the 'reading as a proxy for learning' trap. Cut information consumption to the 4 curated sources (15-30 min/day max) and allocate the recovered time to building. Awareness without building does not maintain skills.",
+        "C. The issue is the sources, not the volume: curate better sources",
+        "D. This pattern is only a problem if your job performance is suffering"
+      ],
+      "answer": "B",
+      "explanation": "Reading AI news feels like staying current, but it does not build or maintain skills. The 20% time pattern allocates exploration time to building, not reading. 2 hours of daily reading with no building produces awareness of what others are building. 30 minutes of reading plus 1.5 hours of building produces both awareness and maintained capability. The 4 curated sources are chosen specifically because they are low-noise and high-signal; the remaining time is for building."
+    },
+    {
+      "id": "c7",
+      "scenario": "In a job interview, the interviewer asks: 'How do you evaluate whether a new AI framework is worth adopting for your team?' You want to demonstrate that you have a systematic approach rather than chasing what is popular.",
+      "question": "What answer best demonstrates engineering judgment?",
+      "options": [
+        "A. 'I watch what top companies are adopting and follow their lead'",
+        "B. 'I apply a 5-question filter: problem check, foundation check, evidence check, cost check, and replace check. The most important is whether there is production evidence it improves on what we already have - not a benchmark, but a case study from a team solving a similar problem.'",
+        "C. 'I evaluate the GitHub star count and community size as signals of production readiness'",
+        "D. 'I test every new framework on a small prototype before making a decision'"
+      ],
+      "answer": "B",
+      "explanation": "The 5-question filter demonstrates systematic judgment rather than trend-following or ad-hoc evaluation. The specific emphasis on production evidence over benchmarks is the differentiating signal: it shows you understand that synthetic benchmarks do not predict performance on your specific use case. Testing on a prototype (option D) is part of the process, but without the upstream filter, you end up prototyping everything that looks interesting."
+    },
+    {
+      "id": "c8",
+      "scenario": "You complete the curriculum and write your 'I can now...' statements for all 5 pillars. Pillar 3 (Agents) reads: 'I can now implement a multi-tool agent and measure whether it meets its quality target.' But the role you are targeting (FDE) emphasizes scoping and handoff, and Pillar 5 reads: 'I can now write an AI spec.' You feel significantly more confident in agents than in FDE skills.",
+      "question": "How should this self-assessment result shape your 90-day plan?",
+      "options": [
+        "A. Prioritize deepening your strongest area (agents) since that is where you have the most leverage",
+        "B. The role you are targeting requires Pillar 5 more than Pillar 3. Allocate 60% of 90-day project time to FDE skills: build 3 projects that specifically practice scoping, demo delivery, and handoff. Use agents as the technical vehicle for those projects, not the focus.",
+        "C. Focus equally on all 5 pillars to maintain balance",
+        "D. Switch your target role to one that better matches your current strengths"
+      ],
+      "answer": "B",
+      "explanation": "The self-assessment is most useful when it informs role-specific prioritization. Strong agents skills are a foundation for FDE work, but the differentiated skill the FDE role requires is scoping, delivery, and handoff - the Pillar 5 areas. The 90-day plan should use agents as the vehicle (you are comfortable there) while practicing FDE disciplines around the agent work: write the AI spec before building, deliver a demo to a simulated non-technical audience, write the handoff package. This strengthens the weak area without abandoning the strong one."
+    }
+  ]
+}
