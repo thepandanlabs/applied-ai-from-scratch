@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated": "2026-05-26T09:07:01Z",
-  "total": 98,
+  "generated": "2026-05-26T09:32:50Z",
+  "total": 111,
   "artifacts": [
     {
       "phase": 2,
@@ -988,6 +988,149 @@
         "capstone",
         "runbook",
         "deployment"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "01",
+      "name": "prompt-llm-observability-primer",
+      "file": "phases/07-observability/01-why-llm-observability-differs/outputs/prompt-llm-observability-primer.md",
+      "tags": [
+        "observability",
+        "llm",
+        "monitoring"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "02",
+      "name": "skill-otel-genai-spans",
+      "file": "phases/07-observability/02-opentelemetry-genai-conventions/outputs/skill-otel-genai-spans.md",
+      "tags": [
+        "opentelemetry",
+        "genai",
+        "tracing"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "03",
+      "name": "skill-langfuse-instrumentation",
+      "file": "phases/07-observability/03-instrument-app-otel-langfuse/outputs/skill-langfuse-instrumentation.md",
+      "tags": [
+        "langfuse",
+        "instrumentation",
+        "otel"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "04",
+      "name": "skill-trace-debug-workflow",
+      "file": "phases/07-observability/04-trace-as-unit-of-debugging/outputs/skill-trace-debug-workflow.md",
+      "tags": [
+        "tracing",
+        "debugging",
+        "workflow"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "05",
+      "name": "skill-llm-request-logger",
+      "file": "phases/07-observability/05-logging-prompts-responses/outputs/skill-llm-request-logger.md",
+      "tags": [
+        "logging",
+        "pii",
+        "structured-logs"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "06",
+      "name": "skill-cost-dashboard",
+      "file": "phases/07-observability/06-cost-engineering/outputs/skill-cost-dashboard.md",
+      "tags": [
+        "cost",
+        "tokens",
+        "accounting"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "07",
+      "name": "skill-caching-strategy",
+      "file": "phases/07-observability/07-caching-deep-dive/outputs/skill-caching-strategy.md",
+      "tags": [
+        "caching",
+        "prompt-cache",
+        "semantic-cache"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "08",
+      "name": "skill-latency-profiler",
+      "file": "phases/07-observability/08-latency-analysis/outputs/skill-latency-profiler.md",
+      "tags": [
+        "latency",
+        "ttft",
+        "percentiles"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "09",
+      "name": "skill-model-router",
+      "file": "phases/07-observability/09-model-routing-llm-gateways/outputs/skill-model-router.md",
+      "tags": [
+        "routing",
+        "gateway",
+        "cost"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "10",
+      "name": "skill-llm-load-test",
+      "file": "phases/07-observability/10-load-testing-llm-apis/outputs/skill-llm-load-test.md",
+      "tags": [
+        "load-testing",
+        "latency",
+        "reliability"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "11",
+      "name": "skill-ai-slo-template",
+      "file": "phases/07-observability/11-slos-slis-alerting/outputs/skill-ai-slo-template.md",
+      "tags": [
+        "slo",
+        "sli",
+        "alerting"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "12",
+      "name": "skill-chaos-test-suite",
+      "file": "phases/07-observability/12-chaos-failure-injection/outputs/skill-chaos-test-suite.md",
+      "tags": [
+        "chaos",
+        "resilience",
+        "testing"
+      ]
+    },
+    {
+      "phase": "07",
+      "lesson": "13",
+      "name": "runbook-observability-setup",
+      "file": "phases/07-observability/13-capstone-observability-dashboard/outputs/runbook-observability-setup.md",
+      "tags": [
+        "capstone",
+        "observability",
+        "runbook"
       ]
     }
   ]

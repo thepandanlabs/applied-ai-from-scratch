@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "13-capstone-observability-dashboard",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You integrate the ObservabilityModule into the Phase 06 RAG service. After deploying to staging, the dashboard shows: Cost/hr=$0.00, Cache hits=0%, Requests(15m)=0. The service is responding to HTTP requests successfully - curl /query returns valid answers.",
+      "question": "What is the most likely root cause?",
+      "options": [
+        "A. The ObservabilityModule is not installed correctly.",
+        "B. The ctx.record(response) call is missing or not being reached. The service is making LLM calls but not recording the results through the observability context manager. Check that every LLM call path is wrapped in a trace_llm_call context and that ctx.record() is called with the response.",
+        "C. The SQLite database path does not exist.",
+        "D. The dashboard refresh interval is too slow."
+      ],
+      "answer": "B",
+      "explanation": "When the service returns valid responses but the dashboard shows zero metrics, the LLM calls are happening but not being instrumented. This is the most common integration bug: the context manager is imported but ctx.record() is never called (perhaps it was forgotten in one code path, or the response is being returned before the record call). Check every code path that calls the Anthropic client and ensure it uses the context manager pattern: 'with obs.trace_llm_call(...) as ctx: ... ctx.record(response)'."
+    },
+    {
+      "id": "c2",
+      "scenario": "The observability dashboard shows: TTFT p95=4800ms, Total p95=5200ms, Cache hits=61%, Error rate=0.1%, SLO status=ALERT (1 active alert on ttft_p95). Your load test baseline from Lesson 10 showed TTFT p95=1200ms at the same concurrency level.",
+      "question": "The cache hit rate is high and error rate is low. What does the 4x TTFT increase most likely indicate?",
+      "options": [
+        "A. The model is overloaded. Switch to a different model.",
+        "B. TTFT p95 increased 4x while cache hit rate improved, which means the slow requests are likely new uncached prompts hitting a cold model. However, a 4x increase also warrants checking: (1) did a recent deploy increase system prompt length? (2) is the model tier the same? (3) is there an Anthropic API status issue affecting some regions?",
+        "C. The SLO target is too aggressive. Raise it to 5000ms.",
+        "D. The TTFT increase is caused by the high cache hit rate - cached requests are slower."
+      ],
+      "answer": "B",
+      "explanation": "A 4x TTFT increase with high cache hit rate is a mixed signal. High cache hits mean most requests are getting fast prefix cache hits. The p95 is dominated by the uncached minority. Three most common causes: (1) a recent deploy added content to the system prompt, increasing the time-to-first-token for cold cache requests; (2) the model version changed or the model is under load; (3) an infrastructure change increased network latency. Start with deploy correlation, then check the Anthropic status page."
+    },
+    {
+      "id": "c3",
+      "scenario": "You run the chaos test suite after integrating the observability module into the RAG service: pytest tests/test_chaos_integration.py. Output: 4 passed, 1 failed - test_overload_529 FAILED: Service returned status='ok' during 529 injection.",
+      "question": "What does this failure indicate and what is the fix?",
+      "options": [
+        "A. The ChaosProxy is broken. Reinstall the test dependencies.",
+        "B. The RAG service is not handling HTTP 529 errors. The LLM call path is either catching the exception too broadly (bare except: pass) or the 529 exception class is not being checked. Inspect the exception handler in the RAG service, add explicit handling for HTTP 529 (treat as transient overload, apply exponential backoff, open circuit after N consecutive failures), and re-run the chaos test.",
+        "C. 529 errors should be treated as success since they indicate the service is available.",
+        "D. The test is incorrect. status='ok' during 529 injection is the correct behavior."
+      ],
+      "answer": "B",
+      "explanation": "status='ok' during a 100% failure_rate 529 injection means the service is not seeing the 529 error. Two possible causes: the exception is being silently swallowed somewhere in the call stack (a bare except clause or an overly broad exception handler), or the 529 error class is being incorrectly interpreted as a successful response. The chaos test correctly identifies this gap. The fix is to add explicit handling for the anthropic.APIStatusError with status_code=529, treat it as temporary overload, and verify the fix by re-running the chaos test."
+    },
+    {
+      "id": "c4",
+      "scenario": "The structured log file (app.jsonl) is growing at 500MB per day. Each log entry is ~800 bytes. You calculate this is about 625,000 log entries per day. Your service handles 50,000 requests per day.",
+      "question": "Why is the log volume 12.5x the request count, and what should you do?",
+      "options": [
+        "A. The logger has a bug causing each event to be written 12 times.",
+        "B. The service is logging at multiple granularities: per-request, per-retry, per-chunk, and possibly per-function. This is expected but 500MB/day may exceed your log retention budget. Add log level filtering (only INFO and above in production), reduce verbose debug logging, and add log rotation with a 7-day retention policy.",
+        "C. The PII scrubber is creating duplicate log entries.",
+        "D. 500MB/day is the expected volume for 50,000 requests. No action needed."
+      ],
+      "answer": "B",
+      "explanation": "500MB/day for 50,000 requests is 10KB per request, which is high. LLM services log at multiple levels: the request arrival, each retry attempt, the model response details, the cost calculation, and any SLO events. In debug mode this is expected. In production, configure a minimum log level of INFO, disable per-chunk streaming logs, and add logrotate or a log sink that applies retention policies. If you are shipping logs to a paid aggregation service, 500MB/day at typical pricing is $150-500/month just in log ingestion costs."
+    },
+    {
+      "id": "c5",
+      "scenario": "You check the cost database and find: AVG(output_tokens)=847 over the last 24 hours. Your max_tokens setting is 1000. Your SLO target is cost_p95 <= $0.005. The current cost_p95 is $0.009.",
+      "question": "What is causing the cost breach and what is the most impactful fix?",
+      "options": [
+        "A. Switch to a cheaper model to reduce output token cost.",
+        "B. AVG output tokens of 847 against a max of 1000 means the model is consistently generating near-maximum responses. Add explicit length constraints to your prompts ('respond in 3 sentences', 'limit your answer to 150 words') and reduce max_tokens to 300-400. This will cut output costs by 50-70% without model switching.",
+        "C. The cost_p95 target is too aggressive. Raise it to $0.015.",
+        "D. Implement streaming to reduce the perceived cost."
+      ],
+      "answer": "B",
+      "explanation": "When AVG output tokens approaches max_tokens, the model is consistently generating maximum-length responses. This means (a) the prompt is not guiding the model to be concise, and (b) max_tokens is set higher than needed. The most impactful fixes: add length instructions to your system prompt ('be concise, limit to 2-3 sentences for factual questions'), reduce max_tokens to the actual average you want (if you want ~150-word answers, max_tokens=200 is sufficient), and use the SLO monitor to verify cost drops after the change."
+    },
+    {
+      "id": "c6",
+      "scenario": "A colleague reviews the ObservabilityModule architecture and says: 'You are writing to SQLite from multiple threads (FastAPI workers). SQLite with WAL mode handles concurrent reads but concurrent writes can be slow.' You have set concurrency=4 in uvicorn.",
+      "question": "Is this a real concern, and what is the production mitigation?",
+      "options": [
+        "A. Not a concern. SQLite handles all concurrency transparently.",
+        "B. This is a valid concern for high-concurrency deployments. The CostAccountant uses a new connection per write, which serializes through SQLite's write lock. For 4 workers at 10 req/sec each, this adds 1-5ms overhead per write. Mitigation options: (a) buffer writes in memory and flush in batches every 5 seconds, reducing write frequency 50x; (b) switch to a single writer thread with a queue; (c) use PostgreSQL instead of SQLite for multi-process deployments.",
+        "C. Increase SQLite connection pool size to match worker count.",
+        "D. Use file locking to prevent concurrent writes."
+      ],
+      "answer": "B",
+      "explanation": "The concern is valid but the severity depends on traffic. At 40 req/sec total (4 workers x 10 req/sec), each with a 5ms SQLite write, you are spending 200ms/sec of aggregate write time. SQLite serializes writes, so at some point writes queue up. The production-grade mitigation is to buffer cost events in an in-memory queue (deque with maxlen) and flush to SQLite every 5 seconds in a background thread. This reduces write frequency by 2-3 orders of magnitude and eliminates the concurrency bottleneck. The tradeoff is losing up to 5 seconds of data if the process crashes."
+    },
+    {
+      "id": "c7",
+      "scenario": "After running the full observability stack for one month, you review the incident log: 3 incidents, MTTR of 8 minutes, 12 minutes, and 22 minutes. Before the observability stack, MTTR averaged 65 minutes. A stakeholder asks for the ROI calculation.",
+      "question": "How do you frame the ROI of the observability investment?",
+      "options": [
+        "A. ROI cannot be calculated for observability. It is a qualitative benefit.",
+        "B. Calculate: time saved per incident = (65 - 14) min average MTTR x 3 incidents = 153 minutes of engineering time saved. At a loaded engineering rate of $200/hour, that is $510 in incident response savings in one month. Add: user impact reduction (faster resolution = fewer users experiencing degradation), and future incident prevention (chaos tests caught 2 failure modes before production). The full ROI includes both cost savings and risk reduction.",
+        "C. ROI is negative. The observability stack added complexity and the 3 incidents prove it is not preventing failures.",
+        "D. The sample size is too small (3 incidents) to calculate meaningful ROI."
+      ],
+      "answer": "B",
+      "explanation": "Observability ROI has three components: (1) reduced MTTR - quantifiable in engineering hours saved; (2) reduced user impact - incident duration times affected users; (3) prevented incidents - chaos tests that caught failure modes before production (harder to quantify but real). The MTTR improvement from 65 minutes to 14 minutes average is an 79% reduction. With even 1 incident per month that affects 1,000 users for 50 minutes vs. 14 minutes, the reduction in user-impact-minutes is significant. Frame the ROI as both engineering efficiency and user experience."
+    }
+  ]
+}

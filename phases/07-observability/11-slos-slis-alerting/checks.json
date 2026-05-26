@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "11-slos-slis-alerting",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team ships an AI feature with three monitored SLIs: availability, p95 latency, and error rate. Two months after launch, users report that answer quality has declined. You check dashboards: availability is 99.8%, p95 latency is 1200ms, error rate is 0.2%. All green.",
+      "question": "What was the root cause of the quality decline going undetected?",
+      "options": [
+        "A. The monitoring tools were misconfigured.",
+        "B. The team only defined traditional infrastructure SLIs and omitted eval_score as an AI-specific SLI. Quality degradation is invisible to availability, latency, and error rate metrics.",
+        "C. The SLO targets were set too loosely.",
+        "D. The dashboards were not being checked frequently enough."
+      ],
+      "answer": "B",
+      "explanation": "This is the canonical AI observability failure: all traditional SLIs are green while quality silently degrades. Availability measures whether the API responded. Latency measures how fast. Error rate measures HTTP failures. None of these measure whether the response was good. The eval_score SLI is the only metric that would have caught this. Without it, quality changes are invisible until users complain."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your eval pipeline runs every hour on a sample of 20 production requests. You set a WARNING alert when eval score drops below 0.75 in any single hourly run. Over one week you get 14 WARNING alerts, but manual review shows the system is working correctly. Each alert was triggered by a small batch of difficult queries in that hour's sample.",
+      "question": "What is wrong with the alert design and how do you fix it?",
+      "options": [
+        "A. The eval score target of 0.75 is too high. Lower it to 0.60.",
+        "B. Evaluating 20 requests per hour is too few samples for a statistically stable metric. Alert only when the eval score is below 0.75 across 3 consecutive hourly runs, or use a 24-hour rolling mean instead of per-run alerting.",
+        "C. Disable eval score alerting entirely - it is too noisy to be useful.",
+        "D. Run the eval pipeline more frequently to get more data per day."
+      ],
+      "answer": "B",
+      "explanation": "With a sample of 20 requests, the variance in a single hourly eval run is very high. A single batch of 3-4 hard questions can drop the mean by 0.10 points, triggering a false alert. The fix is to require the breach to persist across multiple windows (3 consecutive runs) or to use a longer rolling window (24 hours, 240-480 samples) before alerting. This trades alert latency for alert precision - an acceptable tradeoff because quality degradation is a slow-moving signal."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your cache hit rate alert fires: current rate is 12%, SLO target is 40%. You investigate and find that engineering deployed a new prompt template 2 hours ago that uses a different system prompt structure. No other changes were made.",
+      "question": "What happened and what is the fix?",
+      "options": [
+        "A. The cache is full. Clear the cache and monitor recovery.",
+        "B. The new system prompt changed the cache key, invalidating all cached prefixes. The fix is to either revert the prompt change, or to wait 30-60 minutes for the cache to warm up with the new key structure, then verify the hit rate recovers to the target.",
+        "C. The cache hit rate SLO target is too aggressive. Reduce it to 10%.",
+        "D. The Anthropic API cache has an outage. Contact support."
+      ],
+      "answer": "B",
+      "explanation": "Anthropic's prompt cache works by hashing the system prompt prefix. If the system prompt changes, the hash changes, and all cached entries become misses. The cache hit rate drops to near zero immediately and recovers as the new prefix accumulates enough traffic to warm the cache. This is expected behavior, not a bug. The runbook entry for this alert should include: check for recent prompt template deploys before paging oncall."
+    },
+    {
+      "id": "c4",
+      "scenario": "You are setting error budget burn rate alerts for your availability SLO (99.5% over 30 days). Your monthly traffic is 500,000 requests. A colleague says: 'Just alert when error rate exceeds 0.5% in any 5-minute window.'",
+      "question": "What is wrong with this alert and what is the correct design?",
+      "options": [
+        "A. Nothing is wrong. This is the correct design.",
+        "B. A 5-minute window with 0.5% errors is a single bad request in a low-traffic period. Burn rate alerting is better: alert when the current error rate would exhaust the monthly error budget in less than 3 days (a 10x burn rate). This is proportional to your monthly SLO, not to arbitrary 5-minute windows.",
+        "C. Alert on absolute request count rather than percentage.",
+        "D. The 0.5% threshold should be applied to the hourly window instead."
+      ],
+      "answer": "B",
+      "explanation": "Raw percentage alerts on short windows have two failure modes: false positives (2 errors in 1 minute of 10 requests = 20% error rate, triggers alert) and missed real degradation (steady 0.4% error rate consumes 80% of your budget silently). Burn rate alerting calculates: at the current error rate, how many days until my monthly budget is exhausted? Alert when that number is less than 3 days. This is proportional to your actual SLO commitment and immune to traffic volume noise."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your cost_p95 alert fires: $0.011/request vs the $0.005 SLO target. You check the routing_reason distribution: 78% of requests show 'explicit_complexity_high' - up from 15% yesterday. Engineering just deployed a new feature that sets complexity='high' on all API calls as a default.",
+      "question": "What chain of observability signals caught this issue?",
+      "options": [
+        "A. The error rate alert caught the issue, which led to investigating the routing logs.",
+        "B. The cost_p95 SLI alert fired, which prompted investigation of the routing_reason distribution in logs, which revealed the default configuration bug in the new deploy. Three signals: cost alert, routing distribution, deploy correlation.",
+        "C. The eval score improved, which was suspicious and triggered investigation.",
+        "D. The cache hit rate dropped, which indicated a configuration change."
+      ],
+      "answer": "B",
+      "explanation": "This demonstrates the observability chain working correctly: (1) cost SLI fires the alert, (2) you query routing_reason distribution in your structured logs and see the anomaly, (3) you correlate with the recent deploy. Without the cost SLI, this bug runs undetected until the monthly bill arrives. Without structured log routing_reason fields, you cannot diagnose why cost increased. Without the deploy correlation, you cannot root-cause it. All three observability practices from this phase contributed to a 30-minute MTTR."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your manager asks: 'Can we skip defining eval_score SLIs for the v1 launch and add them in v2? Our eval pipeline is not ready yet.' The feature ships in 3 weeks.",
+      "question": "What is the correct engineering response?",
+      "options": [
+        "A. Agree. Eval SLIs can always be added later without impact.",
+        "B. The eval_score SLI requires production data to establish a baseline. If you ship without it, you lose 3+ weeks of baseline data and cannot distinguish normal quality variation from regression when you do add it. Minimum viable option: add eval score logging on day 1 even if alerting is not configured. This gives you baseline data for threshold-setting when the alert is added.",
+        "C. Delay the launch until the eval pipeline is ready.",
+        "D. Use p95 latency as a proxy for quality until the eval pipeline is ready."
+      ],
+      "answer": "B",
+      "explanation": "Shipping without eval alerting is an acceptable tradeoff in some circumstances. Shipping without eval logging is a mistake that cannot be undone. The baseline period (first 2-4 weeks of production traffic) is uniquely valuable for setting meaningful SLO targets - you need to know what 'normal' looks like before you can define 'abnormal'. Log eval scores from day one, even as a background async job over a 1% sample. When the alerting pipeline is ready, you will have weeks of baseline data to set thresholds from."
+    },
+    {
+      "id": "c7",
+      "scenario": "After one week of SLO monitoring in production, you count your alerts: 47 total, of which 38 resolved without any engineering action (self-healed before anyone looked at them). Your oncall team is starting to ignore the alerts.",
+      "question": "What is the correct response to this alert fatigue situation?",
+      "options": [
+        "A. Disable all WARNING-level alerts and only page for CRITICAL.",
+        "B. The 38 self-healing alerts represent noise. Investigate the auto-resolution pattern: if most are TTFT warnings that resolve in under 2 minutes, raise the WARNING threshold or add a minimum breach duration (alert only if breach persists > 5 minutes). The goal is every alert requiring an action, not every alert being suppressible.",
+        "C. Accept the alert volume. Oncall teams should acknowledge all alerts even if they self-heal.",
+        "D. Switch from threshold-based alerts to anomaly detection to reduce false positives."
+      ],
+      "answer": "B",
+      "explanation": "An alert that fires and self-heals in 2 minutes with no engineer action is a noise alert. Noise alerts train oncall engineers to ignore alerts, which means real incidents get delayed responses. The fix is not to disable alerts but to tune them: add minimum breach duration requirements so transient spikes do not alert. The 38/47 noise ratio (81%) is very high - a well-tuned alerting system targets < 20% noise. Audit each noise alert type, find the common patterns, and add duration or multi-window requirements."
+    }
+  ]
+}

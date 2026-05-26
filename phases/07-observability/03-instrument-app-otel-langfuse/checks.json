@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "03-instrument-app-otel-langfuse",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You instrument a FastAPI + Anthropic service with raw OTel spans exporting to Langfuse. Three months later, your platform team decides to consolidate on Grafana Tempo for all observability. They ask you to migrate your LLM traces.",
+      "question": "What change is required to route your LLM traces to Grafana Tempo instead of Langfuse?",
+      "options": [
+        "A. Rewrite all gen_ai.* attribute names to match Grafana's custom schema",
+        "B. Change the OTEL_EXPORTER_OTLP_ENDPOINT environment variable to Grafana Tempo's OTLP endpoint -- no code changes needed",
+        "C. Replace all OTel span code with Grafana's proprietary tracing SDK",
+        "D. Both Langfuse and Grafana Tempo require different OTLP protocol versions, so you must change the exporter class"
+      ],
+      "answer": "B",
+      "explanation": "Both Langfuse and Grafana Tempo accept OTLP over gRPC. The OTLPSpanExporter takes the endpoint as configuration. Since your gen_ai.* attribute names are standardized, they are understood by both backends without reformatting. This is the core value proposition of using raw OTel: instrument once, route by config."
+    },
+    {
+      "id": "c2",
+      "scenario": "You add background tasks to your FastAPI route. The route calls the LLM synchronously, then dispatches a background task to write the interaction to a database. In Langfuse, you see the LLM call span, but the database write span appears as an orphan trace with no parent.",
+      "question": "What is the root cause and how do you fix it?",
+      "options": [
+        "A. Background tasks cannot create OTel spans -- use a message queue instead",
+        "B. FastAPI background tasks run after the HTTP response is sent, breaking automatic OTel context propagation; fix by capturing context before the response and calling attach(parent_context) in the background task",
+        "C. The database write span needs gen_ai.* attributes to be linked to the LLM span",
+        "D. You must use SimpleSpanProcessor instead of BatchSpanProcessor for background task spans to appear correctly"
+      ],
+      "answer": "B",
+      "explanation": "OTel context propagation is thread-local and request-scoped. When FastAPI sends the HTTP response, the request context is cleaned up. Background tasks that run after this point see no active span. The fix: call current_context = context.get_current() inside the route handler (before returning), pass it to the background task, and call token = attach(parent_context) at the start of the task. Always call detach(token) in a finally block."
+    },
+    {
+      "id": "c3",
+      "scenario": "You use SimpleSpanProcessor with OTLPSpanExporter in your production FastAPI service. Under load (100 req/s), you observe that API latency increases from 180ms to 600ms. CPU is fine. The Langfuse backend is healthy.",
+      "question": "What is the cause of the latency increase, and what is the fix?",
+      "options": [
+        "A. Too many gen_ai.* attributes are being set, which increases span payload size",
+        "B. SimpleSpanProcessor exports each span synchronously on the request thread, blocking until the OTLP call completes; replace with BatchSpanProcessor which exports asynchronously",
+        "C. The OTLPSpanExporter connection pool is exhausted; increase the pool size",
+        "D. FastAPIInstrumentor adds overhead; remove it and create HTTP spans manually"
+      ],
+      "answer": "B",
+      "explanation": "SimpleSpanProcessor calls the exporter synchronously when a span ends. If the OTLP backend has any latency (network, queue, etc.), the request thread blocks until the export completes. BatchSpanProcessor decouples export from the request path: it buffers spans in memory and exports them in a background thread. This is always the correct choice for production. The latency difference you saw (180ms to 600ms) is the OTLP export latency being added to every request."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your team adopts the Langfuse Python SDK (@observe decorators) for a new microservice. A year later, you need to add Phoenix as a second observability backend for local development. Phoenix accepts OTLP but not the Langfuse SDK format.",
+      "question": "What does this situation reveal about the Langfuse SDK trade-off?",
+      "options": [
+        "A. The Langfuse SDK does not emit OTel spans, so it is incompatible with Phoenix and other OTel backends",
+        "B. You chose convenience over portability; switching to raw OTel would require rewriting instrumentation but enables routing to any OTLP backend",
+        "C. You can configure the Langfuse SDK to emit gen_ai.* attribute names that Phoenix recognizes",
+        "D. Phoenix and Langfuse use the same underlying protocol, so no changes are needed"
+      ],
+      "answer": "B",
+      "explanation": "The Langfuse SDK emits data in Langfuse's format (not raw gen_ai.* OTel spans), so it only works with Langfuse. This is the fundamental portability trade-off: the SDK is simpler to use but ties you to one backend. Raw OTel with gen_ai.* attributes works with any OTLP backend. The right choice depends on your team's needs: if you are certain Langfuse is your long-term tool, the SDK is fine. If you might switch or need multi-backend support, use raw OTel."
+    },
+    {
+      "id": "c5",
+      "scenario": "You instrument a FastAPI route with OTel. The route handler is an async function that calls the synchronous Anthropic Python client directly with 'response = client.messages.create(...)'. Under load, requests timeout and the event loop shows 100% utilization.",
+      "question": "What is the problem, and what is the correct fix?",
+      "options": [
+        "A. The Anthropic client is not thread-safe; use a separate client instance per request",
+        "B. The synchronous client.messages.create() blocks the async event loop; wrap it in asyncio.get_event_loop().run_in_executor(None, ...) to run it in a thread pool",
+        "C. You must use a different HTTP client; the Anthropic SDK does not support async FastAPI",
+        "D. Reduce the max_tokens parameter to make API calls faster"
+      ],
+      "answer": "B",
+      "explanation": "The Anthropic Python SDK is synchronous. Calling it directly in an async function blocks the event loop, preventing FastAPI from handling other requests while waiting for the API response. The fix: run_in_executor(None, lambda: client.messages.create(...)) offloads the blocking call to the default thread pool executor, keeping the event loop free. The anthropic-sdk-python also provides an AsyncAnthropic client which can be awaited directly."
+    },
+    {
+      "id": "c6",
+      "scenario": "A customer reports that your AI assistant gave them wrong information. They provide you with the timestamp of their request (14:32:07 UTC). You check Langfuse and see 47 traces in that second.",
+      "question": "What additional data from your API response would have let you pinpoint the exact trace immediately?",
+      "options": [
+        "A. The user's IP address, which maps to a specific server instance",
+        "B. The trace_id returned in the API response -- a direct link to the exact Langfuse trace, no searching required",
+        "C. The HTTP session ID, which correlates to a single user conversation",
+        "D. The latency_ms value, which is unique per request and searchable in Langfuse"
+      ],
+      "answer": "B",
+      "explanation": "Returning the trace_id in every API response is the production practice that makes customer-reported bugs debuggable. When a customer says 'this happened,' they (or your support team) can provide the trace_id, which links directly to the exact Langfuse trace with the complete prompt, response, token counts, and timing. Without it, you are searching through 47 traces by timestamp -- tedious and error-prone."
+    },
+    {
+      "id": "c7",
+      "scenario": "You set up OTel tracing. Your Langfuse dashboard shows traces for all HTTP requests, but only 60% of them have an LLM call span as a child. The other 40% show the HTTP root span with no children.",
+      "question": "What is the most likely cause of missing LLM call spans?",
+      "options": [
+        "A. Langfuse has a 40% sampling rate by default for child spans",
+        "B. The LLM calls in the missing 40% are raising exceptions before the span is created, or the span context is lost before call_claude() is called",
+        "C. FastAPIInstrumentor only instruments 60% of routes by default",
+        "D. The OTLPSpanExporter is dropping 40% of spans due to a buffer overflow"
+      ],
+      "answer": "B",
+      "explanation": "If the HTTP root span exists but has no LLM child span, the child span was either never created (exception before the span block) or the span was created but its context got disconnected (context propagation bug). Check your error logs for unhandled exceptions in the route handlers for the affected 40%. Also verify that context.get_current() has an active span inside call_claude() -- if it returns a NonRecordingSpan, context was lost."
+    }
+  ]
+}

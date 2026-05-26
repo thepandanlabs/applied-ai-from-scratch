@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "05-logging-prompts-responses",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your LLM service logs the full prompt text for every request. During a GDPR audit, legal discovers that user emails, names, and addresses are routinely captured in your application logs because users paste them into prompts.",
+      "question": "What is the most production-appropriate approach to fix this without losing debuggability?",
+      "options": [
+        "A. Stop logging prompts entirely to avoid any PII risk.",
+        "B. Encrypt the full prompt before logging so the data is technically unreadable.",
+        "C. Hash the prompt for the main log and store the full prompt only in a restricted error log that fires on failure.",
+        "D. Add a disclaimer to your UI telling users not to paste personal information."
+      ],
+      "answer": "C",
+      "explanation": "Hashing the prompt gives you a stable deduplication key with zero PII exposure. The full prompt is only written to the error log (restricted access, short TTL) so you can debug failures. Stopping logging entirely destroys debuggability. Encryption still stores PII and is subject to audit. A UI disclaimer does not prevent PII from entering logs."
+    },
+    {
+      "id": "c2",
+      "scenario": "You run scrub_pii() on the prompt 'Call me at 555.867.5309' before logging. After the scrub, your log shows the original phone number unchanged.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. The PII_PATTERNS list does not include a pattern for dot-separated phone numbers.",
+        "B. scrub_pii() only works on SSNs and emails, not phone numbers.",
+        "C. The scrub_pii() function returns the scrubbed text but you logged the original variable.",
+        "D. The regex matched but re.sub() failed silently."
+      ],
+      "answer": "C",
+      "explanation": "scrub_pii() returns a new scrubbed string - it does not modify the input in place. If you log the original variable instead of the returned value, the original text (including PII) goes to the log. Always assign and log the first return value: scrubbed, found = scrub_pii(prompt); then log scrubbed, not prompt."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your LLM service handles 50,000 requests per day. You want to detect when the same prompt is being sent thousands of times in a short window (a client loop bug). You cannot store full prompts for privacy reasons.",
+      "question": "Which logging field enables this detection?",
+      "options": [
+        "A. The response_preview field, by checking for repeated response text.",
+        "B. The prompt_hash field, by counting occurrences of the same hash per time window.",
+        "C. The user_id field, by finding users with unusually high request rates.",
+        "D. The latency_ms field, by identifying requests that complete suspiciously fast."
+      ],
+      "answer": "B",
+      "explanation": "The prompt_hash is a stable, deterministic fingerprint of the prompt content. A burst of identical hashes in a short window signals a loop or cache miss storm. This is the entire point of hashing rather than not logging: you get deduplication capability without storing PII."
+    },
+    {
+      "id": "c4",
+      "scenario": "A teammate argues: 'We should log tool call argument values, not just names. Without the values we cannot debug why a tool call returned wrong results.' You are building a financial assistant that calls a balance_lookup tool with the user's account number as an argument.",
+      "question": "What is the correct approach for tool call logging?",
+      "options": [
+        "A. Log full argument values - debugging value outweighs privacy risk.",
+        "B. Log argument schema (field names, types) but not values; include a scrubbed version of values if the argument passes through PII scrubber first.",
+        "C. Do not log tool calls at all - they contain too much sensitive data.",
+        "D. Log argument values only in the development environment and disable in production."
+      ],
+      "answer": "B",
+      "explanation": "Logging argument names and schemas gives you 80% of the debugging value (you know which fields were passed and their types) without exposing the values. For cases where values are needed to debug, run them through PII scrubbing first. Account numbers, API keys, and tokens that appear in tool args must not appear in main logs."
+    },
+    {
+      "id": "c5",
+      "scenario": "You switch from unstructured log lines like '2026-04-12 INFO LLM call: 412ms, 234 tokens' to structured JSONL. Your ops team now says log ingestion costs went up 20% because log lines are longer.",
+      "question": "What is the correct tradeoff analysis?",
+      "options": [
+        "A. Revert to unstructured logs - the 20% cost increase is not justified.",
+        "B. Structured logs are worth the cost because they enable automated querying, alerting, and aggregation without a parsing step.",
+        "C. Compress log lines by removing field names and using positional encoding instead.",
+        "D. Switch to binary log format (Protobuf) to reduce line length."
+      ],
+      "answer": "B",
+      "explanation": "Structured logs eliminate a parsing layer in every downstream consumer: dashboards, alerts, cost accounting, anomaly detection. The 20% storage cost increase is typically offset by reduced engineering time spent writing and maintaining log parsers. For very high volume, structured logs can be compressed with gzip before shipping, reducing the size penalty substantially."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are reviewing a logging implementation. The developer logs response_preview as the first 2,000 characters of the model response instead of 200. Your service handles 100,000 requests per day at an average response length of 800 characters.",
+      "question": "What is the practical impact of this choice?",
+      "options": [
+        "A. No impact - 2,000 chars is a reasonable preview length.",
+        "B. Log storage volume increases by roughly 5x compared to a 200-char preview, and responses may contain PII that users did not put in prompts.",
+        "C. The logger will crash on responses shorter than 2,000 characters.",
+        "D. The preview length only matters for streaming responses, not standard responses."
+      ],
+      "answer": "B",
+      "explanation": "At 800-char average responses, a 2,000-char preview captures the full response in most cases - effectively logging the entire output. This multiplies log storage and, critically, the model's response may contain PII that the user provided earlier in the conversation (names, addresses, emails used in context). 200 chars is enough to verify output type and catch hallucination patterns without the storage and compliance cost."
+    },
+    {
+      "id": "c7",
+      "scenario": "You add structlog to replace your manual JSONL logger. A junior engineer asks: 'structlog.bind() creates a new logger with context - does this mean every call to call_with_structlog() creates a new logger object and wastes memory?'",
+      "question": "What is the correct answer?",
+      "options": [
+        "A. Yes - each bind() creates a new logger object, so you should reuse a single global logger without binding.",
+        "B. No - bind() creates a lightweight BoundLogger wrapper that references the same underlying logger; the context is stored in a dict, not a new logger instance.",
+        "C. Yes - you should use thread-local storage instead of bind() to avoid memory overhead.",
+        "D. No - structlog uses a singleton pattern so all logger instances share the same memory."
+      ],
+      "answer": "B",
+      "explanation": "structlog.bind() returns a BoundLogger that carries the bound key-value pairs in a small dict. It wraps the same underlying logger. Creating one per request is intentional and cheap: it ensures that request-scoped context (prompt_hash, user_id) is automatically included on every log call within that request without polluting other concurrent requests."
+    },
+    {
+      "id": "c8",
+      "scenario": "Six months after shipping, your company acquires a startup. The startup's logs are merged into your centralized log aggregation system. Legal discovers that your LLM service logs contain full user email addresses in every request log line.",
+      "question": "Which earlier design decision caused this, and how could it have been prevented?",
+      "options": [
+        "A. The logs were behind a VPN, which provided sufficient protection before the merger.",
+        "B. The developer logged user_email instead of an opaque user_id hash, and did not run prompts through PII scrubbing before logging.",
+        "C. The log aggregation system failed to strip PII during ingestion.",
+        "D. structlog automatically logs all function arguments including email addresses."
+      ],
+      "answer": "B",
+      "explanation": "This is the exact 'VPN security assumption' failure mode. Logging user email directly (instead of a hashed or opaque user_id) and skipping PII scrubbing means that any access to the log pipeline - including after a merger - exposes user data. The correct approach: never log user email; use an opaque user_id (hash or UUID); scrub prompts before logging. Perimeter security (VPN) is not a substitute for data hygiene in logs."
+    }
+  ]
+}

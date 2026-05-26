@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "10-load-testing-llm-apis",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your team wants to validate that the new AI feature can handle 100 concurrent users before the product launch next week. A colleague suggests running wrk with 100 threads against the Anthropic API endpoint directly. wrk reports 12 req/s and 0% error rate.",
+      "question": "What is wrong with this load test approach?",
+      "options": [
+        "A. wrk is the wrong tool - you should use k6 instead.",
+        "B. wrk measures HTTP throughput but not TTFT or streaming behavior. A 'successful' response to wrk might be a rate limit that returns HTTP 200 with an error body. You also risk spending $50+ to validate a broken test setup.",
+        "C. 100 threads is too many for wrk. Start at 10.",
+        "D. The Anthropic API cannot be load tested directly."
+      ],
+      "answer": "B",
+      "explanation": "wrk measures raw HTTP performance: bytes received, status codes, connection timing. For LLM APIs this misses three critical things: (1) it cannot measure TTFT because it does not process streaming responses, (2) some providers return HTTP 200 with an error payload in the body when rate limited, so wrk counts those as successes, and (3) running wrk directly against a real API is expensive. You need a test harness that understands the LLM API response format."
+    },
+    {
+      "id": "c2",
+      "scenario": "You run the LLM load tester at concurrency=25 and see: TTFT p50=480ms, TTFT p95=4200ms, error rate=0.8% (all rate limits). At concurrency=30 the error rate jumps to 8%.",
+      "question": "What does this data tell you about your safe operating limit and what should you do?",
+      "options": [
+        "A. The safe limit is 30 concurrency. Rate limits start at 25.",
+        "B. The safe limit is around 25 concurrency. The jump from 0.8% to 8% error rate between 25 and 30 indicates you are near the rate limit boundary. Set your auto-scaling trigger at 70% of 25 (about 17-18 concurrent users) and add retry logic with backoff for the remaining 2%.",
+        "C. Rate limits are expected at any concurrency. Configure retries and run at 50 concurrency.",
+        "D. Contact Anthropic to raise your rate limits before proceeding."
+      ],
+      "answer": "B",
+      "explanation": "The steep jump from 0.8% to 8% error rate indicates you are at the rate limit boundary, not above it. Operating at the boundary is unstable: small traffic spikes will flip you into the high-error zone. Best practice is to set your auto-scaling trigger at 70% of the limit threshold, which here means scaling before you hit 25 concurrent users. Retry logic handles the occasional rate limit at 25 concurrency; it cannot save you at 30."
+    },
+    {
+      "id": "c3",
+      "scenario": "You run a load test with concurrency=10 and collect these TTFT values (ms): 120, 135, 290, 118, 4500, 125, 140, 210, 155, 130. A colleague says p50=140ms and the system is healthy.",
+      "question": "What does the data actually show and what should you investigate?",
+      "options": [
+        "A. The colleague is right. p50=140ms is excellent.",
+        "B. p50=140ms is correct, but the 4500ms outlier is a critical signal. One request out of 10 took 30x longer than the median. This is either a rate limit retry, a cold start, or a long-tail output length issue. At scale, this 10% outlier becomes your p90 - investigate before launch.",
+        "C. The data is invalid because the variance is too high for LLM APIs.",
+        "D. The 4500ms request is a network timeout and should be excluded from the analysis."
+      ],
+      "answer": "B",
+      "explanation": "Median hides outliers by design. With only 10 samples, a single 4500ms request is your p90 (the 9th-worst of 10). In a production system with 1000 requests, that 10% tail becomes 100 users waiting 4.5 seconds. The outlier could be a rate limit with a built-in retry (adds 1-2 seconds), an unusually long output that triggered streaming at a different rate, or a genuine API performance hiccup. Investigate the single outlier before scaling the test up."
+    },
+    {
+      "id": "c4",
+      "scenario": "You run a mock load test to validate the test harness. It reports 0% error rate, p95 TTFT of 90ms, and throughput of 25 req/s. You then run the same test against the real Anthropic API and get 3% error rate, p95 TTFT of 1800ms, and throughput of 4 req/s.",
+      "question": "Is this result expected, and what does it tell you?",
+      "options": [
+        "A. The real API results indicate a bug in the harness. The numbers should be similar to mock.",
+        "B. This is expected and correct. Mock validates that the harness logic is right (0% error, correct metrics collection). The real API numbers reflect actual network latency (~1800ms TTFT), real model inference time, and real rate limits. The 3% error rate at this concurrency level means you have found the rate limit boundary.",
+        "C. The mock is misconfigured. Real APIs should be faster than mock.",
+        "D. The real API test should be aborted - 3% error rate means the API is down."
+      ],
+      "answer": "B",
+      "explanation": "Mock and real results are supposed to diverge significantly. Mock validates harness behavior (does the concurrency semaphore work? does error counting work? does TTFT measurement work?). Real tests validate actual performance. A 1800ms TTFT on the real API is normal at moderate concurrency. The 3% error rate is the valuable signal: you have found where rate limits start appearing at this concurrency level."
+    },
+    {
+      "id": "c5",
+      "scenario": "A product manager asks: 'Can we run a load test in production to get the most realistic results?' Your staging environment uses mock LLM responses and does not reflect real model latency.",
+      "question": "What is the correct approach?",
+      "options": [
+        "A. Run load tests in production during low-traffic hours to minimize user impact.",
+        "B. Never load test in production. Build a realistic staging environment instead.",
+        "C. Run load tests in staging with a small real API integration: staging application stack, real Anthropic API, conservative request counts (20-50 req). This gives realistic model latency without production risk and controlled cost.",
+        "D. Load test the mock staging environment and multiply latency by a realistic factor."
+      ],
+      "answer": "C",
+      "explanation": "Production load tests are called incidents. The correct middle ground is: staging application stack (realistic infrastructure) + real Anthropic API (realistic model latency) + conservative request counts (cost-controlled). This approach catches the most important unknowns - model latency, rate limit behavior, and real network conditions - without risk to production traffic. The only thing staging cannot replicate is production traffic patterns, which you address by monitoring production carefully after launch."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your load test results show: p50 total latency = 3.2s, p95 = 12.8s. Output token counts have high variance: min 50, max 1800. Your SLO requires p95 latency < 8s.",
+      "question": "What is the most likely root cause of the p95 violation and what is the correct fix?",
+      "options": [
+        "A. The API is slow. Request a latency SLA from Anthropic.",
+        "B. The p95 violation is driven by the high-output-token tail. Requests generating 1800 output tokens at ~15ms/token take 27 seconds of streaming alone. Set max_tokens=500 or add explicit instructions to limit response length, then re-run the load test.",
+        "C. Increase concurrency to spread load more evenly.",
+        "D. Use a faster model (Sonnet instead of Haiku) to reduce streaming time."
+      ],
+      "answer": "B",
+      "explanation": "When total latency variance is this high and correlates with output token count, the bottleneck is streaming time, not model startup or network. At 15ms per output token, 1800 tokens = 27 seconds of streaming. Setting max_tokens=500 caps the worst case at ~7.5 seconds of streaming, which with ~1.5s TTFT puts you at ~9s total for p95 - close to your SLO. Adding more constraints ('respond in 3 bullet points', 'limit to 200 words') reduces variance further."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are setting up Locust for an LLM load test with a ramp-up from 0 to 100 users. A colleague suggests spawn-rate=100 (all users start simultaneously) so the test finishes faster.",
+      "question": "Why is a high spawn-rate problematic for LLM load tests specifically?",
+      "options": [
+        "A. Locust crashes when spawn-rate matches total users.",
+        "B. Starting all users simultaneously creates a thundering herd that hits the rate limit immediately, before you can observe the gradual degradation that mirrors real traffic growth. You learn 'everything breaks at 100 users' but not 'performance degrades starting at 40 users'. A spawn-rate of 2-5 users/second gives you the degradation curve.",
+        "C. High spawn-rate wastes money because requests overlap.",
+        "D. The Anthropic API enforces a maximum of 10 new connections per second."
+      ],
+      "answer": "B",
+      "explanation": "Gradual ramp-up is the most important parameter for LLM load tests because rate limits are enforced over rolling time windows. A thundering herd hits the token-per-minute limit in the first 10 seconds and then all 100 concurrent users see 429s. This is not a realistic traffic pattern and it gives you no useful data about the shape of degradation. With spawn-rate=2, you add users every 30 seconds and can see exactly when TTFT starts climbing, when rate limits appear, and what the system looks like at each traffic level."
+    }
+  ]
+}

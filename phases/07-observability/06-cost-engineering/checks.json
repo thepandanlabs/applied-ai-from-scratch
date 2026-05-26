@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "06-cost-engineering",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your LLM service uses claude-3-5-haiku-20241022 for a simple yes/no classification task. A junior engineer suggests switching to claude-opus-4-5 because 'it will be more accurate'. The task is classifying whether a support ticket is billing-related or technical. Current accuracy with Haiku is 94%.",
+      "question": "What is the cost impact of this switch, and what is the right engineering response?",
+      "options": [
+        "A. Accept the switch - accuracy matters more than cost for production systems.",
+        "B. Reject the switch - Opus is about 19x more expensive per input token and likely adds no accuracy for a simple binary classification task; measure Opus accuracy first before spending more.",
+        "C. Accept only if the team agrees to cap monthly spend at the current amount.",
+        "D. Switch to Opus for 10% of traffic as an A/B test and compare costs monthly."
+      ],
+      "answer": "B",
+      "explanation": "Haiku at $0.80/1M input vs Opus at $15/1M input is an ~19x cost difference. For a simple binary classification task where Haiku already achieves 94% accuracy, the incremental accuracy gain from Opus is likely marginal. The right approach: benchmark Opus accuracy on a labeled test set first. If accuracy improvement is under 2-3 percentage points, the cost is not justified."
+    },
+    {
+      "id": "c2",
+      "scenario": "You run the feature cost report and find that 'search_intent_classifier' accounts for 71% of your total LLM spend, even though it is the simplest task in your product. Investigating the code, you find it fires on every keystroke in the search box.",
+      "question": "What is the correct cost engineering response?",
+      "options": [
+        "A. Switch the search_intent_classifier to a smaller model to reduce per-call cost.",
+        "B. Add prompt caching to the search_intent_classifier's system prompt.",
+        "C. Fix the call frequency first: debounce the trigger to fire on pause-in-typing or onBlur, then measure the new call volume before optimizing per-call cost.",
+        "D. Cache the classifier's output so identical queries do not call the model."
+      ],
+      "answer": "C",
+      "explanation": "When call frequency is the root cause, reducing per-call cost is the wrong first lever. A 10x reduction in call frequency saves 10x cost regardless of model tier. After fixing the call frequency, you can also apply per-call optimizations (semantic caching, smaller model) for compound savings. Always fix frequency bugs before per-call optimizations."
+    },
+    {
+      "id": "c3",
+      "scenario": "You compute per-call cost using the formula: cost = (input_tokens * input_price + output_tokens * output_price) / 1_000_000. A colleague says you should also track cache_write_tokens and cache_read_tokens separately. Currently you are not using prompt caching.",
+      "question": "Should you add cache token fields to your schema now or later?",
+      "options": [
+        "A. Add them now - even if unused today, adding them later requires a schema migration and gaps in historical data.",
+        "B. Add them only when you implement prompt caching - premature schema design adds complexity.",
+        "C. Cache tokens are included in input_tokens, so no separate field is needed.",
+        "D. Cache tokens do not affect cost, so tracking them adds no value."
+      ],
+      "answer": "A",
+      "explanation": "Schema migrations on production tables are painful, especially when you need to backfill historical data. Adding cache_write_tokens and cache_read_tokens as DEFAULT 0 columns costs nothing now and means your cost accounting is accurate the moment you enable caching. Cache read tokens cost ~10% of cache write tokens - this is a real cost difference that matters at scale."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your monthly_projection function projects $340 on day 5 of the month. Your monthly budget is $200. The budget alert fires at 80% ($160). You investigate and find that a one-time bulk processing job ran on days 1-3 and has since completed.",
+      "question": "What is wrong with the current projection, and how would you fix it?",
+      "options": [
+        "A. Nothing is wrong - the projection correctly reflects the run rate at day 5.",
+        "B. The projection assumes constant daily spend, so a front-loaded batch job inflates it. Add a flag to exclude batch job costs from the steady-state projection.",
+        "C. Reduce the alert threshold from 80% to 50% to give more warning time.",
+        "D. Change the projection to use median daily cost instead of mean daily cost."
+      ],
+      "answer": "B",
+      "explanation": "A linear projection from day 5 overstates the month if the first few days had an anomalous batch job. The fix: tag batch job calls with a distinct feature_name, then exclude them from the projection query. Alternatively, use the last 7 days' run rate instead of month-to-date average. The insight: projection models need to be aware of traffic patterns, not just raw totals."
+    },
+    {
+      "id": "c5",
+      "scenario": "You add user_id tracking to your cost accounting and discover that one user_id accounts for 40% of your monthly LLM spend. That user is your CEO, who uses the product heavily. Your product has 5,000 other users.",
+      "question": "What is the most actionable interpretation of this data?",
+      "options": [
+        "A. Block or throttle the CEO's account to reduce costs.",
+        "B. This is expected for a power user - no action needed.",
+        "C. Investigate whether the CEO's usage pattern reveals a missing feature (e.g., they are doing something manually that should be automated) and whether per-user rate limits or semantic caching would help.",
+        "D. The data is not meaningful because the CEO has special access patterns."
+      ],
+      "answer": "C",
+      "explanation": "A single user driving 40% of cost often signals a usage pattern that should be automated or cached. Maybe they are regenerating the same document analysis repeatedly (semantic cache candidate) or running a workflow that should be batched. Per-user cost data is a product signal, not just a billing tool. The right response is to investigate the pattern, not to throttle the user."
+    },
+    {
+      "id": "c6",
+      "scenario": "The average output_tokens for your 'generate_marketing_copy' feature is 1,847 tokens. The copy it produces is a 3-sentence email subject line and body. A typical 3-sentence email is about 80-100 words (roughly 110-140 tokens).",
+      "question": "What is the most cost-effective fix?",
+      "options": [
+        "A. Switch to a cheaper model for marketing copy generation.",
+        "B. Add explicit output length instructions to the prompt: 'Write a subject line and 2-3 sentence email body. Be concise - total response under 150 words.'",
+        "C. Truncate the model's output to 150 tokens after generation.",
+        "D. Use streaming and cut off the stream at 150 tokens."
+      ],
+      "answer": "B",
+      "explanation": "Output tokens cost 5x more per token than input tokens. Going from 1,847 to ~140 output tokens is a 13x reduction in output cost for this feature. Adding an explicit length instruction in the prompt is the correct fix - it reduces what the model generates, not what you store. Truncating after generation (options C and D) still pays for all the tokens the model generated."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are building a cost dashboard for a startup with $500/month in LLM spend. Your CTO wants a real-time cost display that updates on every page load. Implementing this requires a database query on every request.",
+      "question": "What is the correct architecture for this dashboard?",
+      "options": [
+        "A. Run the cost aggregation query on every page load - SQLite is fast enough.",
+        "B. Cache the dashboard data and refresh it on a schedule (e.g., every 5 minutes or hourly) - real-time accuracy is not needed for cost reporting.",
+        "C. Build a streaming pipeline that updates cost totals in memory on every API call.",
+        "D. Use a separate analytics database (ClickHouse) even at $500/month scale."
+      ],
+      "answer": "B",
+      "explanation": "Cost dashboards do not need real-time accuracy. A 5-minute or hourly cache is more than sufficient for decision-making, eliminates database contention on every page load, and is trivial to implement. Real-time cost streaming (option C) adds architectural complexity with no business value. ClickHouse (option D) is overkill at $500/month."
+    }
+  ]
+}

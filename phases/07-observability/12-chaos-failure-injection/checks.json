@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "12-chaos-failure-injection",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your LLM service has a circuit breaker configured to open after 5 consecutive errors. In code review, a colleague says: 'The circuit breaker logic looks correct. I traced through it and it should handle 529 errors.' The circuit breaker has never been triggered in production or tests.",
+      "question": "Why is code review insufficient validation for the circuit breaker?",
+      "options": [
+        "A. Code review is sufficient. If the logic is correct, it will work.",
+        "B. Tracing through code is not the same as executing the code path. Exception handling, backoff timing, and state transitions have subtle bugs that only appear when running: import ordering issues, wrong exception class caught, state not reset after recovery. The circuit breaker must be triggered in a test before it is trusted.",
+        "C. The circuit breaker should be removed. 529 errors should be retried indefinitely.",
+        "D. Circuit breakers only need to be tested once before the initial deploy."
+      ],
+      "answer": "B",
+      "explanation": "The most common circuit breaker bug is catching the wrong exception class. If your circuit breaker catches `anthropic.APIStatusError` but the SDK raises `anthropic.RateLimitError` for a 529, the circuit never opens. This is invisible in code review because both look correct syntactically. The only way to verify the circuit breaker works is to inject the exact exception that production will raise and observe the circuit open. ChaosProxy injects the real exception class your SDK uses."
+    },
+    {
+      "id": "c2",
+      "scenario": "You run the chaos test suite and get: [FAIL] malformed_json: Unhandled exception: json.JSONDecodeError at line 47 in response_parser.py. Your service has no special handling for JSON parse errors - it relies on the Anthropic SDK to return valid objects.",
+      "question": "What is the correct fix and why does this failure mode matter?",
+      "options": [
+        "A. The fix is to validate that the Anthropic SDK never returns invalid JSON. This failure mode does not occur in practice.",
+        "B. Add a try/except around response parsing that catches json.JSONDecodeError and ValueError, returns a structured error response, and logs the raw response body for debugging. This matters because any network interruption mid-stream can produce a truncated JSON body that the SDK cannot parse.",
+        "C. Retry the request immediately on json.JSONDecodeError since it is likely transient.",
+        "D. Switch to a different HTTP client library that handles malformed JSON gracefully."
+      ],
+      "answer": "B",
+      "explanation": "Streaming LLM responses are vulnerable to truncation: if the connection drops mid-stream, the last JSON chunk may be incomplete. The SDK tries to parse it and raises a parse error. This is not a hypothetical - it happens on every network partition or client disconnect. The fix is to wrap response parsing in a try/except, log the raw content for debugging, and return a structured error to the caller. Do not retry on malformed JSON: if the response was truncated, retrying produces a new response, not the truncated one."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your chaos test for the empty_response failure mode is: assert result.retry_count >= 1. The test passes. However, you notice that the second retry (after detecting an empty response) is also set to use failure_rate=1.0, so the second attempt also returns empty. Your service returns status='error' after 2 retries.",
+      "question": "Is this test correctly verifying the service behavior?",
+      "options": [
+        "A. No. The test should verify that the service retries and eventually gets a valid response, not that it fails after retries.",
+        "B. Yes. The test correctly verifies that the service (a) detects the empty response condition, (b) retries at least once, and (c) returns a structured error when retries are exhausted. The assertion does not need to verify success since the chaos proxy is injecting 100% failure.",
+        "C. No. The test should use failure_rate=0.5 so the second attempt succeeds.",
+        "D. No. Empty responses should not be retried at all."
+      ],
+      "answer": "B",
+      "explanation": "The chaos test has two goals: verify the detection logic (does the service notice the empty response?) and verify the retry logic (does it try again?). With failure_rate=1.0, the second attempt also fails, which tests both goals: the service detected the empty response AND retried, AND returned a structured error when retries were exhausted. A separate test with failure_rate=0.5 would verify that the service can recover when the second attempt succeeds. Both tests are valuable and complementary."
+    },
+    {
+      "id": "c4",
+      "scenario": "You add a chaos test for a new failure mode: the API returns HTTP 200 but the response body contains the correct structure with stop_reason='max_tokens' and the content truncated mid-sentence. Your service passes this to the user as a complete response.",
+      "question": "What should the correct service behavior be for this scenario?",
+      "options": [
+        "A. Pass the truncated response to the user. stop_reason='max_tokens' is a valid API response.",
+        "B. Detect stop_reason='max_tokens', either (a) increase max_tokens and retry if the response is expected to be longer, or (b) add an explicit '[response truncated due to length limit]' indicator to the user, or (c) return an error. Never silently pass truncated content as a complete response.",
+        "C. Retry the request with a lower max_tokens setting.",
+        "D. Log the truncation and pass the response through. Truncation is expected and users understand it."
+      ],
+      "answer": "B",
+      "explanation": "stop_reason='max_tokens' means the model had more to say but was cut off by your max_tokens setting. Silently passing this to the user is a quality failure: they receive an incomplete answer with no indication it is truncated. The correct handling depends on your use case: for structured outputs (JSON), truncation usually means a parsing failure downstream, so retry with higher max_tokens or return an error. For prose responses, surface an indicator so the user knows to ask for the rest."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your circuit breaker opens after 5 consecutive 529 errors. It stays open for 60 seconds before allowing a probe request. During the open state, all requests return a fallback response. A product manager asks: 'Can we reduce the fallback period to 5 seconds so recovery is faster?'",
+      "question": "What is the engineering tradeoff and correct recommendation?",
+      "options": [
+        "A. Yes. 5 seconds is better. Faster recovery always reduces user impact.",
+        "B. The shorter the open period, the more quickly your circuit breaker sends probe requests to an API that may still be overloaded. If the API is having a 5-minute partial outage and your circuit resets every 5 seconds, you send a probe every 5 seconds - 60 probes during the outage. With 60-second resets, you send 5 probes. The right tradeoff depends on your user tolerance for fallback responses vs. the risk of hammering an already-stressed API.",
+        "C. Never reduce the open period below 30 seconds.",
+        "D. The circuit breaker open period should be configurable by the end user."
+      ],
+      "answer": "B",
+      "explanation": "Circuit breaker timing is a tradeoff between recovery speed and probe load on a stressed provider. A 5-second open period means your service is very responsive to API recovery, but also sends aggressive probe traffic. During a real Anthropic outage (which can last 5-30 minutes), 5-second probes add up to significant request volume. A 60-second period is more conservative. The right answer is: use exponential backoff on the open period (start at 10s, double each time, cap at 5min) so early probes are fast and extended outages are handled gently."
+    },
+    {
+      "id": "c6",
+      "scenario": "A 3 a.m. production incident reveals a new failure mode: the Anthropic API is returning HTTP 200 responses that take 45 seconds each (unusually slow streaming). Your timeout is set to 30 seconds for the complete response, so all requests are timing out. The chaos suite does not have a test for this.",
+      "question": "What do you do during and after the incident?",
+      "options": [
+        "A. During: add a streaming timeout. After: close the incident. No new test needed because it was a one-time event.",
+        "B. During: add a per-chunk streaming timeout (e.g., 5 seconds between chunks) so slow-streaming requests fail fast instead of waiting 30s. After: add FailureMode.SLOW_STREAMING to the chaos suite that simulates 500ms delays between chunks, and verify the per-chunk timeout triggers correctly.",
+        "C. During: increase the timeout to 60 seconds. After: add monitoring for requests taking > 30 seconds.",
+        "D. During: route traffic to OpenAI as a backup. After: add provider failover logic."
+      ],
+      "answer": "B",
+      "explanation": "A 30-second total timeout means every user waits the full 30 seconds before getting an error. Per-chunk streaming timeout (time since last token) detects slow streaming much earlier: if no token arrives within 5 seconds, the stream is likely stalled and you can abort and retry. After the incident, converting the failure mode into a chaos test ensures it never catches you off-guard again. This is the core practice: every production failure becomes a permanent chaos test."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your team debates where to run chaos tests: 'Should we inject failures against the real Anthropic API in staging, or only against the mock ChaosProxy?' A senior engineer argues that only real-API chaos tests are meaningful.",
+      "question": "What is the correct testing strategy?",
+      "options": [
+        "A. The senior engineer is right. Only real-API tests catch real failure modes.",
+        "B. ChaosProxy tests verify that your service's error handling code paths execute correctly: the right exceptions are caught, retries happen, structured errors are returned. Real-API chaos tests are not practical because you cannot force the real API to return a 529 on demand. Use ChaosProxy for systematic failure mode coverage; use real-API tests for integration smoke tests. The two are complementary.",
+        "C. Only use real-API tests. Mock proxies give false confidence.",
+        "D. Both are equivalent. Choose based on test speed."
+      ],
+      "answer": "B",
+      "explanation": "You cannot force the Anthropic API to return a 529 on demand. Real-API chaos testing would mean waiting for natural API failures, which is not a testing strategy. ChaosProxy tests verify the specific code paths you care about: does the exception handler catch the right exception class? Does the retry loop use the right backoff? These are deterministic, fast, and free. The tradeoff is that ChaosProxy tests assume the SDK raises the exceptions you expect - which is why keeping your SDK version pinned and reviewing SDK changelogs on version bumps matters."
+    }
+  ]
+}

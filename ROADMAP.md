@@ -155,23 +155,23 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 07: Observability, Cost & Reliability [⬚] (~14 hours)
+## Phase 07: Observability, Cost & Reliability [✅] (~14 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | Why LLM Observability Differs | ⬚ | ~45 min |
-| 02 | OpenTelemetry GenAI Conventions | ⬚ | ~60 min |
-| 03 | Instrument an App: Raw OTel to Langfuse / Phoenix | ⬚ | ~75 min |
-| 04 | The Trace as the Unit of Debugging | ⬚ | ~60 min |
-| 05 | Logging Prompts, Responses, Tool Calls | ⬚ | ~45 min |
-| 06 | Cost Engineering: Token Accounting, Dashboards | ⬚ | ~60 min |
-| 07 | Caching Deep-Dive: Prompt/Prefix + Semantic | ⬚ | ~75 min |
-| 08 | Latency: p50/p95/p99, TTFT, Where Time Goes | ⬚ | ~60 min |
-| 09 | Model Routing & LLM Gateways | ⬚ | ~60 min |
-| 10 | Load Testing LLM APIs | ⬚ | ~45 min |
-| 11 | SLOs, SLIs & Alerting for AI Features | ⬚ | ~45 min |
-| 12 | Chaos & Failure Injection | ⬚ | ~45 min |
-| 13 | Capstone: Full Observability + Cost Dashboard | ⬚ | ~90 min |
+| 01 | Why LLM Observability Differs | ✅ | ~45 min |
+| 02 | OpenTelemetry GenAI Conventions | ✅ | ~60 min |
+| 03 | Instrument an App: Raw OTel to Langfuse / Phoenix | ✅ | ~75 min |
+| 04 | The Trace as the Unit of Debugging | ✅ | ~60 min |
+| 05 | Logging Prompts, Responses, Tool Calls | ✅ | ~45 min |
+| 06 | Cost Engineering: Token Accounting, Dashboards | ✅ | ~60 min |
+| 07 | Caching Deep-Dive: Prompt/Prefix + Semantic | ✅ | ~75 min |
+| 08 | Latency: p50/p95/p99, TTFT, Where Time Goes | ✅ | ~60 min |
+| 09 | Model Routing & LLM Gateways | ✅ | ~60 min |
+| 10 | Load Testing LLM APIs | ✅ | ~45 min |
+| 11 | SLOs, SLIs & Alerting for AI Features | ✅ | ~45 min |
+| 12 | Chaos & Failure Injection | ✅ | ~45 min |
+| 13 | Capstone: Full Observability + Cost Dashboard | ✅ | ~90 min |
 
 ---
 

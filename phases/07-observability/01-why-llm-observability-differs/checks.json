@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "01-why-llm-observability-differs",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your FastAPI service wraps Anthropic API calls. HTTP status codes are all 200, latency averages 180ms, and error rate is 0%. A customer reports the AI gave them incorrect billing information. Your Datadog dashboard shows no anomalies.",
+      "question": "What does this situation reveal about your current observability setup?",
+      "options": [
+        "A. Datadog is misconfigured and not receiving the correct metrics",
+        "B. The HTTP layer cannot detect semantic failures -- you need LLM-specific logging",
+        "C. A 0% error rate means the AI answer was correct; the customer is mistaken",
+        "D. Latency metrics would have been higher if the model produced a wrong answer"
+      ],
+      "answer": "B",
+      "explanation": "A 200 OK with a hallucinated answer is indistinguishable from a 200 OK with a correct one at the HTTP layer. Generic APM tools see latency and status codes, not semantic content. LLM observability requires capturing prompt version, model, token counts, and ideally output quality signals to detect this failure mode."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your LLM service handles 5,000 requests per day. Last month your Anthropic bill was $200. This month it is $600 with no change in request volume. Your APM dashboard shows no anomalies.",
+      "question": "Which LLM-specific failure mode does this represent, and what field in your log would have caught it earliest?",
+      "options": [
+        "A. Model drift; the model field would show the provider changed the model",
+        "B. Runaway costs; the cost_usd field per request would show the per-request cost tripling",
+        "C. Cascading tool failure; tool call logs would show repeated retries",
+        "D. Prompt regression; the error field would show increased failure rates"
+      ],
+      "answer": "B",
+      "explanation": "Runaway costs are invisible to HTTP-layer monitoring because they do not cause errors or latency changes -- only token counts grow. Logging cost_usd per request would show the per-request average tripling from $0.040 to $0.120, triggering an alert long before the monthly bill arrives. The root cause is likely a prompt template change that increased average input token count."
+    },
+    {
+      "id": "c3",
+      "scenario": "You deploy a new prompt template (support-v3) for your customer support bot. Two days later, user satisfaction scores drop from 4.2 to 3.1 stars. Your error rate and latency are unchanged.",
+      "question": "Which of the 8 essential log fields is most critical for diagnosing this issue, and why?",
+      "options": [
+        "A. latency_ms -- slower responses correlate with lower quality outputs",
+        "B. cache_hit -- the new template may be bypassing the cache and serving stale responses",
+        "C. prompt_version -- you can filter logs by 'support-v3' to isolate when quality changed",
+        "D. error -- the new template must be causing silent API errors"
+      ],
+      "answer": "C",
+      "explanation": "Prompt regression is only diagnosable if you log prompt_version with every request. With this field, you can filter your logs to 'support-v3', compare output quality before and after the deployment, and confirm the regression. Without prompt_version, you have no way to correlate the template change with the quality drop."
+    },
+    {
+      "id": "c4",
+      "scenario": "You call the Anthropic API. The response comes back with cache_read_input_tokens = 847 in the usage object. Your LLMLogRecord shows cache_hit = True.",
+      "question": "What does this cache_hit field enable in production?",
+      "options": [
+        "A. It confirms the model used cached model weights, which improves accuracy",
+        "B. It lets you measure prompt cache hit rate and calculate how much you saved vs. full input token pricing",
+        "C. It indicates the response was served from a CDN and did not reach the model",
+        "D. It shows the user's previous request was identical, so no new inference was needed"
+      ],
+      "answer": "B",
+      "explanation": "Anthropic's prompt caching charges cache_read_input_tokens at a fraction of the full input token price (roughly 10x cheaper). Logging cache_hit lets you measure your cache hit rate over time and calculate actual cost savings. A low cache hit rate on a system that should benefit from caching (e.g., large shared system prompts) indicates a caching configuration problem worth fixing."
+    },
+    {
+      "id": "c5",
+      "scenario": "An engineer argues: 'Instead of a structured LLMLogRecord dataclass, let's just log json.dumps(response.__dict__) for every API call. We can parse it later if we need anything.' Your service makes 10,000 calls per day.",
+      "question": "What is the main risk of this approach at production scale?",
+      "options": [
+        "A. The Anthropic response object does not support serialization to JSON",
+        "B. The raw response contains sensitive content that should not be logged",
+        "C. Unstructured logs are expensive to query, schema changes in the SDK break your log parsers, and you cannot alert on fields you have not pre-defined",
+        "D. Logging the full response object will cause latency to increase by more than 100ms"
+      ],
+      "answer": "C",
+      "explanation": "Raw object serialization produces unstructured logs that are expensive to query in log aggregators (full-text scan vs. field index). When Anthropic updates its SDK response schema, your log parsers break silently. And you cannot set up alerts on fields like cost_usd if those fields are not pre-calculated and named consistently. Structured logging with a defined schema is the production-grade approach."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are building an agent that calls three tools in sequence. Each tool call makes a separate API request. You log each API call as a separate LLMLogRecord. A user reports the final answer was wrong.",
+      "question": "What limitation of flat log records does this scenario expose?",
+      "options": [
+        "A. Flat log records cannot capture tool call results, making it impossible to see what data each tool returned",
+        "B. Three separate records have no shared identifier linking them to the same user request, and no way to show the causal sequence of tool calls",
+        "C. Logging multiple records per user request violates data retention policies",
+        "D. The cost_usd field will be inaccurate when summed across multiple records"
+      ],
+      "answer": "B",
+      "explanation": "Flat log records are not connected to each other. Three records for three tool calls have no parent-child relationship and no shared trace ID. When debugging a failure, you cannot reconstruct the sequence: which tool was called first, what it returned, how that affected the next call, and where the error propagated. This is precisely why Lessons 02-03 introduce OpenTelemetry spans, which support hierarchical parent-child relationships and trace context propagation."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your LLM service starts returning responses where error = 'RateLimitError' for 15% of requests during peak hours. Your HTTP error rate dashboard shows no change because your API gateway retries automatically and the final response is always 200.",
+      "question": "What does this scenario illustrate about the error field in LLM logging?",
+      "options": [
+        "A. The error field is redundant if you have an API gateway with retry logic",
+        "B. LLM-specific errors like rate limits are hidden by retry logic at the transport layer, but logging them reveals capacity and cost problems before they become outages",
+        "C. RateLimitError in the log means you should switch to a different model provider",
+        "D. The error field only captures network errors, not API-level errors"
+      ],
+      "answer": "B",
+      "explanation": "Retry logic at the gateway hides rate limit errors from HTTP error rate metrics. But each retry adds latency and consumes quota. Logging the error field at the LLM layer reveals that 15% of requests are hitting rate limits, which means: your prompt cache hit rate may be low (more unique prompts hitting the API), your concurrency is too high, or you need a higher rate limit tier. Without this field, you discover the problem only when retries fail and the HTTP layer starts seeing 5xx errors."
+    },
+    {
+      "id": "c8",
+      "scenario": "You add cost_usd to your LLM logs. After a week of data, you calculate that your per-user cost ranges from $0.002 to $4.80 per session. The top 5 users by cost account for 60% of total spending.",
+      "question": "What production action does the cost_usd field now enable that was not possible before?",
+      "options": [
+        "A. Blocking high-cost users automatically to stay within budget",
+        "B. Per-user cost attribution, usage-based billing, per-user rate limiting, and identifying prompt patterns that drive high token usage",
+        "C. Negotiating a lower per-token price with Anthropic based on usage volume",
+        "D. Switching to a cheaper model automatically for high-cost sessions"
+      ],
+      "answer": "B",
+      "explanation": "Per-request cost_usd enables: (1) per-user cost attribution for usage-based billing or fairness limits, (2) identifying which prompt patterns or user behaviors drive the most cost (e.g., users who ask very long questions), (3) setting soft or hard per-user daily cost limits, and (4) optimizing prompts or caching strategies for the highest-cost usage patterns. None of this is possible with aggregate billing data alone."
+    }
+  ]
+}

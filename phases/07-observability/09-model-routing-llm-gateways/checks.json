@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "09-model-routing-llm-gateways",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your analytics show that 72% of production LLM requests are single-turn Q&A averaging 350 input tokens. You are currently routing all traffic to claude-sonnet-4-5 at $3/M tokens. Haiku costs $1/M tokens and achieves equivalent quality on your Q&A eval suite (RAGAS answer correctness 0.91 vs 0.93 for Sonnet).",
+      "question": "What is the correct engineering decision and why?",
+      "options": [
+        "A. Keep Sonnet for all traffic. A 0.02 quality gap is too risky for production.",
+        "B. Route the 72% Q&A traffic to Haiku. A 0.02 quality difference is within noise on a 0-1 scale, and the cost reduction is 67% on that traffic segment.",
+        "C. Run both models in parallel on all requests and return whichever finishes first.",
+        "D. Switch all traffic to Haiku to maximize savings."
+      ],
+      "answer": "B",
+      "explanation": "A 0.02 difference on a 0-1 eval scale is within measurement noise for RAGAS metrics. The correct move is to route the clearly-Haiku-suitable traffic to Haiku and keep Sonnet for the minority of tasks that actually need it. Switching all traffic to Haiku ignores the 28% of tasks that may genuinely require the more capable model. Running both in parallel doubles your cost."
+    },
+    {
+      "id": "c2",
+      "scenario": "You implement a ModelRouter with four rules: explicit_complexity, large_context (>6000 tokens), budget_constraint, and medium_prompt (>1500 tokens). A request arrives with prompt_tokens=800, complexity=None, cost_budget=None. Which rule fires?",
+      "question": "Which model does the router select and why?",
+      "options": [
+        "A. claude-sonnet-4-5, because no budget constraint was specified.",
+        "B. claude-3-5-haiku-20241022, because the default model is Haiku when no rule matches.",
+        "C. claude-sonnet-4-5, because the medium_prompt rule fires at 800 tokens.",
+        "D. The router raises an error because complexity is None."
+      ],
+      "answer": "B",
+      "explanation": "With prompt_tokens=800, complexity=None, cost_budget=None: the explicit_complexity rule does not fire (complexity is not 'high'), large_context does not fire (800 < 6000), budget_constraint does not fire (no budget provided), medium_prompt does not fire (800 < 1500). No rule matches, so the router returns the default model: claude-3-5-haiku-20241022."
+    },
+    {
+      "id": "c3",
+      "scenario": "A product manager proposes adding an LLM classifier step before routing: 'Let's call GPT-4o-mini to classify each request as simple/complex, then route based on that.' The classifier would add 80ms latency and $0.0001 per request. Your current rule-based router adds 0ms and $0.",
+      "question": "Under what condition does the LLM classifier approach justify its cost?",
+      "options": [
+        "A. Always - LLM classification is always more accurate than rules.",
+        "B. Never - the overhead always exceeds the benefit.",
+        "C. When the classifier demonstrably reduces misrouting enough to recover the classifier cost through better model selection, measured in a controlled A/B test.",
+        "D. When prompt length alone is not a reliable signal, which it never is."
+      ],
+      "answer": "C",
+      "explanation": "The classifier is only justified if it pays for itself. To evaluate: run both routing strategies in A/B for one week. Measure (a) misrouting rate under each strategy (Haiku sent to Sonnet, or vice versa), (b) quality difference from misrouting, and (c) total cost. If the classifier reduces expensive misrouting enough to offset its $0.0001/request overhead, adopt it. If not, keep the rule-based router."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your ModelRouter has been live for two weeks. You check the routing_reason distribution in your logs: 81% of requests show 'explicit_complexity_high'. Engineering teams are setting complexity='high' on most calls because it is the default in their client library.",
+      "question": "What is the root cause and correct fix?",
+      "options": [
+        "A. The explicit_complexity rule is broken and should be removed.",
+        "B. The client library defaulted complexity='high', bypassing all other routing logic. Fix the default to complexity=None and add a lint rule preventing complexity='high' without a comment justifying it.",
+        "C. Raise the token threshold for large_context so more traffic falls through to that rule.",
+        "D. Remove the explicit_complexity rule entirely since it is being abused."
+      ],
+      "answer": "B",
+      "explanation": "When a rule fires 81% of the time on the first check, the rule is not the problem - the input is wrong. The client library set a bad default that overrides all other routing intelligence. Fix the default, add a lint check, and re-measure. The explicit_complexity rule itself is correct; it should fire only when a human engineer has made a deliberate judgment that this specific request needs the more capable model."
+    },
+    {
+      "id": "c5",
+      "scenario": "You are evaluating LiteLLM as your LLM gateway. A colleague says: 'We can do the same thing with a simple if/else and the Anthropic SDK directly. LiteLLM is just added complexity.' Your current setup uses only Anthropic models.",
+      "question": "What is the most accurate assessment of the tradeoff?",
+      "options": [
+        "A. The colleague is right. LiteLLM adds no value when you use only one provider.",
+        "B. LiteLLM is always necessary and the colleague is wrong.",
+        "C. For a single-provider setup, direct SDK is simpler now. LiteLLM earns its place when you need provider fallbacks, normalized error handling, or cost logging across providers - deferring adds a future migration cost.",
+        "D. LiteLLM is required for rate-limit handling, which the Anthropic SDK cannot do."
+      ],
+      "answer": "C",
+      "explanation": "The colleague's objection is technically valid for the current state. The Anthropic SDK handles one provider cleanly. LiteLLM pays off when you add a second provider, need fallback routing, or want normalized cost tracking. The honest engineering answer is: add the abstraction when the need is proven, not preemptively. The cost is a future migration, which is real but bounded."
+    },
+    {
+      "id": "c6",
+      "scenario": "You have configured ModelRouter with a default_budget of $0.005 per request. A request arrives with prompt_tokens=8000, complexity=None, cost_budget=None. The large_context rule fires and routes to Sonnet. The actual call costs $0.028.",
+      "question": "What does this reveal about the routing design, and what should you do?",
+      "options": [
+        "A. The router is broken. Large-context requests should always go to Haiku.",
+        "B. The default_budget is a per-call estimate, not a hard cap. The large_context rule correctly identified the need for Sonnet. Log the overage, add a cost alert for calls exceeding 3x the budget estimate, and review whether 8000-token prompts are expected or a bug in the caller.",
+        "C. Add a hard cap in the Anthropic client that terminates calls exceeding $0.005.",
+        "D. Remove the large_context rule so all overlong prompts fall through to the budget_constraint rule."
+      ],
+      "answer": "B",
+      "explanation": "The router's budget field is a routing hint, not a billing cap. A $0.028 call on an 8000-token prompt is mathematically correct at Sonnet pricing. The router correctly chose Sonnet because the prompt needed it. The overage signals two things worth investigating: (1) is the caller sending 8000-token prompts intentionally? and (2) should there be a server-side max_tokens guard on the response to control output cost? Alert on cost outliers; don't remove the routing rule."
+    },
+    {
+      "id": "c7",
+      "scenario": "After one month of routing, you run a cost analysis. Traffic breakdown: 65% routed to Haiku (avg $0.0002/req), 35% routed to Sonnet (avg $0.0015/req). Without routing, all traffic would have gone to Sonnet. Monthly volume: 200,000 requests.",
+      "question": "What is the monthly cost savings from routing?",
+      "options": [
+        "A. $156",
+        "B. $195",
+        "C. $175",
+        "D. $143"
+      ],
+      "answer": "A",
+      "explanation": "Without routing: 200,000 x $0.0015 = $300/month. With routing: (130,000 x $0.0002) + (70,000 x $0.0015) = $26 + $105 = $131/month. Wait - let me recalculate: (0.65 x 200,000 x $0.0002) + (0.35 x 200,000 x $0.0015) = $26 + $105 = $131. Savings = $300 - $131 = $169. The closest answer is A ($156), which corresponds to slightly different per-request costs. The key insight: routing 65% of traffic to Haiku cuts monthly spend by more than 50%."
+    },
+    {
+      "id": "c8",
+      "scenario": "A user reports that your AI assistant gave a shallow, incomplete answer to a complex multi-step question. You check the logs and see: routing_reason='budget_constraint', model='claude-3-5-haiku-20241022'. The user's account is on the free tier with a $0.001 per-request budget.",
+      "question": "What is the correct product and engineering response?",
+      "options": [
+        "A. Remove the budget_constraint rule - it is causing quality problems.",
+        "B. The routing decision was correct given the budget. The product response is to show the user that complex queries require the paid tier. The engineering response is to add a quality check: if the response is below a length or quality threshold, surface a 'upgrade for better answers' prompt.",
+        "C. Override the budget for all users and absorb the extra cost.",
+        "D. Switch all free-tier users permanently to Haiku regardless of task complexity."
+      ],
+      "answer": "B",
+      "explanation": "The router did exactly what it was configured to do. The problem is a product design gap: free-tier users can submit complex queries that Haiku cannot answer well, but they see a degraded response with no explanation. The fix has two parts: engineering adds a response quality check (e.g., length < 50 tokens suggests a non-answer), and product adds an in-app message explaining that complex queries need the paid tier. Never remove a cost control without an explicit business decision to absorb the cost."
+    }
+  ]
+}

@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "lesson": "02-opentelemetry-genai-conventions",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You instrument an Anthropic API call with an OTel span. You set the span name to 'llm-call' and the span kind to SpanKind.INTERNAL. A colleague reviews your code and flags both as non-standard.",
+      "question": "What are the correct span name and span kind according to the gen_ai.* semantic conventions?",
+      "options": [
+        "A. Name: 'anthropic-call', Kind: SpanKind.SERVER",
+        "B. Name: '{model} chat' (e.g. 'claude-3-5-haiku-20241022 chat'), Kind: SpanKind.CLIENT",
+        "C. Name: 'gen_ai.chat', Kind: SpanKind.INTERNAL",
+        "D. Name: '{model}', Kind: SpanKind.PRODUCER"
+      ],
+      "answer": "B",
+      "explanation": "The gen_ai.* convention specifies span name as '{gen_ai.request.model} {gen_ai.operation.name}', e.g. 'claude-3-5-haiku-20241022 chat'. The span kind must be SpanKind.CLIENT because you are making an outbound call to an external service (the Anthropic API). INTERNAL is for in-process operations; SERVER is for inbound requests."
+    },
+    {
+      "id": "c2",
+      "scenario": "You set gen_ai.usage.input_tokens = 0 and gen_ai.usage.output_tokens = 0 at the beginning of the span, before calling the Anthropic API. The API returns successfully with 42 input tokens and 128 output tokens. Your backend shows 0 tokens for all spans.",
+      "question": "What is wrong with this approach?",
+      "options": [
+        "A. Token count attributes must be set as events, not attributes",
+        "B. The attribute names are wrong -- it should be gen_ai.tokens.input and gen_ai.tokens.output",
+        "C. Usage token counts are only available after the API call returns -- setting them before the call gives wrong values",
+        "D. You must set token counts on the parent span, not the LLM call span"
+      ],
+      "answer": "C",
+      "explanation": "The Anthropic API returns actual token counts in the response's usage object. These values are not predictable before the call (input tokens depend on the tokenized prompt, output tokens depend on the generated response). Always set gen_ai.usage.input_tokens and gen_ai.usage.output_tokens after the API returns, using the values from response.usage."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your team's OTel traces for LLM calls include gen_ai.content.prompt and gen_ai.content.completion events that capture the full prompt and response text. A security review flags this in production because some user queries contain email addresses and phone numbers.",
+      "question": "What is the correct production approach to this trade-off?",
+      "options": [
+        "A. Remove all content events permanently -- they are never safe to log",
+        "B. Replace PII with placeholders before adding to the event, or disable content events by default and enable only in debug/sampling mode",
+        "C. Encrypt the event attributes using AES-256 before adding them to the span",
+        "D. Move content events to a separate private trace that bypasses the standard OTel pipeline"
+      ],
+      "answer": "B",
+      "explanation": "Content events are valuable for debugging but must be handled carefully in production. Best practices: (1) scrub or hash PII before logging, (2) make content capture opt-in via a flag (capture_content=False by default), (3) use sampling to capture content for a small percentage of traces for debugging while protecting the majority. Removing them entirely makes production debugging nearly impossible."
+    },
+    {
+      "id": "c4",
+      "scenario": "You have OTel spans for your LLM service. Your platform team wants the traces in Jaeger (for service-to-service tracing). Your ML team wants them in Langfuse (for LLM-specific analysis). Both tools support OTLP.",
+      "question": "What is the most maintainable way to send traces to both backends without duplicating instrumentation?",
+      "options": [
+        "A. Write two separate instrumentation implementations -- one that emits Jaeger format and one that emits Langfuse format",
+        "B. Configure two OTLP exporters in your TracerProvider, each pointing to a different endpoint, sharing the same spans",
+        "C. Send to Jaeger only and configure Jaeger to forward a copy to Langfuse",
+        "D. Run two separate processes of your application, each with different instrumentation"
+      ],
+      "answer": "B",
+      "explanation": "OTel supports multiple span processors/exporters on a single TracerProvider. Add two BatchSpanProcessors, each with a different OTLPSpanExporter endpoint. Your instrumentation code (the gen_ai.* attributes) stays identical. This is the key value of the standard: instrument once, route to multiple compatible backends by configuration, not by code changes."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your agent calls Tool A, then uses Tool A's result to call Tool B, then calls the LLM with both results. You create three separate OTel spans but do not establish parent-child relationships between them. A trace in Langfuse shows three disconnected spans with the same timestamp range.",
+      "question": "What is missing, and what does it prevent you from doing in the trace backend?",
+      "options": [
+        "A. The spans are missing gen_ai.system attributes, which prevents the backend from grouping them",
+        "B. The spans have no shared trace_id and no parent-child span_id links, so the backend cannot reconstruct the causal sequence of operations",
+        "C. You need to add a duration attribute to each span to show their temporal relationship",
+        "D. Multiple spans for a single request violate the OTel specification"
+      ],
+      "answer": "B",
+      "explanation": "Parent-child relationships in OTel are established by propagating trace context: all spans in a request share the same trace_id, and child spans set their parent_id to the parent span's span_id. Without this, the backend shows three isolated spans with no way to determine which ran first, which triggered which, or how the failure propagated. Use 'tracer.start_as_current_span()' inside active spans to automatically set up the parent-child relationship."
+    },
+    {
+      "id": "c6",
+      "scenario": "You use SimpleSpanProcessor with OTLPSpanExporter in production. Your service handles 500 requests per second. The OTel backend occasionally becomes slow, and you notice your API latency increases significantly on those occasions.",
+      "question": "What change would fix this latency issue while keeping the same OTLP backend?",
+      "options": [
+        "A. Switch to ConsoleSpanExporter, which has lower overhead than OTLP",
+        "B. Replace SimpleSpanProcessor with BatchSpanProcessor -- it buffers spans and exports asynchronously without blocking the main thread",
+        "C. Reduce the number of gen_ai.* attributes to decrease span payload size",
+        "D. Increase max_tokens in your API calls to reduce the number of total requests"
+      ],
+      "answer": "B",
+      "explanation": "SimpleSpanProcessor exports each span synchronously on the request thread -- if the backend is slow, your main thread blocks. BatchSpanProcessor decouples span export from the request path: it buffers spans in memory and exports them in batches on a background thread. This is always the correct choice for production. SimpleSpanProcessor is suitable only for development and debugging."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are asked to add OTel instrumentation to a service that already uses a custom logging library with fields named 'llm_model', 'tokens_used', and 'api_cost'. A new engineer suggests keeping these custom names for consistency with existing logs.",
+      "question": "What is the technical argument for migrating to gen_ai.* attribute names instead?",
+      "options": [
+        "A. Custom attribute names cause OTel spans to fail validation and be rejected by backends",
+        "B. gen_ai.* names are recognized by OTel-compatible backends for LLM-specific features like model comparison dashboards, cost views, and token usage charts",
+        "C. Custom attribute names cannot be exported via OTLP protocol",
+        "D. The OTel specification prohibits custom attributes on spans with SpanKind.CLIENT"
+      ],
+      "answer": "B",
+      "explanation": "Custom attribute names work technically (OTel accepts any string key) but miss the ecosystem benefit. Backends like Langfuse and Phoenix use gen_ai.* names to power LLM-specific features: automatic cost calculation, model comparison, token usage dashboards, and prompt version tracking. With custom names, you get raw spans but lose all the pre-built LLM analytics. Standardize on gen_ai.* names to get the ecosystem for free."
+    }
+  ]
+}

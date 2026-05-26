@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "07-caching-deep-dive",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your AI assistant has a 3,000-token system prompt that never changes. It handles 500 requests per hour. You add cache_control to the system prompt block. After one hour, you check the usage logs and see cache_read_input_tokens is always 0.",
+      "question": "What is the most likely cause?",
+      "options": [
+        "A. Prompt caching requires at least 5,000 tokens to activate.",
+        "B. The 5-minute TTL has expired between calls because your request rate is too low to keep the cache warm.",
+        "C. cache_control only works on user messages, not system prompts.",
+        "D. The system prompt is being modified slightly on each request (e.g., a timestamp is injected), breaking byte-identical match."
+      ],
+      "answer": "D",
+      "explanation": "At 500 requests per hour (~8 per minute), the cache should stay warm with a 5-minute TTL. The most common cause of unexpected cache misses is content that looks static but is actually changing per-request - a timestamp, a dynamic instruction, or a user-specific detail injected into the system prompt. Even one byte difference breaks the cache. Check whether anything is being appended to or templated into the system prompt."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are evaluating whether to add prompt caching to a service with a 500-token system prompt that fires 200 times per day at Haiku pricing ($0.80 per million input tokens).",
+      "question": "What is the correct analysis?",
+      "options": [
+        "A. Add caching - it always reduces costs for any system prompt.",
+        "B. Skip caching - Anthropic requires a minimum of 1,024 tokens for a cache breakpoint to be effective.",
+        "C. Add caching only if daily call volume exceeds 1,000.",
+        "D. The savings at this volume are negligible; implement only if the system prompt will grow."
+      ],
+      "answer": "B",
+      "explanation": "Anthropic's prompt caching requires at least 1,024 tokens at the cache breakpoint to be eligible for caching. A 500-token system prompt will not trigger caching regardless of how you mark it. The minimum threshold exists because the overhead of maintaining the KV cache is only worth it for sufficiently large prefixes."
+    },
+    {
+      "id": "c3",
+      "scenario": "You build a semantic cache for a customer support chatbot with threshold=0.92. In production, you observe that 'How do I cancel?' and 'How do I cancel my premium subscription?' are being treated as the same query and returning the same cached answer. But canceling a free trial has different steps than canceling a paid subscription.",
+      "question": "What is the correct fix?",
+      "options": [
+        "A. Lower the threshold to 0.85 to be more selective.",
+        "B. Raise the threshold to 0.96-0.97 to require higher similarity before returning a cached answer.",
+        "C. Build a labeled test set of known similar/different query pairs, measure the score distribution, and pick a threshold that separates them. Then add 'subscription type' as a cache key dimension.",
+        "D. Disable semantic caching for cancellation-related queries only."
+      ],
+      "answer": "C",
+      "explanation": "Changing the threshold blindly (options A or B) is guessing. The correct approach is empirical: collect labeled pairs where you know whether the same answer applies, measure the cosine similarity scores for each pair, and pick the threshold at the boundary. Additionally, if subscription type determines the correct answer, it should be part of the cache key (e.g., hash(query + subscription_type)). This is a semantic cache design issue, not just a threshold issue."
+    },
+    {
+      "id": "c4",
+      "scenario": "You want to cache responses for a product recommendation feature. The prompt includes the user's purchase history, browsing session data, and a catalog of 500 products. Each user's purchase history is different.",
+      "question": "Which caching strategy is appropriate?",
+      "options": [
+        "A. Semantic caching with per-user embeddings - embed each user's query separately.",
+        "B. Prompt caching on the product catalog section only; semantic caching is not appropriate because user context makes answers user-specific.",
+        "C. Semantic caching across all users - product recommendations follow similar patterns.",
+        "D. No caching - personalized content cannot be cached."
+      ],
+      "answer": "B",
+      "explanation": "The product catalog is static and long (500 products) - a perfect candidate for prompt caching. The user's purchase history and session data are dynamic and user-specific - they must not be cached across users. Semantic caching assumes the answer to a query is user-agnostic. When the answer depends on per-user context, semantic caching returns wrong answers for other users."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your team deploys prompt caching for a 2,500-token system prompt. After the first week, you check the cache stats: cache_creation_input_tokens accounts for 45% of total input tokens (the other 55% are cache reads).",
+      "question": "What does this tell you, and what should you do?",
+      "options": [
+        "A. The cache is working well - a 55% hit rate is healthy.",
+        "B. The cache write rate is too high, suggesting the 5-minute TTL is expiring between many calls. Investigate whether your call pattern has gaps longer than 5 minutes.",
+        "C. Prompt caching only reduces cost when cache reads exceed 80% of calls.",
+        "D. The system prompt is too short for effective caching."
+      ],
+      "answer": "B",
+      "explanation": "A 45% cache write rate means nearly half of calls are paying the 125% write surcharge instead of the 10% read price. This usually means calls are spaced more than 5 minutes apart on average - the TTL expires and each call triggers a new write. If your traffic has natural gaps (e.g., overnight, or low-traffic hours), you will see this pattern. Consider whether the traffic pattern can be smoothed, or whether the economics still make sense given your actual hit rate."
+    },
+    {
+      "id": "c6",
+      "scenario": "You implement a two-tier cache (semantic cache, then prompt cache) for a high-volume FAQ assistant. After one month, your semantic cache hit rate is 72%. A teammate says: 'The threshold is too low - we should raise it to 0.97 to be safe.'",
+      "question": "How do you evaluate whether 72% hit rate at threshold 0.92 is safe?",
+      "options": [
+        "A. A 72% hit rate is too high - lower the threshold to improve accuracy.",
+        "B. Check the false positive rate: sample 100 cache hits and manually verify that the returned answer was correct for the actual query. If false positive rate is under 1-2%, the threshold is safe.",
+        "C. Raise the threshold to 0.97 to be conservative - accuracy is more important than hit rate.",
+        "D. A 72% hit rate proves the threshold is correct - no verification needed."
+      ],
+      "answer": "B",
+      "explanation": "Hit rate alone does not tell you whether the cache is returning correct answers. The right evaluation is a false positive audit: take a random sample of cache hits, compare the actual query to the cached query, and verify the returned answer was appropriate. If your false positive rate is under 1-2%, a 72% hit rate is healthy and the threshold is appropriate. If you find meaningful false positives, raise the threshold empirically based on the score distribution of the false positive cases."
+    },
+    {
+      "id": "c7",
+      "scenario": "You cache responses with a 1-hour TTL in your semantic cache for a product FAQ. The team then updates the return policy: returns are now accepted within 60 days instead of 30 days. The semantic cache still has the old answers stored.",
+      "question": "What is the correct cache invalidation strategy for this case?",
+      "options": [
+        "A. Wait for the TTL to expire - old answers will be replaced within 1 hour.",
+        "B. Flush all return-policy-related cache entries immediately and repopulate with the correct answers.",
+        "C. Raise the TTL to 24 hours so the cache is fresh for longer.",
+        "D. Add a version number to the cache key and increment it on every policy update."
+      ],
+      "answer": "B",
+      "explanation": "Waiting for TTL expiry means serving incorrect information for up to 1 hour. When factual content changes, affected cache entries must be invalidated immediately. The operational pattern: track which canonical queries map to which content (e.g., 'return_policy' tag on the FAQ entries), and on content update, flush all entries with that tag. Adding a version key (option D) is an alternative but requires all clients to know the current version, which is more complex than targeted flush."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are building a legal research assistant. The system prompt includes a 4,000-token legal framework document. Each user query involves case-specific facts. You want to use prompt caching. A compliance officer asks: 'If we cache the system prompt, does Anthropic store our legal documents?'",
+      "question": "What is the accurate answer about prompt cache data storage?",
+      "options": [
+        "A. Anthropic stores the cached KV state on their servers for up to 5 minutes, subject to their data processing agreement.",
+        "B. Prompt caching stores data on your own servers, not Anthropic's.",
+        "C. Cached prompts are permanently stored in Anthropic's training dataset.",
+        "D. The cache is stored in your API client's memory only, never sent to Anthropic."
+      ],
+      "answer": "A",
+      "explanation": "Anthropic's prompt caching stores the computed KV (key-value) state of the cached content on Anthropic's infrastructure for the TTL period (5 minutes). This is covered by Anthropic's data processing agreement and the same data retention policies as non-cached API calls. For compliance-sensitive workloads, review Anthropic's DPA and Enterprise agreement terms regarding caching and data processing. The KV cache is not used for training."
+    }
+  ]
+}

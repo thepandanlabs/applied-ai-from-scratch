@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "04-trace-as-unit-of-debugging",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "A user reports: 'Your chatbot told me my invoice was $0 when it was actually $450.' You have OTel tracing enabled. You open Langfuse and see 3,000 traces from the time window the user specified. Your API returns trace_id in every response.",
+      "question": "What is the fastest path from user complaint to the exact prompt + response that caused the failure?",
+      "options": [
+        "A. Filter all 3,000 traces by the user's reported message content using a text search",
+        "B. Ask the user for the trace_id from their API response, then open that single trace directly in Langfuse",
+        "C. Sort all 3,000 traces by cost_usd descending to find the most expensive one",
+        "D. Check the HTTP access logs for the user's IP address to find the request"
+      ],
+      "answer": "B",
+      "explanation": "Returning trace_id in every API response is the practice that makes this a 30-second task instead of a 30-minute one. The trace_id is a direct link to the exact span tree with the complete prompt, response, token counts, and timing. Without it, you are filtering through 3,000 traces by timestamp -- tedious and error-prone. This is why trace_id belongs in every API response."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your TraceAnalyzer flags 12 traces with 'low_token_efficiency': each has ~4,000 input tokens but only 8-15 output tokens. All 12 traces use prompt_version='rag-v4'. The previous version ('rag-v3') had normal efficiency.",
+      "question": "What is the most likely root cause, and what is the correct next debugging step?",
+      "options": [
+        "A. The model is malfunctioning and generating too few tokens; contact Anthropic support",
+        "B. The rag-v4 prompt template is injecting too much irrelevant context; review the RAG retrieval step and check what documents were retrieved for these queries",
+        "C. The max_tokens parameter was accidentally set to 15; check the API call parameters",
+        "D. The user queries in these 12 traces are unusually short, producing short responses"
+      ],
+      "answer": "B",
+      "explanation": "Low token efficiency (large input, tiny output) combined with a specific prompt version change is the signature of prompt bloat from RAG retrieval. 'rag-v4' is injecting more context than the model needs, or the retrieval is returning irrelevant documents that confuse the model. The next step is to look at the gen_ai.content.prompt event for these traces to see exactly which documents were injected, and check the retrieval quality for those queries."
+    },
+    {
+      "id": "c3",
+      "scenario": "You run the 5-step debug workflow on a failing trace. At Step 3 (read prompt + response), you find no gen_ai.content.prompt or gen_ai.content.completion events. The span has gen_ai.usage.input_tokens = 847 and gen_ai.usage.output_tokens = 12, and the user reported a wrong answer.",
+      "question": "What does the absence of content events mean for your ability to diagnose the failure?",
+      "options": [
+        "A. The failure definitely occurred at the network layer, not the model layer",
+        "B. You can still diagnose it from token counts alone -- 847 input tokens is enough information",
+        "C. You cannot determine whether the failure was in the prompt (wrong context injected) or the model (correct prompt, wrong generation) without seeing the actual text",
+        "D. The content events were captured but stored separately -- check your S3 bucket"
+      ],
+      "answer": "C",
+      "explanation": "Token counts tell you the size of the prompt and response, not their content. 847 input tokens and 12 output tokens is a signal (possibly prompt bloat or truncated response), but you cannot tell if the failure was caused by: (1) wrong documents injected in RAG, (2) a system prompt that constrained the answer incorrectly, (3) the model hallucinating despite a correct prompt, or (4) max_tokens being hit. Content events are the only way to see the actual evidence. This is the production trade-off: not capturing content protects PII but reduces debuggability."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your TraceAnalyzer shows 3 error traces out of 500 total. All 3 have error='OverloadedError' and all occurred within a 2-minute window. The next 497 traces are error-free.",
+      "question": "What root cause category does this match, and what is the appropriate response?",
+      "options": [
+        "A. Prompt regression -- a recent deployment changed the prompt format and caused failures",
+        "B. Infrastructure burst -- the Anthropic API was temporarily overloaded; add exponential backoff retry logic to handle transient provider failures",
+        "C. Tool failure -- a downstream API returned malformed data causing the LLM calls to fail",
+        "D. Runaway cost -- the OverloadedError indicates token usage exceeded the rate limit quota"
+      ],
+      "answer": "B",
+      "explanation": "Three errors in a 2-minute window with OverloadedError (Anthropic's 529 status for capacity issues) is a transient infrastructure spike at the provider level. The pattern (brief cluster, then clean) rules out prompt regression (which would be persistent) and tool failures (which would be correlated with specific input patterns). The fix is retry with exponential backoff -- catch OverloadedError and retry up to 3 times with increasing delays. The trace data gave you the evidence to diagnose this in seconds."
+    },
+    {
+      "id": "c5",
+      "scenario": "You set latency_threshold_ms = 500 in your TraceAnalyzer. The analyzer flags 38% of all traces as 'high_latency'. Your team spends 2 hours investigating and finds all flagged traces are performing normally.",
+      "question": "What is wrong with this configuration, and how should you set the threshold correctly?",
+      "options": [
+        "A. The TraceAnalyzer has a bug -- latency_ms values above 500 are being incorrectly classified",
+        "B. 500ms is too low for LLM API calls -- set the threshold based on your actual P95 latency (e.g., 2x the P95 of successful traces) rather than an arbitrary absolute value",
+        "C. You need to use median latency instead of P95 as the baseline",
+        "D. The threshold should be set in seconds, not milliseconds -- change 500 to 0.5"
+      ],
+      "answer": "B",
+      "explanation": "LLM API calls routinely take 500ms to 2000ms for short responses and longer for complex ones. A fixed 500ms threshold ignores your actual service characteristics. The correct approach: compute P95 latency from a healthy baseline window, then set the alert threshold at 2x P95. This adapts to your specific model, prompt length, and infrastructure. A well-tuned threshold should flag roughly 1-3% of traces, not 38%."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are asked to debug a production issue where an agent sometimes gives wrong answers on multi-step tasks. You look at the trace for a failing case and see: root span (OK), LLM call span 1 (OK), tool call span (OK, returns data), LLM call span 2 (OK). All spans are green. The final answer is still wrong.",
+      "question": "What does this trace tell you about where the failure occurred?",
+      "options": [
+        "A. The trace is incorrect -- a wrong answer must be accompanied by an ERROR status on at least one span",
+        "B. The failure is semantic, not technical: the tool returned valid data but possibly incorrect data, or the model misinterpreted the tool result in LLM call 2 -- you need to read the content events",
+        "C. The issue is in the root span -- check the HTTP request parameters",
+        "D. The span statuses are all OK, so the system is working correctly; the user's expectation is wrong"
+      ],
+      "answer": "B",
+      "explanation": "Status=OK means the API call completed without an exception. It says nothing about semantic correctness. A tool can return syntactically valid JSON with semantically wrong data. The model can receive correct context and still hallucinate. All spans being OK means the infrastructure worked -- but the failure is in the content: what data did the tool return, what prompt was sent to LLM call 2, and what did the model say? This is the gen_ai.content.prompt and gen_ai.content.completion events for tool call span and LLM call 2."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your team is debating between two approaches to trace-based debugging: (A) query the Langfuse API programmatically to pull failing traces into a TraceAnalyzer, or (B) query the raw JSONL log files that your service writes to S3.",
+      "question": "In which scenario is querying raw JSONL files clearly better than the Langfuse API?",
+      "options": [
+        "A. When you need to debug an issue faster than 10 minutes -- the Langfuse API has higher latency",
+        "B. When you need to query more than 7 days of historical data, join trace data with other business data (orders, users), or perform aggregations that exceed Langfuse's query capabilities",
+        "C. When your service handles more than 1,000 requests per day -- the Langfuse API cannot handle this volume",
+        "D. When you are running a local development environment without internet access"
+      ],
+      "answer": "B",
+      "explanation": "The Langfuse API is excellent for recent traces and LLM-specific queries (cost per model, prompt version comparison, quality scores). Raw JSONL files in S3 are better for: (1) historical analysis beyond Langfuse's retention window, (2) joining trace data with business data (e.g., 'which traces led to conversions?'), (3) complex SQL aggregations in Athena or BigQuery, and (4) building custom ML models on trace patterns. Both are legitimate -- choose based on the query you need to answer."
+    },
+    {
+      "id": "c8",
+      "scenario": "You deploy a TraceAnalyzer that runs every hour on the previous hour's traces. At 14:00, it reports: 47 high-latency anomalies, 0 errors, all from prompt_version='search-v5', all between 13:30 and 13:50 UTC.",
+      "question": "What is the correct, evidence-based response when your CEO emails at 09:00 the next day asking 'why was the chatbot broken yesterday afternoon?'",
+      "options": [
+        "A. 'We were experiencing high latency from 13:30-13:50 UTC. We are investigating the root cause.'",
+        "B. 'We detected 47 high-latency traces (all using search-v5 prompt) between 13:30-13:50 UTC. This was a 20-minute window affecting [X]% of users. Root cause: [from trace content review]. Fix deployed: [action taken]. Normal latency resumed at 13:50 UTC.'",
+        "C. 'Our monitoring showed no errors during that time period, so the chatbot was not broken.'",
+        "D. 'We cannot determine what happened without more information from the user about what they experienced.'"
+      ],
+      "answer": "B",
+      "explanation": "The trace data gives you everything needed for a precise, evidence-based answer: the exact time window (13:30-13:50), the affected scope (47 traces, X% of users), the specific component (search-v5), and the anomaly type (high latency, not errors). This is the difference between a reactive 'we're investigating' and a proactive 'here is what happened and what we did about it.' Traces turn customer complaints from ambiguous anecdotes into engineering evidence."
+    }
+  ]
+}

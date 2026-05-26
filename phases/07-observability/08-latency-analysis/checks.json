@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "08-latency-analysis",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "You instrument your AI chat feature and collect 1,000 latency measurements over 24 hours. The mean is 1.4 seconds. Your product manager says 'We are well within the 3-second target, no action needed.' You calculate p99 = 8.7 seconds.",
+      "question": "What is the concrete business risk the PM is missing, and what metric should drive the SLO conversation?",
+      "options": [
+        "A. The mean is the right metric; p99 is an outlier and can be ignored for most users.",
+        "B. At 1,000 calls per day, a p99 of 8.7 seconds means roughly 10 users per day experience a near-timeout wait; over a month that is 300 people who may churn. p99 should drive the SLO conversation, not the mean.",
+        "C. The p99 is only a problem if it exceeds the API timeout setting.",
+        "D. The mean understates the problem because it includes fast outliers."
+      ],
+      "answer": "B",
+      "explanation": "The mean is pulled toward the fast majority and hides the tail. At 1,000 calls/day, p99 corresponds to ~10 users experiencing 8.7-second waits daily. Churn research consistently shows users who hit >5s waits are significantly more likely to abandon. The right SLO target is a percentile (typically p95 or p99), not a mean, because it directly represents the worst experience a given fraction of users receives."
+    },
+    {
+      "id": "c2",
+      "scenario": "You measure TTFT = 3,200ms and total latency = 3,800ms for a 1,500-token prompt that generates 80 tokens. The model is claude-3-5-haiku-20241022.",
+      "question": "Which component is the bottleneck, and what is the most effective fix?",
+      "options": [
+        "A. Generation dominates (600ms to generate 80 tokens). Reduce max_tokens.",
+        "B. TTFT dominates (3,200ms of 3,800ms total). The bottleneck is prefill time from the long prompt. Fix: compress the prompt or use prompt caching.",
+        "C. Network latency dominates. Fix: move to an API region closer to users.",
+        "D. Post-processing dominates. Fix: optimize response parsing."
+      ],
+      "answer": "B",
+      "explanation": "TTFT = 3,200ms is 84% of total latency. Generation (80 tokens at fast Haiku speed) accounts for only 600ms. The bottleneck is in prefill - the model processing the 1,500-token prompt before generating any output. Fix options: reduce prompt length by 50-70%, add prompt caching so the prefix KV state is cached (reduces effective prefill time), or restructure the prompt to put dynamic content before long static context."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are building a streaming autocomplete feature. Users type in a text box and the model streams completion suggestions. Your p50 total latency is 2.1 seconds, but your p50 TTFT is 1.8 seconds. Users complain the feature 'feels laggy' even though total latency seems acceptable.",
+      "question": "Why do users feel lag, and what is the correct optimization target?",
+      "options": [
+        "A. The p50 total latency is too high. Optimize to reduce total latency under 1 second.",
+        "B. TTFT of 1.8 seconds means users see a blank response for 1.8 seconds before any text appears. For streaming, TTFT is the primary UX metric. Optimize TTFT to under 500ms.",
+        "C. Users feel lag because 2.1 seconds is above the 2-second threshold. Switch to a faster model.",
+        "D. The streaming implementation is incorrect - autocomplete should use non-streaming responses."
+      ],
+      "answer": "B",
+      "explanation": "For streaming responses, users form their perception of speed from TTFT - the delay before the first character appears. A 1.8-second blank screen is perceptible lag even if the full response arrives quickly after. The fix is to reduce TTFT: use a shorter, more focused prompt (reducing prefill time), and consider whether the 1,500-token context window for autocomplete is necessary or can be trimmed."
+    },
+    {
+      "id": "c4",
+      "scenario": "After profiling 50 real API calls, your p99/mean ratio is 8.2x. Your p50 is 900ms and your p99 is 7,400ms.",
+      "question": "What does a p99/mean ratio of 8.2x indicate, and what should you investigate first?",
+      "options": [
+        "A. A ratio of 8.2x is normal for LLM APIs - no investigation needed.",
+        "B. A ratio this high indicates severe tail latency from a specific subset of requests. Investigate whether long-prompt calls, retried requests, or calls during peak API load are the outliers.",
+        "C. The percentile calculation is wrong - ratios over 5x indicate a bug in the profiler.",
+        "D. Switch to a different model with more consistent latency."
+      ],
+      "answer": "B",
+      "explanation": "A p99/mean ratio of 8.2x is unusually high - it means the worst 1% is dramatically slower than the median. This pattern typically comes from a specific cause: requests with very long prompts, requests that hit API rate limits and are retried, requests during API congestion, or cold-start conditions. The right approach is to segment the tail: filter the top 1% of latencies by other dimensions (prompt length, time of day, user, model) to identify the pattern."
+    },
+    {
+      "id": "c5",
+      "scenario": "You implement TTFT tracking but realize your implementation measures time from when client.messages.stream() is called, not from when the HTTP request is sent. There is 80ms of Python overhead before the actual HTTP request goes out.",
+      "question": "How does this 80ms offset affect your TTFT analysis?",
+      "options": [
+        "A. It does not matter - 80ms is within measurement noise.",
+        "B. It makes TTFT appear 80ms higher than it actually is, which overstates prefill time and may incorrectly attribute the bottleneck to the API rather than your code.",
+        "C. It makes TTFT appear 80ms lower, so your data understates actual latency.",
+        "D. It only affects total latency, not TTFT."
+      ],
+      "answer": "B",
+      "explanation": "Measuring from before the HTTP request inflates TTFT by the local overhead time (80ms in this case). For p50 TTFT of 500ms, 80ms is a 16% error - significant enough to misattribute the bottleneck. The overhead could be Python async dispatch, connection pooling setup, or request serialization. Use time.monotonic() as close as possible to the network send operation, or measure from the first byte sent rather than from client method entry."
+    },
+    {
+      "id": "c6",
+      "scenario": "You set up latency monitoring and configure an alert when p99 exceeds 5,000ms. On a Tuesday, the alert fires 200 times between 2pm and 3pm. The p99 was 8,200ms during that window. Your API key and network look fine.",
+      "question": "What is the most likely cause, and what is the investigation path?",
+      "options": [
+        "A. Your alert threshold is too sensitive. Raise it to 10,000ms.",
+        "B. The Anthropic API may be experiencing elevated latency. Check status.anthropic.com for incidents, correlate your alert timestamps with API status events, and check whether all model tiers are affected or just one.",
+        "C. Your application has a memory leak that causes slow responses after 2 hours of uptime.",
+        "D. 200 alert firings in one hour is normal for a high-traffic service."
+      ],
+      "answer": "B",
+      "explanation": "A sudden spike in p99 latency during a specific window, with no changes on your end, most commonly indicates upstream API latency or an API incident. The investigation path: check status.anthropic.com for that time window, check whether the degradation affects one model tier (e.g., Sonnet but not Haiku), and correlate with your request logs to see if retries are inflating latency. If it is a one-time API event, document it and set up Anthropic status webhook notifications."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your streaming chat feature has p95 TTFT = 2.1 seconds. You add a 'Thinking...' spinner that appears instantly, then shows the first word of the response when TTFT arrives. A user study shows that users rate the feature 23% faster-feeling than before, even though actual TTFT did not change.",
+      "question": "What does this result tell you about the relationship between measured TTFT and perceived latency?",
+      "options": [
+        "A. The user study is flawed - perceived latency must equal measured latency.",
+        "B. Perceived latency is influenced by feedback loops: an immediate UI response (spinner) reduces anxiety during the wait and improves the subjective experience even when objective latency is unchanged. TTFT measurement remains important for SLO tracking, but UX improvements can reduce churn without changing the underlying metric.",
+        "C. You should replace all latency metrics with subjective user ratings.",
+        "D. The 2.1-second TTFT is within acceptable range and no further optimization is needed."
+      ],
+      "answer": "B",
+      "explanation": "This is a well-established pattern in HCI research: immediate feedback (a spinner, a progress indicator, text appearing progressively) reduces perceived wait time even when actual wait time is unchanged. Both dimensions matter: measure actual TTFT for SLO compliance and bottleneck analysis, and invest in UX patterns that reduce perceived latency. They are complementary, not alternatives. The 23% improvement in perceived speed from a spinner is often cheaper to achieve than a 23% reduction in actual TTFT."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are presenting your latency data to a customer with an SLA requiring 99% of requests under 3 seconds. Your data shows: p50=0.9s, p95=2.8s, p99=4.2s. The customer asks: 'Are we meeting the SLA?'",
+      "question": "What is the accurate answer, and what does meeting '99%' require?",
+      "options": [
+        "A. Yes - p95 is under 3 seconds, so more than 95% of requests meet the SLA.",
+        "B. No - the SLA requires 99% of requests under 3 seconds. p99=4.2s means approximately 1% of requests exceed 3 seconds, violating the SLA.",
+        "C. Yes - p50 and p95 both meet the threshold, so on average the SLA is met.",
+        "D. The SLA cannot be evaluated without knowing the exact count of violations."
+      ],
+      "answer": "B",
+      "explanation": "A '99% of requests under Xs' SLA is satisfied if and only if p99 < Xs. p99=4.2s means approximately 1% of requests (by definition) take more than 4.2 seconds - which exceeds the 3-second SLA threshold. p95 meeting the threshold means 95% compliance, not 99%. The SLA is currently violated, and the fix requires reducing p99 below 3 seconds, likely by addressing the tail causes identified in the bottleneck analysis."
+    }
+  ]
+}
