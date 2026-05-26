@@ -86,18 +86,16 @@ Loop = call model, check stop reason, execute tools, repeat.
 ## Agent loop: the flow
 
 <div class="mermaid">
-flowchart TD
+flowchart LR
     A([Task]) --> B[Call Model]
-    B --> C{Stop reason?}
-    C -->|end_turn| D([Return answer])
-    C -->|tool_use| E[Execute tools]
-    E --> F[Append results]
-    F --> G{Budget limit?}
-    G -->|exceeded| H([Abort])
-    G -->|ok| B
+    B -->|end_turn| C([Return answer])
+    B -->|tool_use| D[Execute tools]
+    D --> E{Budget ok?}
+    E -->|yes| B
+    E -->|no| F([Abort])
     style A fill:#4f46e5,color:#fff
-    style D fill:#10b981,color:#fff
-    style H fill:#ef4444,color:#fff
+    style C fill:#10b981,color:#fff
+    style F fill:#ef4444,color:#fff
 </div>
 
 <!-- SPEAKER: The kill switch is not optional. Runaway agents are a real production incident. Always have a cost governor. -->
@@ -179,25 +177,19 @@ flowchart TD
 
 ## Pattern 3: Parallelization
 
-Two sub-patterns: **sectioning** and **voting**.
+**Sectioning** (throughput): split input, run in parallel, aggregate.
+**Voting** (accuracy): run same query N times, take majority.
 
 <div class="mermaid">
 flowchart LR
-    subgraph Sectioning
-    A1[Long doc] --> B1[Chunk 1 to LLM]
-    A1 --> B2[Chunk 2 to LLM]
-    A1 --> B3[Chunk 3 to LLM]
-    B1 & B2 & B3 --> C1[Aggregate]
-    end
-    subgraph Voting
-    A2[Query] --> D1[LLM call 1]
-    A2 --> D2[LLM call 2]
-    A2 --> D3[LLM call 3]
-    D1 & D2 & D3 --> E1[Majority vote]
-    end
+    A[Input] --> B[LLM call 1]
+    A --> C[LLM call 2]
+    A --> D[LLM call 3]
+    B & C & D --> E[Majority vote / Aggregate]
+    E --> F[Output]
 </div>
 
-Sectioning = throughput. Voting = accuracy (at 3x cost).
+Same pattern, different intent: sectioning splits the *data*, voting samples the *model*.
 
 <!-- SPEAKER: Voting is how you get near-deterministic answers from probabilistic models. Expensive but powerful for high-stakes decisions. -->
 
