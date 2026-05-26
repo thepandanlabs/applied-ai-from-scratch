@@ -389,6 +389,12 @@ img, svg { display: block; max-width: 100%; }
 
 .phase-card-wrap {
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.phase-card-wrap > .phase-card {
+  flex: 1;
 }
 
 .slides-btn {
