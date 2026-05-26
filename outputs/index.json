@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "generated": "2026-05-26T09:32:50Z",
-  "total": 111,
+  "generated": "2026-05-26T10:34:17Z",
+  "total": 122,
   "artifacts": [
     {
       "phase": 2,
@@ -1130,6 +1130,127 @@
       "tags": [
         "capstone",
         "observability",
+        "runbook"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "01",
+      "name": "prompt-llm-threat-model",
+      "file": "phases/08-security-and-guardrails/01-owasp-llm-top-10/outputs/prompt-llm-threat-model.md",
+      "tags": [
+        "security",
+        "owasp",
+        "threat-model"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "02",
+      "name": "skill-prompt-injection-defense",
+      "file": "phases/08-security-and-guardrails/02-prompt-injection/outputs/skill-prompt-injection-defense.md",
+      "tags": [
+        "security",
+        "injection",
+        "defense"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "03",
+      "name": "skill-injection-defense-patterns",
+      "file": "phases/08-security-and-guardrails/03-injection-defenses/outputs/skill-injection-defense-patterns.md",
+      "tags": [
+        "security",
+        "dual-llm",
+        "spotlighting"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "04",
+      "name": "skill-info-disclosure-defenses",
+      "file": "phases/08-security-and-guardrails/04-sensitive-info-disclosure/outputs/skill-info-disclosure-defenses.md",
+      "tags": [
+        "security",
+        "disclosure",
+        "output-filter"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "05",
+      "name": "skill-tool-permission-policy",
+      "file": "phases/08-security-and-guardrails/05-excessive-agency-tool-permissioning/outputs/skill-tool-permission-policy.md",
+      "tags": [
+        "security",
+        "tools",
+        "least-privilege"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "06",
+      "name": "skill-output-safety-pipeline",
+      "file": "phases/08-security-and-guardrails/06-output-handling-downstream-injection/outputs/skill-output-safety-pipeline.md",
+      "tags": [
+        "security",
+        "output",
+        "injection"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "07",
+      "name": "skill-guardrail-pipeline",
+      "file": "phases/08-security-and-guardrails/07-guardrails/outputs/skill-guardrail-pipeline.md",
+      "tags": [
+        "guardrails",
+        "safety",
+        "llama-guard"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "08",
+      "name": "skill-pii-redactor",
+      "file": "phases/08-security-and-guardrails/08-pii-detection-redaction/outputs/skill-pii-redactor.md",
+      "tags": [
+        "pii",
+        "redaction",
+        "privacy"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "09",
+      "name": "skill-moderation-refusal-policy",
+      "file": "phases/08-security-and-guardrails/09-content-moderation-refusal-design/outputs/skill-moderation-refusal-policy.md",
+      "tags": [
+        "moderation",
+        "refusal",
+        "safety"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "10",
+      "name": "skill-consumption-limits",
+      "file": "phases/08-security-and-guardrails/10-unbounded-consumption-cost-dos/outputs/skill-consumption-limits.md",
+      "tags": [
+        "security",
+        "rate-limits",
+        "cost-dos"
+      ]
+    },
+    {
+      "phase": "08",
+      "lesson": "11",
+      "name": "runbook-security-hardening",
+      "file": "phases/08-security-and-guardrails/11-capstone-harden-app/outputs/runbook-security-hardening.md",
+      "tags": [
+        "capstone",
+        "security",
         "runbook"
       ]
     }

@@ -175,21 +175,21 @@ Total estimated time: ~200 hours, at your own pace.
 
 ---
 
-## Phase 08: Security, Safety & Guardrails [⬚] (~12 hours)
+## Phase 08: Security, Safety & Guardrails [✅] (~12 hours)
 
 | # | Lesson | Status | Est. |
 |---|--------|--------|------|
-| 01 | Threat Model: OWASP LLM Top 10 (2025) | ⬚ | ~60 min |
-| 02 | Prompt Injection: Direct, Indirect, Cross-Modal | ⬚ | ~60 min |
-| 03 | Injection Defenses: Sandboxing, Allow-Lists, Dual-LLM | ⬚ | ~60 min |
-| 04 | Sensitive Info Disclosure & System Prompt Leakage | ⬚ | ~45 min |
-| 05 | Excessive Agency & Tool Permissioning | ⬚ | ~45 min |
-| 06 | Output Handling & Downstream Injection | ⬚ | ~45 min |
-| 07 | Guardrails: Raw to Llama Guard / NeMo | ⬚ | ~60 min |
-| 08 | PII Detection & Redaction | ⬚ | ~45 min |
-| 09 | Content Moderation & Refusal Design | ⬚ | ~45 min |
-| 10 | Unbounded Consumption & Cost-DoS | ⬚ | ~45 min |
-| 11 | Capstone: Harden the App Against the Top 10 | ⬚ | ~90 min |
+| 01 | Threat Model: OWASP LLM Top 10 (2025) | ✅ | ~60 min |
+| 02 | Prompt Injection: Direct, Indirect, Cross-Modal | ✅ | ~60 min |
+| 03 | Injection Defenses: Sandboxing, Allow-Lists, Dual-LLM | ✅ | ~60 min |
+| 04 | Sensitive Info Disclosure & System Prompt Leakage | ✅ | ~45 min |
+| 05 | Excessive Agency & Tool Permissioning | ✅ | ~45 min |
+| 06 | Output Handling & Downstream Injection | ✅ | ~45 min |
+| 07 | Guardrails: Raw to Llama Guard / NeMo | ✅ | ~60 min |
+| 08 | PII Detection & Redaction | ✅ | ~45 min |
+| 09 | Content Moderation & Refusal Design | ✅ | ~45 min |
+| 10 | Unbounded Consumption & Cost-DoS | ✅ | ~45 min |
+| 11 | Capstone: Harden the App Against the Top 10 | ✅ | ~90 min |
 
 ---
 

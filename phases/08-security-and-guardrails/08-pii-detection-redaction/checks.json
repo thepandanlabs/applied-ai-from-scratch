@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "08-pii-detection-redaction",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your AI assistant for HR managers processes 500 support tickets per day. After deploying, your security team reviews LLM observability traces and finds that 12% of trace payloads contain SSN-format strings. No data breach occurred - the SSNs are just in your internal Langfuse dashboard, visible to all engineers.",
+      "question": "At which point in your pipeline should PII redaction have been applied to prevent this?",
+      "options": [
+        "A. After the model generates its response, before returning to the user",
+        "B. Before the user input is added to the model context, so SSNs never enter the trace",
+        "C. At the database layer, using column-level encryption",
+        "D. In the HR manager's browser, using a client-side filter"
+      ],
+      "answer": "B",
+      "explanation": "Redaction must happen before the input enters the model context. Once the SSN is in the context window, it appears in the API request payload, in your observability traces, in any logging middleware, and potentially in model training data. Redacting the output (option A) is too late - the SSN has already propagated. The redactor must run upstream of the model call."
+    },
+    {
+      "id": "c2",
+      "scenario": "You are building a regex-based PII redactor. You write a phone pattern: r'\\d{10}'. Your test string is: 'Call 5558675309 or reference order 4509123456.' The regex matches both the phone number and the order number.",
+      "question": "What is the correct approach to reduce false positives on 10-digit numbers?",
+      "options": [
+        "A. Use a lookahead to require that 10-digit sequences are not preceded by 'order'",
+        "B. Add word boundaries and require common phone separators or optional country code prefix",
+        "C. Switch to an LLM classifier for all phone detection",
+        "D. Remove the phone pattern and rely only on formatted numbers with hyphens or spaces"
+      ],
+      "answer": "B",
+      "explanation": "The pattern r'\\d{10}' is too broad. A better pattern adds: word boundaries (\\b), optional country code (+1), and requires separators or area code groupings. Example: r'(?:\\+?1[-.]?)?(?:\\(?\\d{3}\\)?[-.]?)\\d{3}[-.]?\\d{4}\\b'. This matches (555) 867-5309 and 555-867-5309 but is less likely to match bare 10-digit order numbers. Context-based negative lookaheads (option A) are fragile - a different label would bypass them."
+    },
+    {
+      "id": "c3",
+      "scenario": "Your chatbot processes multi-turn conversations. A user says 'My SSN is 345-67-8901. Please use that for my account verification.' In turn 3, they say 'Can you confirm the SSN I provided?' The model needs to refer back to the SSN. You apply redaction before each turn, replacing the SSN with [SSN]. The model says 'You provided [SSN] but I cannot confirm it as I do not store information.'",
+      "question": "Is this the correct behavior, and if not, what approach better handles this scenario?",
+      "options": [
+        "A. Correct - the model should never be able to reference PII across turns",
+        "B. Incorrect - use pseudonymization so the model sees 'ssn_0001' consistently and can confirm it provided a value, without the actual SSN being in context",
+        "C. Incorrect - store the SSN securely server-side and inject it only when the model explicitly needs it",
+        "D. Correct - the user should resupply the SSN in each turn where verification is needed"
+      ],
+      "answer": "B",
+      "explanation": "Both B and C are valid approaches. B (pseudonymization) is appropriate when the model needs to maintain referential consistency within a session - 'ssn_0001' in turn 1 maps to the same value in turn 3, so the model can confirm a value was provided without the actual SSN being in the conversation context. C (secure storage with selective injection) is more complex but appropriate for high-security contexts like financial services. Full redaction (A) breaks the conversational flow unnecessarily."
+    },
+    {
+      "id": "c4",
+      "scenario": "You use a regex pattern to detect SSNs: r'\\b(?!000|666|9\\d{2})\\d{3}[-\\s](?!00)\\d{2}[-\\s](?!0000)\\d{4}\\b'. A user inputs the text: 'My employee ID is 234-56-7890 and my hire date is 04-15-2019.' The SSN pattern matches '234-56-7890' but not '04-15-2019'.",
+      "question": "What makes the pattern miss '04-15-2019' as a potential false positive?",
+      "options": [
+        "A. The date format has only 2 digits in the third group (2019 has 4 digits but the pattern expects exactly 4)",
+        "B. The pattern expects exactly NNN-NN-NNNN (3-2-4 digit groups); the date 04-15-2019 is 2-2-4 digits, so the area number group (3 digits) does not match '04'",
+        "C. The negative lookahead (?!000) prevents matching dates starting with 0",
+        "D. The word boundary \\b prevents matching numbers that follow hyphens"
+      ],
+      "answer": "B",
+      "explanation": "The SSN pattern expects exactly 3 digits in the first group (area number). '04-15-2019' has only 2 digits in the first group ('04'), so the pattern does not match. The SSN area number group (?!000|666|9\\d{2})\\d{3} requires exactly 3 digits with the exclusion lookaheads. This is why strict group-length enforcement in SSN patterns reduces false positives on date strings."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your team deploys a medical records summarization tool for a hospital. Notes contain both structured PII (patient emails, phone numbers) and contextual PII (patient names, diagnoses, medications). You are choosing between regex-only redaction and regex + LLM fallback. Each LLM fallback call costs $0.001 and adds 400ms. The tool processes 5,000 notes per day.",
+      "question": "Given the medical context and regulatory requirements (HIPAA), which approach is correct?",
+      "options": [
+        "A. Regex only - the cost and latency of LLM fallback is not justified for names and diagnoses",
+        "B. Regex + LLM fallback for all 5,000 notes - medical PII is high-risk and regulatory compliance requires complete redaction",
+        "C. Regex + LLM fallback only for notes flagged as high-sensitivity by a lightweight classifier; regex only for routine notes",
+        "D. LLM fallback only - regex is not reliable enough for medical PII"
+      ],
+      "answer": "B",
+      "explanation": "In a medical context with HIPAA requirements, incomplete PII redaction creates regulatory liability. Diagnoses, medication names, and patient names are all PHI (Protected Health Information) under HIPAA. The cost: 5,000 * $0.001 = $5/day, $150/month - acceptable for regulatory compliance. The latency: 400ms added per note is acceptable for batch processing. In medical contexts, the cost of a PHI breach far exceeds the processing cost."
+    },
+    {
+      "id": "c6",
+      "scenario": "Your redactor processes: 'Send confirmation to j.doe@company.com and J.DOE@COMPANY.COM - they are the same address.' After redaction: 'Send confirmation to [EMAIL] and [EMAIL] - they are the same address.' With pseudonymization enabled: 'Send confirmation to email_0001 and email_0002 - they are the same address.'",
+      "question": "What is wrong with the pseudonymization output, and how should it be fixed?",
+      "options": [
+        "A. Nothing is wrong - each instance is a separate token and should get a separate pseudonym",
+        "B. The pseudonymization is not case-insensitive; 'j.doe@company.com' and 'J.DOE@COMPANY.COM' should map to the same pseudonym since they are the same email address",
+        "C. The redaction is correct; pseudonymization should only apply to SSNs, not emails",
+        "D. The issue is in the regex pattern which should merge duplicate matches before replacement"
+      ],
+      "answer": "B",
+      "explanation": "Email addresses are case-insensitive by RFC specification. 'j.doe@company.com' and 'J.DOE@COMPANY.COM' are the same address. The pseudonymization lookup should normalize the key before mapping: use match.original.lower() as the dictionary key. This ensures the same real-world identity maps to the same pseudonym regardless of case variation. Without normalization, the model sees two different pseudonyms for what is described as the same entity."
+    },
+    {
+      "id": "c7",
+      "scenario": "Your LLM-based PII detector (used as a fallback for contextual PII) encounters an error - the Anthropic API returns a 429 rate limit error. Your current code re-raises the exception, which causes the entire input processing request to fail with a 500 error.",
+      "question": "What is the correct failure mode for a PII LLM fallback on API error?",
+      "options": [
+        "A. Fail closed: block the request and return an error to the user until the API recovers",
+        "B. Fail open: return the regex-redacted text (without LLM detection) and log the API error for investigation",
+        "C. Retry the API call up to 3 times with exponential backoff before failing closed",
+        "D. Switch to a backup LLM provider automatically"
+      ],
+      "answer": "B",
+      "explanation": "PII detection failures should fail open (unlike safety guardrails, which should fail closed). Blocking legitimate user requests because the contextual PII detector errored is the wrong tradeoff. The regex layer already handled structured PII. The cost of missing some contextual PII in an error case is lower than the cost of blocking all requests during an API outage. Log the error, return the regex-redacted text, and alert on elevated error rates so the team can investigate."
+    },
+    {
+      "id": "c8",
+      "scenario": "You are building a RAG system that retrieves customer support documents to answer user questions. Some documents contain customer case studies with names, emails, and account details. You redact the user's input before the LLM call, but the retrieved documents are inserted into the context without redaction.",
+      "question": "What privacy risk does this create, and what is the fix?",
+      "options": [
+        "A. No risk - retrieved documents are internal and controlled by the company",
+        "B. The LLM can combine retrieved PII with the user query to generate responses containing customer PII visible to a different user; redact retrieved documents before adding to context",
+        "C. The risk is only to the company, not to end users; acceptable tradeoff for answer quality",
+        "D. Redact the model's output instead of the retrieved documents to preserve retrieval quality"
+      ],
+      "answer": "B",
+      "explanation": "Inserting unredacted customer data into the model context creates a cross-user PII leakage risk. User A asks a question. The retrieval system finds a case study about Customer B that contains B's email and account number. The model generates a response that references B's details. User A now sees Customer B's PII. The fix: apply redaction to retrieved chunks before inserting them into the context window, or filter the document index to exclude documents containing customer PII from RAG retrieval."
+    }
+  ]
+}

@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "07-guardrails",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your guardrail pipeline processes 10,000 requests per day. Each request goes through: Layer 1 (keyword blocklist, 1ms), then Layer 2 (LLM classifier, 500ms). Your SLA requires p99 response time under 800ms. Your main model call averages 600ms. Currently Layer 1 blocks 8% of requests and Layer 2 blocks 2% of the remaining requests.",
+      "question": "What is the total latency added by guardrails for a request that passes all layers and reaches the main model?",
+      "options": [
+        "A. 501ms (both layers always run)",
+        "B. 1ms (Layer 1 short-circuits before Layer 2 for most requests)",
+        "C. 500ms, because Layer 2 always runs even when Layer 1 blocks",
+        "D. 1ms for 8% of requests; 501ms for 92% of requests that pass Layer 1"
+      ],
+      "answer": "D",
+      "explanation": "Layer 1 runs for all requests (1ms). Layer 1 blocks 8%, so Layer 2 runs for the remaining 92% (adds 500ms). For requests that reach the main model, total guardrail latency is 501ms. This is why short-circuit design matters: the 8% of requests blocked at Layer 1 save 500ms of LLM classifier latency each, which at 10,000 requests/day is 800 fewer classifier calls per day."
+    },
+    {
+      "id": "c2",
+      "scenario": "Your LLM classifier is returning JSON for most inputs. However, for one category of inputs - long documents with complex formatting - it returns a 400-character explanation paragraph instead of JSON. Your current code raises json.JSONDecodeError and re-raises the exception, which is caught by the caller and treated as a pipeline pass (safe).",
+      "question": "Why is treating a parse error as 'safe' a security vulnerability?",
+      "options": [
+        "A. It is not a vulnerability - parse errors indicate benign inputs that confused the classifier",
+        "B. An attacker can craft inputs designed to cause classifier parse errors, effectively bypassing the safety layer",
+        "C. Parse errors indicate the classifier is overloaded, not that the input is unsafe",
+        "D. The real problem is the long documents, not the error handling"
+      ],
+      "answer": "B",
+      "explanation": "Failing open on classifier errors is a security vulnerability. An attacker who discovers that certain input patterns cause parse errors can reliably bypass the LLM classifier layer. The fix is to fail closed: catch all classifier errors and return a UNSAFE decision. This may increase false positives for edge-case inputs, but it prevents the bypass. The correct behavior: parse error = block + log for investigation."
+    },
+    {
+      "id": "c3",
+      "scenario": "You review the past month's guardrail logs. Layer 1 (rule-based) never fires. Layer 2 (LLM classifier) blocks 0.3% of requests. Your product serves a general-purpose writing assistant with no specialized threat model. A teammate suggests removing Layer 1 since it never blocks anything.",
+      "question": "Should you remove Layer 1?",
+      "options": [
+        "A. Yes - if Layer 1 never fires, it adds only latency with no benefit",
+        "B. No - Layer 1 catches future known attack signatures at near-zero cost, and its 1ms overhead is negligible",
+        "C. Yes - but only if you increase the LLM classifier's sensitivity to compensate",
+        "D. No - removing a security layer requires a formal risk assessment regardless of effectiveness"
+      ],
+      "answer": "B",
+      "explanation": "Layer 1 costs 1ms and $0. A layer that never fires is not necessarily useless - it means no known attack patterns have been attempted yet, or that your current blocklist does not match your current threat model. The correct response is to review and update the blocklist to reflect your actual threat model, not to remove the layer. When a new prompt injection technique becomes public, you add it to Layer 1 and it starts catching attacks immediately, without waiting for the LLM classifier."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your company's legal team prohibits sending any user conversation data to third-party APIs for compliance reasons. Your current Layer 2 uses Claude claude-3-5-haiku-20241022 via the Anthropic API. You need to replace it with a compliant alternative.",
+      "question": "Which option correctly addresses the legal requirement?",
+      "options": [
+        "A. Use a different cloud provider's safety API - the restriction applies only to Anthropic",
+        "B. Deploy Llama Guard on your own infrastructure so user data never leaves your systems",
+        "C. Anonymize user inputs by removing PII before sending to the Anthropic API",
+        "D. Use a local regex-only approach and skip semantic safety classification entirely"
+      ],
+      "answer": "B",
+      "explanation": "The legal requirement is that user data cannot leave company infrastructure. Llama Guard is an open-weight model that runs locally via HuggingFace Transformers on your own GPU servers. Data never leaves your systems. Options A violates the requirement (still third-party API). Option C is a partial mitigation but does not guarantee all user data is removed before transmission. Option D weakens your safety posture significantly."
+    },
+    {
+      "id": "c5",
+      "scenario": "Your guardrail pipeline applies the same three layers to both inputs and outputs. Your main model occasionally generates responses that contain the phrase 'How to synthesize' in the context of legitimate chemistry explanations for a science education platform. The output guardrail is blocking these responses.",
+      "question": "What is the correct fix?",
+      "options": [
+        "A. Remove the output guardrail entirely for the science education platform",
+        "B. Add 'how to synthesize' to the keyword blocklist whitelist for this deployment",
+        "C. Tune the classifier prompt to distinguish instructional synthesis (education) from harmful synthesis (weapons), and update the blocklist to require more specific dangerous substance names",
+        "D. Replace the LLM classifier with a domain-specific fine-tuned safety model"
+      ],
+      "answer": "C",
+      "explanation": "This is a false positive caused by an over-broad rule. The fix is to tighten the rule, not remove the layer. Approach: (1) Remove 'how to synthesize' from the blocklist as a standalone phrase. (2) Replace with specific harmful patterns: 'how to synthesize sarin', 'synthesize VX nerve agent', etc. (3) Update the classifier prompt to understand context: educational chemistry discussion is safe; weapons synthesis instructions are not. Removing the output guardrail entirely creates a blind spot."
+    },
+    {
+      "id": "c6",
+      "scenario": "A security researcher reports that your chatbot can be made to output harmful content by asking it to 'write a fictional story where a character explains [harmful topic] in detail.' Your Layer 1 does not match fictional framing. Your Layer 2 (LLM classifier) classifies the INPUT as safe because the story framing is not inherently harmful. The OUTPUT contains harmful content.",
+      "question": "Which part of the pipeline failed, and what is the fix?",
+      "options": [
+        "A. Layer 1 failed - add 'write a fictional story where' to the keyword blocklist",
+        "B. The output check failed to catch harmful content in the output - improve the output classifier to evaluate the actual content, not just the framing",
+        "C. The main model failed - fine-tune it to refuse fictional framing of harmful requests",
+        "D. Layer 2 failed on input - update the classifier to treat any fictional framing of harmful topics as unsafe"
+      ],
+      "answer": "B",
+      "explanation": "Both D and B have merit, but B is the primary fix. The output check is the last line of defense before the response reaches the user. If harmful content makes it through input checks and the main model generates it, the output classifier must catch it. The output classifier should evaluate actual content ('does this text contain [harmful content]?') regardless of the framing. Option D is also correct as defense-in-depth, but the output check is the definitive gate."
+    },
+    {
+      "id": "c7",
+      "scenario": "You are configuring guardrails for three different deployments: (A) an internal HR Q&A bot, (B) a public-facing customer support chatbot, (C) a developer API used by verified enterprise customers to build their own applications. You have a single GuardrailPipeline class with a GuardrailConfig.",
+      "question": "Which configuration approach best matches the threat model for each deployment?",
+      "options": [
+        "A. Same full pipeline for all three - safety requirements are identical across deployments",
+        "B. Deployment A: rule-based only; Deployment B: full pipeline; Deployment C: no guardrails (developers are trusted)",
+        "C. Deployment A: rule-based + classifier; Deployment B: full pipeline with strict thresholds; Deployment C: rule-based + classifier with developer-context-aware prompts",
+        "D. Deployment A: no guardrails; Deployment B: rule-based only; Deployment C: full pipeline"
+      ],
+      "answer": "C",
+      "explanation": "Guardrail configuration should match the threat model and trust level of each deployment. Internal HR bot (A): lower public exposure but still needs safety checks - rule-based + classifier is appropriate. Public chatbot (B): highest exposure, unknown users, full pipeline with strict settings. Developer API (C): developers are building on top of your API and will implement their own safeguards, but your platform still needs protection - use guardrails with developer-context-aware prompts that understand technical use cases."
+    },
+    {
+      "id": "c8",
+      "scenario": "Your guardrail audit shows: past 30 days, 50,000 requests total. Layer 1 blocked 200 (0.4%). Layer 2 blocked 50 (0.1% of requests that passed Layer 1). Zero false positives reported by users. You are expanding to a new market with higher risk of adversarial users.",
+      "question": "What is the most important metric to establish BEFORE expanding to the higher-risk market?",
+      "options": [
+        "A. The current false negative rate - what percentage of actually harmful inputs are getting through",
+        "B. The average latency of the guardrail pipeline",
+        "C. The cost per request of the LLM classifier",
+        "D. The number of requests per day in the new market"
+      ],
+      "answer": "A",
+      "explanation": "Zero reported false positives sounds good but tells you nothing about false negatives. Before expanding to a higher-risk market, you need to know: are harmful inputs getting through? Run a red-team evaluation: submit 100 known-harmful inputs representative of the new threat model. Count how many get through. If your false negative rate is 30% on that threat model, your guardrail pipeline is not ready for the expansion regardless of current production metrics."
+    }
+  ]
+}
