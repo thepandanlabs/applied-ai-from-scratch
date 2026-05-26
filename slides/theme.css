@@ -171,7 +171,9 @@ td {
   background: inherit !important;
 }
 
-tr:last-child td { border-bottom: none !important; }
+table {
+  border-bottom: 1px solid var(--border);
+}
 
 /* ── Footer ── */
 footer {

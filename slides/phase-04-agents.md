@@ -64,17 +64,14 @@ The raw loop. No framework. No magic.
 ```python
 def agent_loop(task: str, tools: list[Tool]) -> str:
     messages = [{"role": "user", "content": task}]
-    
     while True:
         response = client.messages.create(
             model="claude-opus-4-5",
             messages=messages,
             tools=[t.schema for t in tools],
         )
-        
         if response.stop_reason == "end_turn":
             return response.content[0].text
-        
         if response.stop_reason == "tool_use":
             tool_results = execute_tools(response.content, tools)
             messages.extend(build_tool_messages(response, tool_results))
@@ -94,17 +91,16 @@ flowchart TD
     B --> C{Stop reason?}
     C -->|end_turn| D([Return answer])
     C -->|tool_use| E[Execute tools]
-    E --> F[Append tool results]
-    F --> G{Cost/turn limit?}
-    G -->|exceeded| H([Abort with error])
+    E --> F[Append results]
+    F --> G{Budget limit?}
+    G -->|exceeded| H([Abort])
     G -->|ok| B
-
     style A fill:#4f46e5,color:#fff
     style D fill:#10b981,color:#fff
     style H fill:#ef4444,color:#fff
 </div>
 
-<!-- SPEAKER: The kill switch on the left is not optional. Runaway agents are a real production incident. Always have a cost governor. -->
+<!-- SPEAKER: The kill switch is not optional. Runaway agents are a real production incident. Always have a cost governor. -->
 
 ---
 
@@ -140,11 +136,10 @@ Output of step N feeds input of step N+1. Works when steps are independent and o
 
 <div class="mermaid">
 flowchart LR
-    A[Input] --> B[LLM Step 1\nExtract intent]
-    B --> C[LLM Step 2\nRetrieve context]
-    C --> D[LLM Step 3\nGenerate response]
+    A[Input] --> B[Step 1: Extract intent]
+    B --> C[Step 2: Retrieve context]
+    C --> D[Step 3: Generate response]
     D --> E[Output]
-
     style A fill:#1e1e1e,color:#e8e8e8,stroke:#4f46e5
     style E fill:#1e1e1e,color:#e8e8e8,stroke:#10b981
     style B fill:#141414,color:#a78bfa,stroke:#2a2a2a
@@ -171,7 +166,6 @@ flowchart TD
     C --> F[Output]
     D --> F
     E --> F
-
     style B fill:#4f46e5,color:#fff
     style C fill:#141414,color:#e8e8e8,stroke:#2a2a2a
     style D fill:#141414,color:#e8e8e8,stroke:#2a2a2a
@@ -190,12 +184,11 @@ Two sub-patterns: **sectioning** and **voting**.
 <div class="mermaid">
 flowchart LR
     subgraph Sectioning
-    A1[Long doc] --> B1[Chunk 1 → LLM]
-    A1 --> B2[Chunk 2 → LLM]
-    A1 --> B3[Chunk 3 → LLM]
+    A1[Long doc] --> B1[Chunk 1 to LLM]
+    A1 --> B2[Chunk 2 to LLM]
+    A1 --> B3[Chunk 3 to LLM]
     B1 & B2 & B3 --> C1[Aggregate]
     end
-
     subgraph Voting
     A2[Query] --> D1[LLM call 1]
     A2 --> D2[LLM call 2]
@@ -216,13 +209,12 @@ One agent decomposes the task, N worker agents execute in parallel.
 
 <div class="mermaid">
 flowchart TD
-    A([Task]) --> B[Orchestrator LLM\nDecomposes task]
-    B --> C[Worker 1\nSubtask A]
-    B --> D[Worker 2\nSubtask B]
-    B --> E[Worker 3\nSubtask C]
-    C & D & E --> F[Orchestrator LLM\nSynthesizes results]
+    A([Task]) --> B[Orchestrator: decompose]
+    B --> C[Worker 1: Subtask A]
+    B --> D[Worker 2: Subtask B]
+    B --> E[Worker 3: Subtask C]
+    C & D & E --> F[Orchestrator: synthesize]
     F --> G([Final answer])
-
     style A fill:#4f46e5,color:#fff
     style B fill:#a78bfa,color:#0a0a0a
     style F fill:#a78bfa,color:#0a0a0a
@@ -232,7 +224,7 @@ flowchart TD
     style E fill:#1e1e1e,color:#e8e8e8
 </div>
 
-Workers can be specialized (code executor, web search, calculator).
+Workers can be specialized: code executor, web search, calculator.
 
 ---
 
@@ -244,10 +236,9 @@ Generator produces; evaluator scores and gives feedback; loop until threshold me
 flowchart LR
     A([Task]) --> B[Generator LLM]
     B --> C[Evaluator LLM]
-    C -->|score < threshold| D[Feedback]
+    C -->|score below threshold| D[Feedback]
     D --> B
-    C -->|score >= threshold| E([Output])
-
+    C -->|score above threshold| E([Output])
     style A fill:#4f46e5,color:#fff
     style E fill:#10b981,color:#fff
     style C fill:#f59e0b,color:#0a0a0a
@@ -272,7 +263,7 @@ flowchart LR
 |---|---|---|
 | Infinite loop | No turn limit | `max_turns=20` governor |
 | Cost explosion | Unbounded tool calls | Per-request budget cap |
-| Tool timeout hang | Network call with no timeout | All tools: `timeout=10s` |
+| Tool timeout hang | No timeout on network calls | All tools: `timeout=10s` |
 | Wrong tool called | Ambiguous tool descriptions | Sharp, exclusive tool schemas |
 | Context overflow | Long tool outputs | Truncate + summarize |
 | Silent wrong answer | No stopping condition check | Validate final output |
@@ -294,7 +285,6 @@ class CostGovernor:
     def check(self, response) -> None:
         self.turns += 1
         self.cost += calculate_cost(response.usage)
-        
         if self.turns >= self.max_turns:
             raise AgentBudgetExceeded(f"Turn limit {self.max_turns} reached")
         if self.cost >= self.max_cost:
@@ -303,7 +293,7 @@ class CostGovernor:
 
 Wire this into the loop. No exceptions.
 
-<!-- SPEAKER: This is table stakes. A runaway agent at $50/request will get you paged. The governor is 20 lines and prevents a class of incidents entirely. -->
+<!-- SPEAKER: A runaway agent at $50/request will get you paged. The governor is 20 lines and prevents a class of incidents entirely. -->
 
 ---
 
@@ -312,15 +302,14 @@ Wire this into the loop. No exceptions.
 <div class="mermaid">
 flowchart LR
     A{Memory needed?} -->|no - most agents| B[In-context messages]
-    A -->|cross-session| C[External store\nRedis / Postgres]
-    A -->|user preferences| D[Key-value store\nSimple dict / DB]
-    A -->|tool outputs > 50k tokens| E[Summarize into context]
-
+    A -->|cross-session| C[External store: Redis or Postgres]
+    A -->|user preferences| D[Key-value store: simple dict or DB]
+    A -->|tool outputs over 50k tokens| E[Summarize into context]
     style A fill:#4f46e5,color:#fff
     style B fill:#10b981,color:#fff
 </div>
 
-Start with in-context memory. Add persistent memory only when users complain about forgetting things across sessions.
+Start with in-context memory. Add persistent memory only when users report forgetting things across sessions.
 
 <!-- SPEAKER: The most common mistake is adding a vector DB for memory before you know you need it. In-context is fast, simple, and debuggable. -->
 
@@ -355,16 +344,15 @@ Most production systems that claim to be multi-agent are **orchestrator-workers*
 
 <div class="mermaid">
 flowchart TD
-    A([User request]) --> B[Input guardrail\nLlama Guard / NeMo]
+    A([User request]) --> B[Input guardrail: Llama Guard]
     B -->|blocked| C([Reject with reason])
-    B -->|pass| D[Agent loop\nwith cost governor]
+    B -->|pass| D[Agent loop with cost governor]
     D --> E{Tool calls}
-    E --> F[Tool executor\ntimeout + validation]
+    E --> F[Tool executor: timeout + validation]
     F --> D
-    D --> G[Output guardrail\nPII + content check]
-    G --> H[OTel span\nfull trace]
+    D --> G[Output guardrail: PII + content check]
+    G --> H[OTel span: full trace]
     H --> I([Response])
-
     style A fill:#4f46e5,color:#fff
     style C fill:#ef4444,color:#fff
     style I fill:#10b981,color:#fff
@@ -426,7 +414,7 @@ phases/04-agents/16-capstone-agent/
 
 # Questions?
 
-**Phase 04: Agents — Patterns That Survive Production**
+**Phase 04: Agents - Patterns That Survive Production**
 
 Applied AI From Scratch
 github.com/thepandanlabs/applied-ai-from-scratch
