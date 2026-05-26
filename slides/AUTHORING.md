@@ -205,8 +205,8 @@ flowchart LR
 | P00: Setup & Mindset | `phase-00-setup.md` | Done |
 | P02: Retrieval & RAG | `phase-02-rag.md` | Done |
 | P04: Agents | `phase-04-agents.md` | Done (mermaid diagrams) |
-| P01: Prompt & Context | — | To do |
-| P03: Tools & MCP | — | To do |
+| P01: Prompt & Context | `phase-01-prompt-and-context.md` | Done |
+| P03: Tools & MCP | `phase-03-tools-and-mcp.md` | Done |
 | P05: Evaluation | — | To do |
 | P06: Shipping | — | To do |
 | P07: Observability | — | To do |

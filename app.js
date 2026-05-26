@@ -187,7 +187,9 @@ function renderHome() {
 // Phases with slide decks available (add slug as key, filename stem as value)
 const SLIDE_DECKS = {
   '00': 'phase-00-setup',
+  '01': 'phase-01-prompt-and-context',
   '02': 'phase-02-rag',
+  '03': 'phase-03-tools-and-mcp',
   '04': 'phase-04-agents',
 };
 
