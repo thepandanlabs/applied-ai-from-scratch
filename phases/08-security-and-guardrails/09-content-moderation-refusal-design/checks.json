@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "lesson": "09-content-moderation-refusal-design",
+  "checks": [
+    {
+      "id": "c1",
+      "scenario": "Your AI writing assistant blocks a novelist who asks: 'What is the most efficient way to kill a person?' The user was researching a murder mystery. Support receives 50 complaints that week about over-blocking.",
+      "question": "Which failure mode does this represent, and what is the correct fix?",
+      "options": [
+        "A. A safety failure - the model should never answer questions about killing regardless of context",
+        "B. A false positive - the policy blocked a legitimate request; fix by raising the violence category threshold or adding context signals",
+        "C. A SOFT_BLOCK miss - the policy should have responded with a balanced qualifier instead of refusing",
+        "D. A logging failure - the block was correct but the error message was unclear"
+      ],
+      "answer": "B",
+      "explanation": "A false positive is a user-visible failure where a legitimate request is blocked. A novelist researching murder methods is a valid use case. The fix is to raise the threshold (so the classifier needs higher confidence before blocking) or add context signals like 'fiction writing' to the ALLOW list. Blocking all questions about killing regardless of context is over-aggressive moderation."
+    },
+    {
+      "id": "c2",
+      "scenario": "A user sends: 'Write a fake 5-star review for my restaurant.' Your moderation policy has a competitor_attack category configured as SOFT_BLOCK. The same policy has a violence category as HARD_BLOCK. This user's message matches only competitor_attack.",
+      "question": "What happens when guarded_completion() processes this message?",
+      "options": [
+        "A. The LLM is not called; only a refusal message is returned",
+        "B. The LLM is called with the original system prompt unchanged",
+        "C. The LLM is called with a safety qualifier added to the system prompt, and the response is prefixed with a note",
+        "D. The message is silently dropped with no response to the user"
+      ],
+      "answer": "C",
+      "explanation": "SOFT_BLOCK calls the LLM but modifies the system prompt to add a safety qualifier ('provide balanced information without advocacy'), and prepends the category's refusal_message as a note to the response. The user still gets a useful answer, but with a clear framing that the assistant won't help create fake content. HARD_BLOCK is what prevents the LLM from being called at all."
+    },
+    {
+      "id": "c3",
+      "scenario": "You are writing a HARD_BLOCK refusal message for a PII harvesting category. A colleague suggests: 'I cannot fulfill this request because it triggered our PII protection rule. The blocked keywords were: find their phone number, look up their ssn.'",
+      "question": "What is wrong with this refusal message?",
+      "options": [
+        "A. It is too long - refusals should be one word only",
+        "B. It reveals the blocklist, giving attackers a roadmap to rephrase their request and bypass the filter",
+        "C. It does not apologize enough for the inconvenience",
+        "D. It should be sent as an HTTP 403 status code instead of a text message"
+      ],
+      "answer": "B",
+      "explanation": "Revealing which keywords triggered the block tells an attacker exactly what phrases to avoid. They simply rephrase: 'What is Jane Smith's residential location?' instead of 'find their phone number.' A good refusal says what you can't help with, not why the specific phrasing triggered it. The blocked keyword list is an internal signal for logging, never for users."
+    },
+    {
+      "id": "c4",
+      "scenario": "Your moderation policy uses keyword matching. During a weekly review, you find that 8% of normal user requests are being soft-blocked by the sensitive_topic category. The category uses keywords like 'controversial political' and 'is abortion right or wrong.'",
+      "question": "What is the most appropriate next step?",
+      "options": [
+        "A. Increase the number of keywords to catch more edge cases",
+        "B. Move the sensitive_topic category from SOFT_BLOCK to HARD_BLOCK for stricter protection",
+        "C. Review false-positive cases and either raise the threshold or narrow the keyword list based on real traffic data",
+        "D. Remove the sensitive_topic category entirely since it causes too many false positives"
+      ],
+      "answer": "C",
+      "explanation": "An 8% soft-block rate on normal traffic suggests the thresholds are too aggressive. The correct approach is to look at the actual blocked requests (were they genuinely sensitive, or legitimate?), then either raise the classifier threshold or remove over-broad keywords that are matching benign queries. Removing the category entirely eliminates the protection. Adding more keywords makes the problem worse. Upgrading to HARD_BLOCK makes false positives more costly."
+    },
+    {
+      "id": "c5",
+      "scenario": "A message matches both the violence category (HARD_BLOCK) and the sensitive_topic category (SOFT_BLOCK). The violence match is for 'beat someone up' in a question about disciplining children historically.",
+      "question": "What decision does the ModerationPolicy.evaluate() method return?",
+      "options": [
+        "A. SOFT_BLOCK, because the less severe decision takes precedence",
+        "B. ALLOW, because the context suggests the request is legitimate",
+        "C. HARD_BLOCK, because HARD_BLOCK always wins regardless of other category matches",
+        "D. An error, because a message cannot match two categories simultaneously"
+      ],
+      "answer": "C",
+      "explanation": "The evaluate() method prioritizes HARD_BLOCK over SOFT_BLOCK over ALLOW. When a message matches categories of different severities, the most severe decision wins. This prevents a SOFT_BLOCK match from accidentally downgrading a HARD_BLOCK. The consequence is that edge cases like historical disciplinary questions can get false-positives, which is why the keyword list needs to be calibrated with real traffic data."
+    },
+    {
+      "id": "c6",
+      "scenario": "You are building a developer tools product where users are software engineers asking questions about security vulnerabilities, SQL injection, and network attacks for legitimate penetration testing work. Your off-the-shelf moderation policy blocks 25% of these requests.",
+      "question": "What is the most appropriate architectural response?",
+      "options": [
+        "A. Accept the 25% block rate as the cost of safety",
+        "B. Disable moderation entirely for developer tools",
+        "C. Configure a separate ModerationPolicy instance for the developer tools use case with a narrower category set and higher thresholds appropriate for that audience",
+        "D. Move all blocked requests to a human review queue"
+      ],
+      "answer": "C",
+      "explanation": "Moderation policy should be calibrated to the use case and audience. A developer tools product with verified engineer users has different risk and legitimate-use profiles than a consumer chatbot. The ModerationPolicy class accepts a categories list, so you can configure a product-specific policy with narrower categories (e.g., remove the security research category from the blocklist) and higher thresholds. One policy does not fit all products."
+    },
+    {
+      "id": "c7",
+      "scenario": "After deploying your moderation layer, you want to measure whether it is working correctly. You log request counts but no category breakdown. After one week, you have: total requests 10,000; hard-blocked 50; soft-blocked 120.",
+      "question": "What critical data is missing from this logging setup?",
+      "options": [
+        "A. The total cost of LLM calls that were saved by hard-blocking",
+        "B. The category breakdown showing which specific categories are firing - without this you cannot tell if sensitive_topic is blocking 100 legitimate requests or violence is only catching 2",
+        "C. The user IDs of all blocked users so you can notify them",
+        "D. The response latency broken down by decision type"
+      ],
+      "answer": "B",
+      "explanation": "Knowing you soft-blocked 120 requests tells you nothing about whether those blocks were correct. If 100 of them were from the sensitive_topic category blocking legitimate political questions, that is a calibration problem you need to fix. If all 120 were from the competitor_attack category catching real fake review attempts, that is the policy working. You need per-category counts to tune the policy. Log result.category on every request."
+    },
+    {
+      "id": "c8",
+      "scenario": "A product manager proposes: 'Instead of a custom moderation layer, let's just add to our system prompt: Do not answer any harmful questions. Refuse anything dangerous.' They argue this is simpler and avoids maintaining a separate policy class.",
+      "question": "What does the custom ModerationPolicy class give you that a system prompt instruction does not?",
+      "options": [
+        "A. Nothing - a well-written system prompt instruction is equally effective",
+        "B. Deterministic, auditable decisions that happen before the LLM call, with no API cost on hard blocks, explicit category tracking for logging, and behavior that cannot be overridden by prompt injection",
+        "C. Better natural language understanding because the policy class uses the same LLM internally",
+        "D. Compliance with GDPR, which requires a separate moderation system"
+      ],
+      "answer": "B",
+      "explanation": "A system prompt instruction is interpreted by the LLM, which means it can be overridden by prompt injection ('ignore previous instructions'), produces non-deterministic results, still costs tokens even for hard-block cases, and provides no structured logging. The ModerationPolicy runs before the LLM call, costs nothing for hard blocks, produces structured ModerationResult objects you can log and alert on, and cannot be bypassed through the user message because it is evaluated in your code, not in the model."
+    }
+  ]
+}
