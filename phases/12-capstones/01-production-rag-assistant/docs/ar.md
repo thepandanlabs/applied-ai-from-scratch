@@ -13,7 +13,7 @@
 - بث الاستجابات عبر Server-Sent Events مع إسناد كل جزء (chunk) إلى مصدره (citation grounding)
 - فرض حاجز حماية (guardrail) للأسئلة الخارجة عن الموضوع قبل الاسترجاع للتحكم في النطاق والتكلفة
 - تجهيز خط المعالجة الكامل بقياسات spans عبر OpenTelemetry
-- تشغيل ثلاثية RAG (RAG Triad) — صلة الإجابة (answer relevance)، ودقة السياق (context precision)، والأمانة (faithfulness) — مقابل مجموعة استعلامات ذهبية (golden query set)
+- تشغيل ثلاثية RAG (RAG Triad): صلة الإجابة (answer relevance)، ودقة السياق (context precision)، والأمانة (faithfulness)، مقابل مجموعة استعلامات ذهبية (golden query set)
 
 ---
 
