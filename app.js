@@ -37,7 +37,7 @@ renderer.code = function (code, lang) {
   return `<div class="code-block">
     <div class="code-block-header">
       <span class="code-lang">${langLabel}</span>
-      <button class="copy-btn" onclick="copyCode(this, event)">Copy</button>
+      <button class="copy-btn" onclick="copyCode(this, event)">${t('copy')}</button>
     </div>
     <pre><code class="hljs language-${validLang}">${highlighted}</code></pre>
   </div>`;
@@ -49,6 +49,155 @@ renderer.table = function (header, body) {
 
 marked.use({ renderer, breaks: false, gfm: true });
 
+// ── i18n ──────────────────────────────────────────────────────────────────
+const SUPPORTED_LANGS = ['en', 'ar'];
+
+const I18N = {
+  en: {
+    statusComplete: 'Available',
+    statusProgress: 'Currently Building',
+    statusPlanned: 'Planned',
+    copy: 'Copy',
+    copied: 'Copied!',
+    heroBadge: 'Open Source · MIT License · 2026',
+    heroTitle: 'The <em>applied</em> AI engineering<br>curriculum',
+    heroSub: 'Build production AI systems from scratch: RAG, agents, evals, observability, security, and the forward-deployed skillset. No math gate. Eval-first. Ship something in Phase 0.',
+    statPhases: 'Phases',
+    statLessons: 'Lessons',
+    statTime: 'Est. Time',
+    statPublished: 'Published',
+    allPhases: 'All Phases',
+    lessons: 'lessons',
+    home: 'Home',
+    phase: 'Phase',
+    colNum: '#',
+    colLesson: 'Lesson',
+    colStatus: 'Status',
+    colTime: 'Time',
+    lessonsBtn: '☰ Lessons',
+    loadingLesson: 'Loading lesson…',
+    loading: 'Loading…',
+    prev: 'Previous',
+    next: 'Next',
+    notBuiltTitle: 'Not built yet',
+    notBuiltBody: (title) => `<strong>${title}</strong> is on the roadmap but hasn't been authored yet. Star the repo to get notified when it drops.`,
+    backToPhase: 'Back to Phase',
+    starGithub: 'Star on GitHub ↗',
+    notFoundTitle: 'Page not found',
+    notFoundBody: "That phase or lesson doesn't exist.",
+    backHome: 'Back to home',
+    slides: '⧉ Slides',
+    slidesTitle: 'Open facilitator slide deck',
+    navPhases: 'Phases',
+    siteTitle: 'Applied AI From Scratch',
+    couldNotLoad: (p) => `Could not load lesson content from <code>${p}</code>.`,
+    serveHint: 'If running locally, use a static server: <code>npx serve .</code> or <code>python -m http.server 8000</code>',
+    buildHint: 'Run <code>node site/build.js</code> to generate curriculum data, then serve with <code>npx serve .</code>',
+  },
+  ar: {
+    statusComplete: 'متاح',
+    statusProgress: 'قيد الإنشاء',
+    statusPlanned: 'مُخطَّط له',
+    copy: 'نسخ',
+    copied: 'تم النسخ!',
+    heroBadge: 'مفتوح المصدر · رخصة MIT · 2026',
+    heroTitle: 'منهج هندسة الذكاء الاصطناعي <em>التطبيقي</em>',
+    heroSub: 'ابنِ أنظمة ذكاء اصطناعي إنتاجية من الصفر: RAG، والوكلاء، والتقييمات، والقابلية للمراقبة، والأمان، ومهارات المهندس الميداني. لا بوابة رياضيات. التقييم أولًا. اشحن شيئًا في المرحلة 0.',
+    statPhases: 'مراحل',
+    statLessons: 'دروس',
+    statTime: 'الوقت التقديري',
+    statPublished: 'منشورة',
+    allPhases: 'كل المراحل',
+    lessons: 'دروس',
+    home: 'الرئيسية',
+    phase: 'المرحلة',
+    colNum: '#',
+    colLesson: 'الدرس',
+    colStatus: 'الحالة',
+    colTime: 'الوقت',
+    lessonsBtn: '☰ الدروس',
+    loadingLesson: 'جارٍ تحميل الدرس…',
+    loading: 'جارٍ التحميل…',
+    prev: 'السابق',
+    next: 'التالي',
+    notBuiltTitle: 'لم يُكتب بعد',
+    notBuiltBody: (title) => `<strong>${title}</strong> مُدرَج في خارطة الطريق لكنه لم يُكتب بعد. ضع نجمة للمستودع ليصلك إشعار عند نشره.`,
+    backToPhase: 'العودة إلى المرحلة',
+    starGithub: 'ضع نجمة على GitHub ↗',
+    notFoundTitle: 'الصفحة غير موجودة',
+    notFoundBody: 'هذه المرحلة أو الدرس غير موجود.',
+    backHome: 'العودة إلى الرئيسية',
+    slides: '⧉ الشرائح',
+    slidesTitle: 'افتح شرائح الميسِّر',
+    navPhases: 'المراحل',
+    siteTitle: 'الذكاء الاصطناعي التطبيقي من الصفر',
+    couldNotLoad: (p) => `تعذّر تحميل محتوى الدرس من <code>${p}</code>.`,
+    serveHint: 'إذا كنت تشغّله محليًا، استخدم خادمًا ثابتًا: <code>npx serve .</code> أو <code>python -m http.server 8000</code>',
+    buildHint: 'شغّل <code>node site/build.js</code> لتوليد بيانات المنهج، ثم قدّمه عبر <code>npx serve .</code>',
+  },
+};
+
+function getInitialLang() {
+  const fromUrl = new URLSearchParams(window.location.search).get('lang');
+  if (SUPPORTED_LANGS.includes(fromUrl)) return fromUrl;
+  const saved = localStorage.getItem('lang');
+  if (SUPPORTED_LANGS.includes(saved)) return saved;
+  return 'en';
+}
+
+let currentLang = getInitialLang();
+
+// Translate a UI string key. Falls back to English, then the key itself.
+function t(key, ...args) {
+  const dict = I18N[currentLang] || I18N.en;
+  let v = dict[key];
+  if (v === undefined) v = I18N.en[key];
+  if (v === undefined) return key;
+  return typeof v === 'function' ? v(...args) : v;
+}
+
+// Localize a curriculum data field (title/description/time) for the current lang.
+function L(obj, field) {
+  if (currentLang === 'ar') return obj[`${field}_ar`] || obj[field];
+  return obj[field];
+}
+
+function applyLang(lang) {
+  currentLang = SUPPORTED_LANGS.includes(lang) ? lang : 'en';
+  const root = document.documentElement;
+  root.setAttribute('lang', currentLang);
+  root.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+  localStorage.setItem('lang', currentLang);
+}
+
+function updateLangToggle() {
+  const label = document.querySelector('#lang-toggle .lang-label');
+  if (label) label.textContent = currentLang === 'ar' ? 'EN' : 'ع';
+}
+
+// Updates chrome that lives in index.html and is not re-rendered by route().
+function updateStaticChrome() {
+  document.title = t('siteTitle');
+  const navPhases = document.querySelector('.nav-link[data-i18n="navPhases"]');
+  if (navPhases) navPhases.textContent = t('navPhases');
+}
+
+window.toggleLang = function () {
+  applyLang(currentLang === 'ar' ? 'en' : 'ar');
+  const url = new URL(window.location.href);
+  url.searchParams.set('lang', currentLang);
+  history.replaceState(null, '', url);
+  updateLangToggle();
+  updateStaticChrome();
+  route();
+};
+
+function initLang() {
+  applyLang(currentLang);
+  updateLangToggle();
+  updateStaticChrome();
+}
+
 // ── Utilities ─────────────────────────────────────────────────────────────
 function escapeHtml(str) {
   return str
@@ -59,7 +208,7 @@ function escapeHtml(str) {
 }
 
 function statusLabel(status) {
-  const map = { complete: 'Available', progress: 'Currently Building', planned: 'Planned' };
+  const map = { complete: t('statusComplete'), progress: t('statusProgress'), planned: t('statusPlanned') };
   return map[status] || status;
 }
 
@@ -77,9 +226,9 @@ window.copyCode = function (btn, e) {
   if (e) e.stopPropagation();
   const pre = btn.closest('.code-block').querySelector('code');
   navigator.clipboard.writeText(pre.textContent).then(() => {
-    btn.textContent = 'Copied!';
+    btn.textContent = t('copied');
     btn.classList.add('copied');
-    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    setTimeout(() => { btn.textContent = t('copy'); btn.classList.remove('copied'); }, 2000);
   });
 };
 
@@ -115,7 +264,7 @@ function route() {
   const app = document.getElementById('app');
 
   if (!window.CURRICULUM) {
-    app.innerHTML = '<div class="loading">Loading…</div>';
+    app.innerHTML = `<div class="loading">${t('loading')}</div>`;
     return;
   }
 
@@ -142,39 +291,36 @@ function renderHome() {
 
   app.innerHTML = `
     <section class="hero">
-      <div class="hero-badge">Open Source · MIT License · 2026</div>
-      <h1>The <em>applied</em> AI engineering<br>curriculum</h1>
-      <p class="hero-sub">
-        Build production AI systems from scratch: RAG, agents, evals, observability,
-        security, and the forward-deployed skillset. No math gate. Eval-first. Ship something in Phase 0.
-      </p>
+      <div class="hero-badge">${t('heroBadge')}</div>
+      <h1>${t('heroTitle')}</h1>
+      <p class="hero-sub">${t('heroSub')}</p>
       <div class="stats-bar">
         <div class="stat">
           <div class="stat-value">${stats.totalPhases}</div>
-          <div class="stat-label">Phases</div>
+          <div class="stat-label">${t('statPhases')}</div>
         </div>
         <div class="stat">
           <div class="stat-value">${stats.totalLessons}</div>
-          <div class="stat-label">Lessons</div>
+          <div class="stat-label">${t('statLessons')}</div>
         </div>
         <div class="stat">
           <div class="stat-value">~${Math.round(totalHours)}h</div>
-          <div class="stat-label">Est. Time</div>
+          <div class="stat-label">${t('statTime')}</div>
         </div>
         <div class="stat">
           <div class="stat-value">${stats.completeLessons}</div>
-          <div class="stat-label">Published</div>
+          <div class="stat-label">${t('statPublished')}</div>
         </div>
       </div>
     </section>
 
     <section class="phases-section" id="phases">
       <div class="section-header">
-        <span class="section-title">All Phases</span>
+        <span class="section-title">${t('allPhases')}</span>
         <div class="legend">
-          <div class="legend-item"><div class="legend-dot complete"></div> Available</div>
-          <div class="legend-item"><div class="legend-dot progress"></div> Currently Building</div>
-          <div class="legend-item"><div class="legend-dot planned"></div> Planned</div>
+          <div class="legend-item"><div class="legend-dot complete"></div> ${t('statusComplete')}</div>
+          <div class="legend-item"><div class="legend-dot progress"></div> ${t('statusProgress')}</div>
+          <div class="legend-item"><div class="legend-dot planned"></div> ${t('statusPlanned')}</div>
         </div>
       </div>
       <div class="phase-grid">
@@ -210,7 +356,7 @@ function phaseCard(phase) {
   const slideDeck = SLIDE_DECKS[phase.id];
   // slides-btn is a sibling of the card anchor, not nested inside it
   const slidesBtn = slideDeck
-    ? `<a class="slides-btn" href="site/slides/${slideDeck}.html" target="_blank" rel="noopener" title="Open facilitator slide deck">⧉ Slides</a>`
+    ? `<a class="slides-btn" href="site/slides/${slideDeck}.html" target="_blank" rel="noopener" title="${t('slidesTitle')}">${t('slides')}</a>`
     : '';
 
   return `
@@ -221,13 +367,13 @@ function phaseCard(phase) {
           <span class="status-dot ${phase.status}"></span>
           <span class="status-label ${phase.status}">${statusLabel(phase.status)}</span>
         </div>
-        <div class="phase-card-title">${phase.title}</div>
-        <div class="phase-card-desc">${phase.description}</div>
+        <div class="phase-card-title">${L(phase, 'title')}</div>
+        <div class="phase-card-desc">${L(phase, 'description')}</div>
         <div class="phase-progress">
           <div class="phase-progress-bar">
             <div class="phase-progress-fill" style="width:${pct}%"></div>
           </div>
-          <div class="phase-progress-text">${done} / ${total} lessons · ${phase.time}</div>
+          <div class="phase-progress-text">${done} / ${total} ${t('lessons')} · ${L(phase, 'time')}</div>
         </div>
       </a>
       ${slidesBtn}
@@ -246,29 +392,29 @@ function renderPhase(phaseId) {
   app.innerHTML = `
     <div class="phase-page">
       <div class="breadcrumb">
-        <a href="#">Home</a>
+        <a href="#">${t('home')}</a>
         <span class="breadcrumb-sep">/</span>
-        <span>Phase ${phase.id}</span>
+        <span>${t('phase')} ${phase.id}</span>
       </div>
 
       <div class="phase-header">
-        <div class="phase-num-badge">Phase ${phase.id}</div>
-        <h1>${phase.title}</h1>
+        <div class="phase-num-badge">${t('phase')} ${phase.id}</div>
+        <h1>${L(phase, 'title')}</h1>
         <div class="phase-header-meta">
           ${statusPill(phase.status)}
-          <span class="tag">${done}/${phase.lessons.length} lessons</span>
-          <span class="tag">${phase.time}</span>
+          <span class="tag">${done}/${phase.lessons.length} ${t('lessons')}</span>
+          <span class="tag">${L(phase, 'time')}</span>
         </div>
-        <p class="phase-desc">${phase.description}</p>
+        <p class="phase-desc">${L(phase, 'description')}</p>
       </div>
 
       <table class="lesson-table">
         <thead>
           <tr>
-            <th>#</th>
-            <th>Lesson</th>
-            <th>Status</th>
-            <th style="text-align:right">Time</th>
+            <th>${t('colNum')}</th>
+            <th>${t('colLesson')}</th>
+            <th>${t('colStatus')}</th>
+            <th style="text-align:right">${t('colTime')}</th>
           </tr>
         </thead>
         <tbody>
@@ -288,9 +434,9 @@ function lessonRow(phase, lesson) {
   return `
     <tr class="${lesson.status} ${rowClass}" ${onclick}>
       <td class="lesson-num">${lesson.id}</td>
-      <td class="lesson-title-cell">${lesson.title}</td>
+      <td class="lesson-title-cell">${L(lesson, 'title')}</td>
       <td>${statusPill(lesson.status)}</td>
-      <td class="lesson-time">${lesson.time}</td>
+      <td class="lesson-time">${L(lesson, 'time')}</td>
     </tr>
   `;
 }
@@ -314,20 +460,20 @@ async function renderLesson(phaseId, lessonId) {
     <div class="sidebar-overlay" onclick="closeSidebar()"></div>
     <div class="lesson-layout">
       <aside class="lesson-sidebar">
-        <div class="sidebar-phase-title">Phase ${phase.id}: ${phase.title}</div>
+        <div class="sidebar-phase-title">${t('phase')} ${phase.id}: ${L(phase, 'title')}</div>
         ${phase.lessons.map(l => sidebarItem(phase, lesson, l)).join('')}
       </aside>
       <div class="lesson-content">
         <div class="lesson-content-inner">
-          <button class="mobile-toc-btn" onclick="openSidebar()" aria-label="Open lesson list">☰ Lessons</button>
+          <button class="mobile-toc-btn" onclick="openSidebar()" aria-label="${t('colLesson')}">${t('lessonsBtn')}</button>
           <div class="breadcrumb">
-            <a href="#">Home</a>
+            <a href="#">${t('home')}</a>
             <span class="breadcrumb-sep">/</span>
-            <a href="#phase/${phase.id}">Phase ${phase.id}</a>
+            <a href="#phase/${phase.id}">${t('phase')} ${phase.id}</a>
             <span class="breadcrumb-sep">/</span>
-            <span>${lesson.title}</span>
+            <span>${L(lesson, 'title')}</span>
           </div>
-          <div id="lesson-body" class="md-body"><div class="loading">Loading lesson…</div></div>
+          <div id="lesson-body" class="md-body"><div class="loading">${t('loadingLesson')}</div></div>
           ${lessonNavButtons(phase, lessonIdx)}
         </div>
       </div>
@@ -347,7 +493,7 @@ function sidebarItem(phase, currentLesson, lesson) {
   return `
     <div class="sidebar-lesson ${active} ${planned}" ${onclick}>
       <span class="sidebar-lesson-num">${lesson.id}</span>
-      <span style="flex:1">${lesson.title}</span>
+      <span style="flex:1">${L(lesson, 'title')}</span>
       <span class="sidebar-status" style="font-size:11px; color:${lesson.status === 'complete' ? 'var(--green)' : 'var(--text-faint)'}">${statusIcon}</span>
     </div>
   `;
@@ -356,27 +502,32 @@ function sidebarItem(phase, currentLesson, lesson) {
 function lessonNavButtons(phase, idx) {
   const prev = phase.lessons[idx - 1];
   const next = phase.lessons[idx + 1];
+  const rtl = currentLang === 'ar';
+  const backArrow = rtl ? '→' : '←';
+  const fwdArrow = rtl ? '←' : '→';
   const prevBtn = prev
     ? `<div class="lesson-nav-btn prev" onclick="window.location.hash='phase/${phase.id}/${prev.id}'">
-        <span class="lesson-nav-dir">← Previous</span>
-        <span class="lesson-nav-title">${prev.title}</span>
+        <span class="lesson-nav-dir">${backArrow} ${t('prev')}</span>
+        <span class="lesson-nav-title">${L(prev, 'title')}</span>
       </div>`
     : `<div></div>`;
   const nextBtn = next && next.status !== 'planned'
     ? `<div class="lesson-nav-btn next" onclick="window.location.hash='phase/${phase.id}/${next.id}'">
-        <span class="lesson-nav-dir">Next →</span>
-        <span class="lesson-nav-title">${next.title}</span>
+        <span class="lesson-nav-dir">${t('next')} ${fwdArrow}</span>
+        <span class="lesson-nav-title">${L(next, 'title')}</span>
       </div>`
     : `<div></div>`;
   return `<div class="lesson-nav">${prevBtn}${nextBtn}</div>`;
 }
 
 async function loadLessonContent(phase, lesson) {
-  const mdPath = `phases/${phase.slug}/${lesson.slug}/docs/en.md`;
+  const dir = `phases/${phase.slug}/${lesson.slug}/docs`;
+  const mdPath = `${dir}/${currentLang === 'ar' ? 'ar' : 'en'}.md`;
   const body = document.getElementById('lesson-body');
 
   try {
-    const res = await fetch(mdPath);
+    let res = await fetch(mdPath);
+    if (!res.ok && currentLang === 'ar') res = await fetch(`${dir}/en.md`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const md = await res.text();
     const colabBadge = lesson.notebook
@@ -388,10 +539,8 @@ async function loadLessonContent(phase, lesson) {
   } catch (e) {
     body.innerHTML = `
       <div class="not-built" style="text-align:left; padding:0">
-        <p style="color:var(--text-muted)">Could not load lesson content from <code>${mdPath}</code>.</p>
-        <p style="color:var(--text-muted); font-size:13px; margin-top:8px">
-          If running locally, use a static server: <code>npx serve .</code> or <code>python -m http.server 8000</code>
-        </p>
+        <p style="color:var(--text-muted)">${t('couldNotLoad', mdPath)}</p>
+        <p style="color:var(--text-muted); font-size:13px; margin-top:8px">${t('serveHint')}</p>
       </div>
     `;
   }
@@ -399,7 +548,7 @@ async function loadLessonContent(phase, lesson) {
 
 function renderMarkdown(md) {
   // Extract header metadata (Type, Languages, Prerequisites, Time lines at top)
-  const metaMatch = md.match(/^(\*\*(?:Type|Languages?|Prerequisites?|Time|Phase):\*\*[^\n]*\n?)+/m);
+  const metaMatch = md.match(/^(\*\*(?:Type|Languages?|Prerequisites?|Time|Phase|النوع|اللغات|اللغة|المتطلبات|الوقت|المرحلة):\*\*[^\n]*\n?)+/m);
   let metaHtml = '';
   let cleanMd = md;
 
@@ -425,15 +574,12 @@ function renderNotBuilt(phase, lesson) {
   app.innerHTML = `
     <div class="not-built">
       <div class="not-built-icon">📐</div>
-      <h2>Not built yet</h2>
-      <p>
-        <strong>${lesson.title}</strong> is on the roadmap but hasn't been authored yet.
-        Star the repo to get notified when it drops.
-      </p>
+      <h2>${t('notBuiltTitle')}</h2>
+      <p>${t('notBuiltBody', L(lesson, 'title'))}</p>
       <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap">
-        <a class="btn" href="#phase/${phase.id}">← Back to Phase ${phase.id}</a>
+        <a class="btn" href="#phase/${phase.id}">${currentLang === 'ar' ? '→' : '←'} ${t('backToPhase')} ${phase.id}</a>
         <a class="btn" href="https://github.com/appliedaifromscratch/appliedaifromscratch.com"
-           target="_blank" rel="noopener">Star on GitHub ↗</a>
+           target="_blank" rel="noopener">${t('starGithub')}</a>
       </div>
     </div>
   `;
@@ -444,9 +590,9 @@ function renderNotFound() {
   app.innerHTML = `
     <div class="not-built">
       <div class="not-built-icon">🔍</div>
-      <h2>Page not found</h2>
-      <p>That phase or lesson doesn't exist.</p>
-      <a class="btn" href="#">← Back to home</a>
+      <h2>${t('notFoundTitle')}</h2>
+      <p>${t('notFoundBody')}</p>
+      <a class="btn" href="#">${currentLang === 'ar' ? '→' : '←'} ${t('backHome')}</a>
     </div>
   `;
 }
@@ -493,10 +639,11 @@ window.closeSidebar = function () {
 window.addEventListener('hashchange', route);
 window.addEventListener('load', () => {
   initTheme();
+  initLang();
   if (window.CURRICULUM) {
     route();
   } else {
     document.getElementById('app').innerHTML =
-      '<div class="loading">Run <code>node site/build.js</code> to generate curriculum data, then serve with <code>npx serve .</code></div>';
+      `<div class="loading">${t('buildHint')}</div>`;
   }
 });

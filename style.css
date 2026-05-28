@@ -1168,3 +1168,69 @@ img, svg { display: block; max-width: 100%; }
 @media (min-width: 769px) and (max-width: 1024px) {
   .phase-grid { grid-template-columns: repeat(3, 1fr); }
 }
+
+/* ── ── ── RTL / Arabic ── ── ── ─────────────────────────────────────────────
+   Flexbox and flow content mirror automatically under dir="rtl"; the rules
+   below flip the physical (left/right) properties that do not. Code blocks and
+   diagrams are forced back to LTR — code is always read left-to-right. */
+
+/* Hero badge separators contain Latin punctuation; keep readable */
+html[dir="rtl"] { text-align: right; }
+
+/* Stat dividers */
+html[dir="rtl"] .stat { border-right: none; border-left: 1px solid var(--border); }
+html[dir="rtl"] .stat:last-child { border-left: none; }
+
+/* Push legend to the inline-end */
+html[dir="rtl"] .legend { margin-left: 0; margin-right: auto; }
+
+/* Phase cards */
+html[dir="rtl"] .phase-card { text-align: right; }
+html[dir="rtl"] .phase-card-num { right: auto; left: 16px; }
+html[dir="rtl"] .phase-card-title { padding-right: 0; padding-left: 40px; }
+html[dir="rtl"] .slides-btn { right: auto; left: 14px; }
+
+/* Tables */
+html[dir="rtl"] .lesson-table th,
+html[dir="rtl"] .md-body th { text-align: right; }
+html[dir="rtl"] .lesson-table th[style] { text-align: left !important; }
+html[dir="rtl"] .lesson-time { text-align: left; }
+
+/* Lesson sidebar — sits on the right, divider on its inline-start */
+html[dir="rtl"] .lesson-sidebar { border-right: none; border-left: 1px solid var(--border); }
+html[dir="rtl"] .sidebar-status { margin-left: 0; margin-right: auto; }
+
+/* Markdown lists + blockquotes */
+html[dir="rtl"] .md-body ul,
+html[dir="rtl"] .md-body ol { padding-left: 0; padding-right: 20px; }
+html[dir="rtl"] .md-body blockquote {
+  border-left: none;
+  border-right: 3px solid var(--accent);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+/* Prev/next: "next" sits on the inline-start under RTL */
+html[dir="rtl"] .lesson-nav-btn.next { text-align: left; }
+
+/* Code and diagrams stay LTR */
+html[dir="rtl"] .code-block,
+html[dir="rtl"] .code-block pre,
+html[dir="rtl"] .code-block code,
+html[dir="rtl"] .md-body pre,
+html[dir="rtl"] .mermaid-wrap { direction: ltr; text-align: left; }
+
+/* Mobile drawer slides in from the right under RTL */
+@media (max-width: 900px) {
+  html[dir="rtl"] .lesson-sidebar {
+    left: auto;
+    right: 0;
+    transform: translateX(100%);
+    border-left: none;
+    border-right: 1px solid var(--border);
+  }
+  html[dir="rtl"] .lesson-sidebar.open { transform: translateX(0); }
+}
+
+@media (max-width: 768px) {
+  html[dir="rtl"] .phase-card-num { right: auto; left: 12px; }
+}
