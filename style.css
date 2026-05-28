@@ -1084,6 +1084,73 @@ img, svg { display: block; max-width: 100%; }
   color: var(--text);
 }
 
+/* ── Lesson top bar + language toggle (EN / AR) ─────────────────────────── */
+.lesson-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.lesson-topbar .mobile-toc-btn {
+  margin-bottom: 0;
+  flex: 1;
+}
+.lang-toggle {
+  display: inline-flex;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.lang-btn {
+  padding: 6px 12px;
+  background: var(--surface);
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.lang-btn + .lang-btn { border-left: 1px solid var(--border); }
+.lang-btn:hover { color: var(--text); }
+.lang-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+[data-theme="light"] .lang-btn.active { color: #fff; }
+
+.lang-fallback-note {
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: right;
+}
+
+/* ── RTL (Arabic) lesson body ───────────────────────────────────────────── */
+.md-body.lang-ar { direction: rtl; text-align: right; }
+.md-body.lang-ar ul, .md-body.lang-ar ol {
+  padding-left: 0;
+  padding-right: 20px;
+}
+.md-body.lang-ar blockquote {
+  border-left: none;
+  border-right: 3px solid var(--accent);
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+/* Code, commands, tables stay left-to-right for readability */
+.md-body.lang-ar pre,
+.md-body.lang-ar .code-block,
+.md-body.lang-ar table { direction: ltr; text-align: left; }
+.md-body.lang-ar code:not(pre code) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
 /* ── Code block — mobile touch scroll ───────────────────────────────────── */
 .code-block pre {
   -webkit-overflow-scrolling: touch;

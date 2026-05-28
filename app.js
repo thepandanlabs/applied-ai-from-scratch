@@ -319,7 +319,10 @@ async function renderLesson(phaseId, lessonId) {
       </aside>
       <div class="lesson-content">
         <div class="lesson-content-inner">
-          <button class="mobile-toc-btn" onclick="openSidebar()" aria-label="Open lesson list">☰ Lessons</button>
+          <div class="lesson-topbar">
+            <button class="mobile-toc-btn" onclick="openSidebar()" aria-label="Open lesson list">☰ Lessons</button>
+            ${langToggle()}
+          </div>
           <div class="breadcrumb">
             <a href="#">Home</a>
             <span class="breadcrumb-sep">/</span>
@@ -371,18 +374,55 @@ function lessonNavButtons(phase, idx) {
   return `<div class="lesson-nav">${prevBtn}${nextBtn}</div>`;
 }
 
+// ── Lesson language (i18n) ──────────────────────────────────────────────────
+function getLessonLang() {
+  return localStorage.getItem('lessonLang') === 'ar' ? 'ar' : 'en';
+}
+
+window.setLessonLang = function (lang) {
+  localStorage.setItem('lessonLang', lang === 'ar' ? 'ar' : 'en');
+  const r = parseHash();
+  if (r.view === 'lesson') route();
+};
+
+function langToggle() {
+  const lang = getLessonLang();
+  return `
+    <div class="lang-toggle" role="group" aria-label="Lesson language">
+      <button class="lang-btn ${lang === 'en' ? 'active' : ''}" onclick="setLessonLang('en')">EN</button>
+      <button class="lang-btn ${lang === 'ar' ? 'active' : ''}" onclick="setLessonLang('ar')">العربية</button>
+    </div>
+  `;
+}
+
 async function loadLessonContent(phase, lesson) {
-  const mdPath = `phases/${phase.slug}/${lesson.slug}/docs/en.md`;
+  const lang = getLessonLang();
+  const enPath = `phases/${phase.slug}/${lesson.slug}/docs/en.md`;
+  const mdPath = lang === 'ar' ? `phases/${phase.slug}/${lesson.slug}/docs/ar.md` : enPath;
   const body = document.getElementById('lesson-body');
 
   try {
-    const res = await fetch(mdPath);
+    let res = await fetch(mdPath);
+    let usedFallback = false;
+    if (!res.ok && lang === 'ar') {
+      // Arabic translation not available yet — fall back to English.
+      res = await fetch(enPath);
+      usedFallback = true;
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const md = await res.text();
+    const isArabic = lang === 'ar' && !usedFallback;
+
+    body.setAttribute('dir', isArabic ? 'rtl' : 'ltr');
+    body.classList.toggle('lang-ar', isArabic);
+
     const colabBadge = lesson.notebook
       ? `<div class="colab-badge-wrap"><a href="https://colab.research.google.com/github/thepandanlabs/applied-ai-from-scratch/blob/main/${lesson.notebook}" target="_blank" rel="noopener noreferrer"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"></a></div>`
       : '';
-    body.innerHTML = colabBadge + renderMarkdown(md);
+    const fallbackNote = usedFallback
+      ? `<div class="lang-fallback-note">الترجمة العربية لهذا الدرس غير متوفرة بعد — يتم عرض النسخة الإنجليزية.</div>`
+      : '';
+    body.innerHTML = colabBadge + fallbackNote + renderMarkdown(md);
     await runMermaid();
     hljs.highlightAll();
   } catch (e) {
@@ -399,7 +439,7 @@ async function loadLessonContent(phase, lesson) {
 
 function renderMarkdown(md) {
   // Extract header metadata (Type, Languages, Prerequisites, Time lines at top)
-  const metaMatch = md.match(/^(\*\*(?:Type|Languages?|Prerequisites?|Time|Phase):\*\*[^\n]*\n?)+/m);
+  const metaMatch = md.match(/^(\*\*(?:Type|Languages?|Prerequisites?|Time|Phase|النوع|اللغات|المتطلبات|الوقت|المرحلة):\*\*[^\n]*\n?)+/m);
   let metaHtml = '';
   let cleanMd = md;
 
