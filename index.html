@@ -19,9 +19,13 @@
   <!-- Mermaid diagrams -->
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 
-  <!-- Apply saved theme before first paint to prevent flash -->
+  <!-- Apply saved theme + language before first paint to prevent flash -->
   <script>
     (function() {
+      const lang = localStorage.getItem('siteLang') === 'ar' ? 'ar' : 'en';
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+
       const saved = localStorage.getItem('theme');
       const prefer = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       const theme = saved || prefer;
@@ -45,7 +49,8 @@
       applied<span class="logo-accent">ai</span>fromscratch
     </a>
     <div class="nav-links">
-      <a href="#phases" class="nav-link">Phases</a>
+      <a href="#phases" id="nav-phases" class="nav-link">Phases</a>
+      <button id="lang-toggle" class="lang-toggle-btn" onclick="toggleLang()" aria-label="Switch language" title="English / العربية">العربية</button>
       <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
         <span class="theme-icon">☀</span>
       </button>

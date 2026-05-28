@@ -165,6 +165,29 @@ img, svg { display: block; max-width: 100%; }
   border-color: var(--border-hover);
 }
 
+/* Language toggle (nav) */
+.lang-toggle-btn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.lang-toggle-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  border-color: var(--border-hover);
+}
+
 /* ── Loading ─────────────────────────────────────────────────────────────── */
 .loading {
   text-align: center;
@@ -1084,42 +1107,7 @@ img, svg { display: block; max-width: 100%; }
   color: var(--text);
 }
 
-/* ── Lesson top bar + language toggle (EN / AR) ─────────────────────────── */
-.lesson-topbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-.lesson-topbar .mobile-toc-btn {
-  margin-bottom: 0;
-  flex: 1;
-}
-.lang-toggle {
-  display: inline-flex;
-  margin-left: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.lang-btn {
-  padding: 6px 12px;
-  background: var(--surface);
-  border: none;
-  color: var(--text-muted);
-  font-size: 13px;
-  font-family: var(--font);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.lang-btn + .lang-btn { border-left: 1px solid var(--border); }
-.lang-btn:hover { color: var(--text); }
-.lang-btn.active {
-  background: var(--accent);
-  color: #fff;
-}
-[data-theme="light"] .lang-btn.active { color: #fff; }
-
+/* ── Fallback note (Arabic translation not available) ───────────────────── */
 .lang-fallback-note {
   border: 1px solid var(--border);
   background: var(--surface-2);
@@ -1150,6 +1138,17 @@ img, svg { display: block; max-width: 100%; }
   direction: ltr;
   unicode-bidi: isolate;
 }
+
+/* ── RTL: global site chrome (Arabic) ───────────────────────────────────── */
+html[dir="rtl"] .nav-logo { direction: ltr; }            /* keep brand mark LTR */
+html[dir="rtl"] .lesson-nav-btn.prev { text-align: right; }
+html[dir="rtl"] .lesson-nav-btn.next { text-align: left; }
+html[dir="rtl"] .lesson-time { text-align: left; }
+html[dir="rtl"] .lesson-table th[style*="right"] { text-align: left !important; }
+html[dir="rtl"] .lesson-sidebar { border-right: none; border-left: 1px solid var(--border); }
+/* Code blocks always read left-to-right, regardless of page direction */
+html[dir="rtl"] pre,
+html[dir="rtl"] .code-block { direction: ltr; text-align: left; }
 
 /* ── Code block — mobile touch scroll ───────────────────────────────────── */
 .code-block pre {

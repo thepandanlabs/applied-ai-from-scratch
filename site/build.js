@@ -26,6 +26,38 @@ const PHASE_DESCRIPTIONS = {
   '12': 'Six capstone projects combining all prior phases into shippable, evaluated, observable portfolio pieces.',
 };
 
+const PHASE_TITLES_AR = {
+  '00': 'الإعداد والعقلية',
+  '01': 'هندسة الـ Prompt والسياق',
+  '02': 'الاسترجاع و RAG',
+  '03': 'الأدوات واستدعاء الدوال و MCP',
+  '04': 'الوكلاء: أنماط تصمد في الإنتاج',
+  '05': 'التقييم والتطوير المبني على التقييم',
+  '06': 'الإطلاق: من Notebook إلى خدمة',
+  '07': 'المراقبة والتكلفة والموثوقية',
+  '08': 'الأمان والسلامة وحواجز الحماية',
+  '09': 'الضبط الدقيق (Fine-Tuning) والتخصيص',
+  '10': 'ما بعد النص: متعدد الوسائط والصوت',
+  '11': 'مهارات المهندس المنتشَر ميدانيًا (FDE)',
+  '12': 'مشاريع التتويج (Capstones)',
+};
+
+const PHASE_DESCRIPTIONS_AR = {
+  '00': 'سلسلة الأدوات، ومفاتيح الـ API، وأول استدعاء للنموذج، والانتقال الذهني من الكود الحتمي إلى الاحتمالي.',
+  '01': 'تشريح الـ prompt، والأمثلة القليلة (few-shot)، وسلسلة التفكير (chain-of-thought)، والمخرجات المنظَّمة، والتحقق، وإصدارات الـ prompt، والـ caching.',
+  '02': 'الـ embeddings، ومخازن المتجهات (vector stores)، والتقطيع (chunking)، من RAG البسيط إلى RAG الوكيلي، والبحث الهجين، ومنظومة التقييم.',
+  '03': 'استدعاء الدوال (function calling)، وتصميم مخطط الأدوات، وخوادم وعملاء MCP، وأنماط الأدوات الإنتاجية، والأمان.',
+  '04': 'حلقة الوكيل (agent loop) من الصفر، والأنماط (التوجيه، المنسّق-العمال، المُقيِّم-المُحسِّن)، والـ SDKs، وتعدّد الوكلاء.',
+  '05': 'تحليل الأخطاء، والمجموعات الذهبية (golden sets)، والنموذج كحَكَم (LLM-as-judge)، ومنظومات التقييم، والـ CI للـ prompts، وكشف الانحراف، واختبارات A/B.',
+  '06': 'تغليف النموذج بـ FastAPI، والبثّ (streaming)، و Docker، وحدود المعدّل، والبدائل (fallbacks)، وإدارة الإصدارات، وأعلام الميزات، ومسارات النشر.',
+  '07': 'تتبّع OTel GenAI، وهندسة التكلفة، والـ caching الدلالي، وتحليل زمن الاستجابة، و SLOs، واختبار الحِمل.',
+  '08': 'أعلى 10 مخاطر OWASP لنماذج اللغة، ودفاعات حقن الـ prompt، ومعالجة الـ PII، وحواجز الحماية، وتهذيب المحتوى.',
+  '09': 'سُلّم القرار، وهندسة مجموعات البيانات، و SFT، و LoRA، و DPO، والتقطير (distillation)، وتشغيل النماذج مفتوحة الأوزان.',
+  '10': 'نماذج الرؤية واللغة، وذكاء المستندات، والكلام، والوكلاء الصوتيون، وواجهات الزمن الحقيقي، و RAG متعدد الوسائط.',
+  '11': 'تحديد النطاق، والاكتشاف، والانتقال من العرض إلى الإنتاج، وبيئات العملاء الفوضوية، والتسليم، والتواصل مع أصحاب المصلحة.',
+  '12': 'ستة مشاريع تتويجية تجمع كل المراحل السابقة في قطع محفظة قابلة للإطلاق ومُقيَّمة وقابلة للمراقبة.',
+};
+
 function glyphToStatus(glyph) {
   if (glyph === '✅') return 'complete';
   if (glyph === '🚧') return 'progress';
@@ -108,12 +140,23 @@ function getLessonNotebook(phaseId, lessonSlug) {
   return fs.existsSync(nbPath) ? `notebooks/phase-${phaseId}/${lessonSlug}.ipynb` : null;
 }
 
+// Pull the Arabic lesson title from the first H1 of docs/ar.md, if present.
+function getLessonTitleAr(phaseSlug, lessonSlug) {
+  const arPath = path.join(PHASES_DIR, phaseSlug, lessonSlug, 'docs', 'ar.md');
+  if (!fs.existsSync(arPath)) return null;
+  const content = fs.readFileSync(arPath, 'utf8');
+  const m = content.match(/^#\s+(.+?)\s*$/m);
+  return m ? m[1].trim() : null;
+}
+
 function main() {
   const roadmap = fs.readFileSync(ROADMAP_PATH, 'utf8');
   const phases = parseRoadmap(roadmap);
   const phaseFolders = getPhaseFolderMap();
 
   for (const phase of phases) {
+    phase.title_ar = PHASE_TITLES_AR[phase.id] || null;
+    phase.description_ar = PHASE_DESCRIPTIONS_AR[phase.id] || null;
     phase.slug = phaseFolders[phase.id] || null;
     if (!phase.slug) continue;
 
@@ -123,6 +166,7 @@ function main() {
       if (lesson.slug) {
         lesson.artifact = getLessonArtifact(phase.slug, lesson.slug);
         lesson.notebook = getLessonNotebook(phase.id, lesson.slug);
+        lesson.title_ar = getLessonTitleAr(phase.slug, lesson.slug);
       }
     }
   }
