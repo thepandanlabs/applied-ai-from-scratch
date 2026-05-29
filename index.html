@@ -36,6 +36,19 @@
       }
     })();
   </script>
+
+  <!-- Apply saved/URL language + direction before first paint -->
+  <script>
+    (function() {
+      const supported = ['en', 'ar'];
+      const fromUrl = new URLSearchParams(window.location.search).get('lang');
+      const saved = localStorage.getItem('lang');
+      const lang = supported.includes(fromUrl) ? fromUrl
+        : supported.includes(saved) ? saved : 'en';
+      document.documentElement.setAttribute('lang', lang);
+      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    })();
+  </script>
 </head>
 <body>
 
@@ -45,7 +58,10 @@
       applied<span class="logo-accent">ai</span>fromscratch
     </a>
     <div class="nav-links">
-      <a href="#phases" class="nav-link">Phases</a>
+      <a href="#phases" class="nav-link" data-i18n="navPhases">Phases</a>
+      <button id="lang-toggle" class="theme-toggle" onclick="toggleLang()" aria-label="Switch language" title="English / العربية">
+        <span class="lang-label">ع</span>
+      </button>
       <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme" title="Toggle light/dark mode">
         <span class="theme-icon">☀</span>
       </button>
