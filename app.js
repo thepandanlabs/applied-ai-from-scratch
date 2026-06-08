@@ -90,6 +90,8 @@ const I18N = {
     slidesTitle: 'Open facilitator slide deck',
     navPhases: 'Phases',
     siteTitle: 'Applied AI From Scratch',
+    footerText: 'Built with ❤️ from 🇸🇦 Saudi Arabia',
+    footerOpen: 'open source',
     couldNotLoad: (p) => `Could not load lesson content from <code>${p}</code>.`,
     serveHint: 'If running locally, use a static server: <code>npx serve .</code> or <code>python -m http.server 8000</code>',
     buildHint: 'Run <code>node site/build.js</code> to generate curriculum data, then serve with <code>npx serve .</code>',
@@ -131,6 +133,8 @@ const I18N = {
     slidesTitle: 'افتح شرائح الميسِّر',
     navPhases: 'المراحل',
     siteTitle: 'الذكاء الاصطناعي التطبيقي من الصفر',
+    footerText: 'صُنع بـ ❤️ من 🇸🇦 المملكة العربية السعودية',
+    footerOpen: 'مفتوح المصدر',
     couldNotLoad: (p) => `تعذّر تحميل محتوى الدرس من <code>${p}</code>.`,
     serveHint: 'إذا كنت تشغّله محليًا، استخدم خادمًا ثابتًا: <code>npx serve .</code> أو <code>python -m http.server 8000</code>',
     buildHint: 'شغّل <code>node site/build.js</code> لتوليد بيانات المنهج، ثم قدّمه عبر <code>npx serve .</code>',
@@ -180,6 +184,8 @@ function updateStaticChrome() {
   document.title = t('siteTitle');
   const navPhases = document.querySelector('.nav-link[data-i18n="navPhases"]');
   if (navPhases) navPhases.textContent = t('navPhases');
+  const footer = document.querySelector('.site-footer');
+  if (footer) footer.innerHTML = `${t('footerText')} &nbsp;·&nbsp; <a href="https://github.com/thepandanlabs/applied-ai-from-scratch" target="_blank" rel="noopener">${t('footerOpen')}</a>`;
 }
 
 window.toggleLang = function () {
