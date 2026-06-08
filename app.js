@@ -185,7 +185,7 @@ function updateStaticChrome() {
   const navPhases = document.querySelector('.nav-link[data-i18n="navPhases"]');
   if (navPhases) navPhases.textContent = t('navPhases');
   const footer = document.querySelector('.site-footer');
-  if (footer) footer.innerHTML = `${t('footerText')} &nbsp;·&nbsp; <a href="https://github.com/thepandanlabs/applied-ai-from-scratch" target="_blank" rel="noopener">${t('footerOpen')}</a>`;
+  if (footer) footer.innerHTML = t('footerText');
 }
 
 window.toggleLang = function () {
