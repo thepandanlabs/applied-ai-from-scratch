@@ -1234,3 +1234,15 @@ html[dir="rtl"] .mermaid-wrap { direction: ltr; text-align: left; }
 @media (max-width: 768px) {
   html[dir="rtl"] .phase-card-num { right: auto; left: 12px; }
 }
+
+/* Footer */
+.site-footer {
+  text-align: center;
+  padding: 1.5rem 1rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  margin-top: 2rem;
+}
+.site-footer a { color: var(--text-muted); text-decoration: underline; }
+.site-footer a:hover { color: var(--accent); }
